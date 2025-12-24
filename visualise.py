@@ -5,6 +5,7 @@ Subcommands:
     groks       - Grokking experiment visualizations
     capacity    - Model capacity (memorisation) experiment visualizations
     speed       - Learning speed experiment visualizations
+    ntk         - Neural Tangent Kernel regime diagnostics
 """
 import re
 import argparse
@@ -37,7 +38,11 @@ from plotting import (
     plot_speed_vs_model_size,
     plot_combined_speed_analysis,
     plot_saturation_time_vs_capacity_fraction,
-    plot_saturation_steps_vs_params
+    plot_saturation_steps_vs_params,
+    plot_ntk_evolution,
+    plot_param_displacement,
+    plot_linearization_error,
+    plot_ntk_summary
 )
 import consts
 
@@ -1118,6 +1123,227 @@ def speed(args):
         print("="*70)
 
 
+# =============================================================================
+# NTK Experiment Visualization Functions
+# =============================================================================
+
+def list_ntk_results(data_dir: str, pattern: str = 'ntk_dim*.npz') -> List[Dict]:
+    """List all saved NTK experiment results."""
+    files = sorted(glob(os.path.join(data_dir, pattern)))
+
+    if not files:
+        print(f"No results found matching pattern: {pattern}")
+        return []
+
+    print(f"\nFound {len(files)} NTK result files:")
+    print("="*80)
+
+    results = []
+    for i, fname in enumerate(files):
+        data = np.load(fname)
+        dim = int(data['dim'])
+        n_samples = int(data['n_samples'])
+        param_count = int(data['param_count'])
+        final_acc = float(data['final_acc'])
+
+        # Get final NTK metrics
+        ntk_fro = float(data['ntk_relative_frobenius'][-1])
+        param_l2 = float(data['param_relative_l2'][-1])
+        lin_error = float(data['lin_output_relative_error'][-1])
+
+        results.append({
+            'file': fname,
+            'dim': dim,
+            'n_samples': n_samples,
+            'param_count': param_count,
+            'final_acc': final_acc,
+            'ntk_fro': ntk_fro,
+            'param_l2': param_l2,
+            'lin_error': lin_error,
+            'data': data
+        })
+
+        regime = "LAZY" if ntk_fro < 0.1 and param_l2 < 0.1 else "FEATURE"
+        print(f"{i:2d}. {os.path.basename(fname)}")
+        print(f"    dim={dim:3d}, samples={n_samples:6d}, params={param_count:8,}")
+        print(f"    NTK_Δ={ntk_fro:.4f}, θ_Δ={param_l2:.4f}, lin_err={lin_error:.4f} [{regime}]")
+
+    print("="*80)
+    return results
+
+
+def extract_ntk_dim(fname: str) -> int:
+    """Extract dimension from NTK filename."""
+    import re
+    match = re.search(r'ntk_dim(\d+)_', fname)
+    return int(match.group(1)) if match else 0
+
+
+def extract_ntk_samples(fname: str) -> int:
+    """Extract samples from NTK filename."""
+    import re
+    match = re.search(r'_samples(\d+)', fname)
+    return int(match.group(1)) if match else 0
+
+
+def ntk(args):
+    """Handle ntk subcommand."""
+    signature = f'p{args.p}_seed{args.seed}'
+    data_dir = os.path.join(args.data_dir, signature)
+    plot_dir = os.path.join(args.plot_dir, signature)
+
+    print(f'Data directory: {data_dir}')
+    print(f'Plot directory: {plot_dir}')
+
+    # List results
+    if args.list:
+        pattern = args.pattern or 'ntk_dim*.npz'
+        list_ntk_results(data_dir, pattern)
+        return
+
+    # Collect files based on selection criteria
+    files = set()
+
+    if args.files:
+        files.update(args.files)
+
+    if args.all:
+        pattern = os.path.join(data_dir, 'ntk_dim*.npz')
+        files.update(glob(pattern))
+
+    if args.pattern:
+        pattern = os.path.join(data_dir, args.pattern)
+        files.update(glob(pattern))
+
+    if args.dims:
+        for d in args.dims:
+            pattern = os.path.join(data_dir, f'ntk_dim{d}_samples*.npz')
+            files.update(glob(pattern))
+
+    files = sorted(files, key=lambda f: (extract_ntk_dim(f), extract_ntk_samples(f)))
+
+    if not files:
+        print("No files found. Use --list to see available results, or --all to select all.")
+        return
+
+    print(f"\nFound {len(files)} files to analyze:")
+    for f in files:
+        print(f"  - {os.path.basename(f)}")
+
+    # Load all results and group by dimension
+    all_results = {}
+    for fname in files:
+        if not os.path.exists(fname):
+            print(f"Warning: File not found: {fname}")
+            continue
+        data = np.load(fname)
+
+        dim = int(data['dim'])
+
+        # Reconstruct result dict
+        n_tracking = len(data['tracking_steps'])
+        result = {
+            'n_samples': int(data['n_samples']),
+            'dim': dim,
+            'depth': int(data['depth']),
+            'heads': int(data['heads']),
+            'param_count': int(data['param_count']),
+            'p': int(data['p']),
+            'saturation_step': int(data['saturation_step']),
+            'final_acc': float(data['final_acc']),
+            'dataset_bits': float(data['dataset_bits']),
+            'saturated': bool(data.get('saturated', True)),
+            'tracking_steps': data['tracking_steps'],
+            'train_loss_trace': data['train_loss_trace'],
+            'train_acc_trace': data['train_acc_trace'],
+        }
+
+        # Reconstruct trace dicts
+        result['ntk_change_trace'] = [
+            {
+                'relative_frobenius': data['ntk_relative_frobenius'][i],
+                'relative_spectral': data['ntk_relative_spectral'][i],
+                'cosine_similarity': data['ntk_cosine_similarity'][i]
+            }
+            for i in range(n_tracking)
+        ]
+        result['param_displacement_trace'] = [
+            {
+                'relative_l2': data['param_relative_l2'][i],
+                'relative_linf': data['param_relative_linf'][i],
+                'cosine_similarity': data['param_cosine_similarity'][i]
+            }
+            for i in range(n_tracking)
+        ]
+        result['linearization_error_trace'] = [
+            {
+                'output_mse': data['lin_output_mse'][i],
+                'output_relative_error': data['lin_output_relative_error'][i],
+                'prediction_agreement': data['lin_prediction_agreement'][i]
+            }
+            for i in range(n_tracking)
+        ]
+
+        if dim not in all_results:
+            all_results[dim] = []
+        all_results[dim].append(result)
+
+    # Generate requested plots
+    os.makedirs(plot_dir, exist_ok=True)
+    show = not args.no_show
+
+    if args.evolution:
+        print("\nPlotting NTK evolution...")
+        save_path = os.path.join(plot_dir, 'ntk_evolution.pdf') if args.save else None
+        plot_ntk_evolution(all_results, save_path=save_path, show=show)
+
+    if args.displacement:
+        print("\nPlotting parameter displacement...")
+        save_path = os.path.join(plot_dir, 'param_displacement.pdf') if args.save else None
+        plot_param_displacement(all_results, save_path=save_path, show=show)
+
+    if args.linearization:
+        print("\nPlotting linearization error...")
+        save_path = os.path.join(plot_dir, 'linearization_error.pdf') if args.save else None
+        plot_linearization_error(all_results, save_path=save_path, show=show)
+
+    if args.all_plots or (not args.evolution and not args.displacement and
+                          not args.linearization and not args.summary):
+        # Default: show summary if nothing else specified
+        print("\nPlotting NTK summary...")
+        save_path = os.path.join(plot_dir, 'ntk_summary.pdf') if args.save else None
+        plot_ntk_summary(all_results, save_path=save_path, show=show)
+
+    if args.summary:
+        print("\n" + "="*70)
+        print("NTK REGIME ANALYSIS SUMMARY")
+        print("="*70)
+
+        for dim in sorted(all_results.keys()):
+            results = all_results[dim]
+            param_count = results[0]['param_count']
+
+            # Average final metrics
+            avg_ntk_change = np.mean([r['ntk_change_trace'][-1]['relative_frobenius'] for r in results])
+            avg_param_disp = np.mean([r['param_displacement_trace'][-1]['relative_l2'] for r in results])
+            avg_lin_error = np.mean([r['linearization_error_trace'][-1]['output_relative_error'] for r in results])
+
+            regime = "LAZY" if avg_ntk_change < 0.1 and avg_param_disp < 0.1 else "FEATURE LEARNING"
+
+            print(f"\ndim={dim:3d}: {param_count:8,} params")
+            print(f"  Avg NTK change:         {avg_ntk_change:.4f}")
+            print(f"  Avg param displacement: {avg_param_disp:.4f}")
+            print(f"  Avg linearization error: {avg_lin_error:.4f}")
+            print(f"  Likely regime: {regime}")
+
+        print("\n" + "="*70)
+        print("Interpretation:")
+        print("  - NTK change < 0.1: Kernel approximately constant (lazy regime)")
+        print("  - Param displacement < 0.1: Parameters near initialization (lazy regime)")
+        print("  - High linearization error: Features are learning (not lazy)")
+        print("="*70)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='View saved experiment results',
@@ -1407,6 +1633,75 @@ Examples:
                                  help='Save plots to plot-dir')
     speed_subparser.add_argument('--no-show', action='store_true',
                                  help='Do not display plots (only save)')
+
+    # =========================================================================
+    # NTK subparser
+    # =========================================================================
+    ntk_subparser = subparsers.add_parser(
+        'ntk',
+        help='Neural Tangent Kernel regime diagnostics',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # List all NTK results
+  python visualise.py ntk --list
+
+  # Plot NTK summary for all experiments
+  python visualise.py ntk --all
+
+  # Plot specific diagnostics
+  python visualise.py ntk --all --evolution
+  python visualise.py ntk --all --displacement
+  python visualise.py ntk --all --linearization
+
+  # Get summary statistics
+  python visualise.py ntk --all --summary
+
+  # Filter by model dimension
+  python visualise.py ntk --dims 16 24 32 --save
+"""
+    )
+    ntk_subparser.set_defaults(func=ntk)
+
+    # Directory configuration
+    ntk_subparser.add_argument('--data-dir', type=str, default='data/ntk',
+                               help='Data directory (default: data/ntk)')
+    ntk_subparser.add_argument('--plot-dir', type=str, default='media/ntk',
+                               help='Plot output directory (default: media/ntk)')
+    ntk_subparser.add_argument('--p', type=int, default=97,
+                               help='Prime number (default: 97)')
+    ntk_subparser.add_argument('--seed', type=int, default=42,
+                               help='Random seed (default: 42)')
+
+    # File selection
+    ntk_subparser.add_argument('--list', action='store_true',
+                               help='List all available NTK results')
+    ntk_subparser.add_argument('--files', nargs='+', metavar='FILE',
+                               help='Analyze specific result files')
+    ntk_subparser.add_argument('--pattern', type=str,
+                               help='Glob pattern to match result files')
+    ntk_subparser.add_argument('--all', action='store_true',
+                               help='Select all available results')
+    ntk_subparser.add_argument('--dims', nargs='+', type=int, metavar='DIM',
+                               help='Filter by model dimensions (e.g., --dims 16 24 32)')
+
+    # Plot types
+    ntk_subparser.add_argument('--evolution', action='store_true',
+                               help='Plot NTK evolution during training')
+    ntk_subparser.add_argument('--displacement', action='store_true',
+                               help='Plot parameter displacement from initialization')
+    ntk_subparser.add_argument('--linearization', action='store_true',
+                               help='Plot linearization error (actual vs linear prediction)')
+    ntk_subparser.add_argument('--all-plots', action='store_true',
+                               help='Generate all plot types')
+    ntk_subparser.add_argument('--summary', action='store_true',
+                               help='Print regime analysis summary')
+
+    # Output options
+    ntk_subparser.add_argument('--save', action='store_true',
+                               help='Save plots to plot-dir')
+    ntk_subparser.add_argument('--no-show', action='store_true',
+                               help='Do not display plots (only save)')
 
     # Run the appropriate function based on the subparser
     args = parser.parse_args()

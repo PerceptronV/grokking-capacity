@@ -2670,3 +2670,386 @@ def plot_saturation_steps_vs_params(
     else:
         plt.close()
 
+
+# =============================================================================
+# NTK Diagnostics Plotting Functions
+# =============================================================================
+
+def plot_ntk_evolution(
+    all_results: Dict[int, List[Dict]],
+    save_path: Optional[str] = None,
+    show: bool = True
+) -> None:
+    """
+    Plot how the NTK changes during training for different model sizes.
+
+    Args:
+        all_results: Dict mapping dimension to list of result dicts
+        save_path: Path to save the plot (optional)
+        show: Whether to show the plot
+    """
+    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+
+    # Get all dimensions and assign colors
+    all_dims = sorted(all_results.keys())
+    colors = sns.color_palette("crest", n_colors=len(all_dims))
+    dim_to_color = {d: colors[i] for i, d in enumerate(all_dims)}
+
+    # Left plot: NTK change (Frobenius) over training
+    ax1 = axes[0]
+    for dim in all_dims:
+        results = all_results[dim]
+        # Use the largest dataset for this dimension
+        result = max(results, key=lambda r: r['n_samples'])
+
+        tracking_steps = result['tracking_steps']
+        ntk_fro = [t['relative_frobenius'] for t in result['ntk_change_trace']]
+
+        ax1.plot(tracking_steps, ntk_fro, '-o', color=dim_to_color[dim],
+                 linewidth=2, markersize=6, alpha=0.8, label=f'dim={dim}')
+
+    ax1.set_xlabel('Training Steps', fontsize=14)
+    ax1.set_ylabel('||K_t - K_0||_F / ||K_0||_F', fontsize=14)
+    ax1.set_title('NTK Change During Training', fontsize=16, pad=10)
+    ax1.axhline(y=0.1, color='red', linestyle='--', alpha=0.5, label='Lazy threshold (0.1)')
+    ax1.legend(fontsize=10, loc='best')
+    ax1.grid(True, alpha=0.3)
+    ax1.tick_params(axis='both', which='major', labelsize=12)
+
+    # Right plot: Final NTK change vs model width
+    ax2 = axes[1]
+    dims_plot = []
+    param_counts = []
+    final_ntk_changes = []
+
+    for dim in all_dims:
+        results = all_results[dim]
+        # Average over all dataset sizes
+        avg_final_change = np.mean([r['ntk_change_trace'][-1]['relative_frobenius'] for r in results])
+        param_count = results[0]['param_count']
+
+        dims_plot.append(dim)
+        param_counts.append(param_count)
+        final_ntk_changes.append(avg_final_change)
+
+    ax2.scatter(param_counts, final_ntk_changes, c=dims_plot, cmap='crest',
+                s=150, alpha=0.8, edgecolors='black', linewidths=1)
+
+    for pc, change, dim in zip(param_counts, final_ntk_changes, dims_plot):
+        ax2.annotate(f'{dim}', (pc, change), xytext=(5, 5),
+                     textcoords='offset points', fontsize=10)
+
+    ax2.axhline(y=0.1, color='red', linestyle='--', alpha=0.5, label='Lazy threshold')
+    ax2.set_xlabel('Model Parameters', fontsize=14)
+    ax2.set_ylabel('Final NTK Change (Frobenius)', fontsize=14)
+    ax2.set_title('Final NTK Change vs Model Size', fontsize=16, pad=10)
+    ax2.set_xscale('log')
+    ax2.legend(fontsize=10)
+    ax2.grid(True, alpha=0.3)
+    ax2.tick_params(axis='both', which='major', labelsize=12)
+
+    plt.tight_layout()
+
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight', dpi=150)
+        print(f"Saved NTK evolution plot: {save_path}")
+
+    if show:
+        plt.show()
+    else:
+        plt.close()
+
+
+def plot_param_displacement(
+    all_results: Dict[int, List[Dict]],
+    save_path: Optional[str] = None,
+    show: bool = True
+) -> None:
+    """
+    Plot parameter displacement from initialization during training.
+
+    Args:
+        all_results: Dict mapping dimension to list of result dicts
+        save_path: Path to save the plot (optional)
+        show: Whether to show the plot
+    """
+    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+
+    all_dims = sorted(all_results.keys())
+    colors = sns.color_palette("crest", n_colors=len(all_dims))
+    dim_to_color = {d: colors[i] for i, d in enumerate(all_dims)}
+
+    # Left plot: Parameter displacement over training
+    ax1 = axes[0]
+    for dim in all_dims:
+        results = all_results[dim]
+        result = max(results, key=lambda r: r['n_samples'])
+
+        tracking_steps = result['tracking_steps']
+        param_l2 = [t['relative_l2'] for t in result['param_displacement_trace']]
+
+        ax1.plot(tracking_steps, param_l2, '-o', color=dim_to_color[dim],
+                 linewidth=2, markersize=6, alpha=0.8, label=f'dim={dim}')
+
+    ax1.set_xlabel('Training Steps', fontsize=14)
+    ax1.set_ylabel('||θ_t - θ_0||_2 / ||θ_0||_2', fontsize=14)
+    ax1.set_title('Parameter Displacement During Training', fontsize=16, pad=10)
+    ax1.axhline(y=0.1, color='red', linestyle='--', alpha=0.5, label='Lazy threshold (0.1)')
+    ax1.legend(fontsize=10, loc='best')
+    ax1.grid(True, alpha=0.3)
+    ax1.tick_params(axis='both', which='major', labelsize=12)
+
+    # Right plot: Final displacement vs model width
+    ax2 = axes[1]
+    dims_plot = []
+    param_counts = []
+    final_displacements = []
+
+    for dim in all_dims:
+        results = all_results[dim]
+        avg_final_disp = np.mean([r['param_displacement_trace'][-1]['relative_l2'] for r in results])
+        param_count = results[0]['param_count']
+
+        dims_plot.append(dim)
+        param_counts.append(param_count)
+        final_displacements.append(avg_final_disp)
+
+    ax2.scatter(param_counts, final_displacements, c=dims_plot, cmap='crest',
+                s=150, alpha=0.8, edgecolors='black', linewidths=1)
+
+    for pc, disp, dim in zip(param_counts, final_displacements, dims_plot):
+        ax2.annotate(f'{dim}', (pc, disp), xytext=(5, 5),
+                     textcoords='offset points', fontsize=10)
+
+    # In lazy regime, displacement should scale as 1/sqrt(width)
+    # Fit power law
+    if len(param_counts) >= 2:
+        log_params = np.log10(param_counts)
+        log_disp = np.log10(final_displacements)
+        slope, intercept = np.polyfit(log_params, log_disp, 1)
+
+        x_fit = np.logspace(np.log10(min(param_counts) * 0.5),
+                            np.log10(max(param_counts) * 2), 100)
+        y_fit = 10 ** intercept * x_fit ** slope
+        ax2.plot(x_fit, y_fit, '--', color='orange', linewidth=2, alpha=0.7,
+                 label=f'Fit: ∝ params^{slope:.2f}')
+
+    ax2.axhline(y=0.1, color='red', linestyle='--', alpha=0.5, label='Lazy threshold')
+    ax2.set_xlabel('Model Parameters', fontsize=14)
+    ax2.set_ylabel('Final Parameter Displacement', fontsize=14)
+    ax2.set_title('Final Displacement vs Model Size', fontsize=16, pad=10)
+    ax2.set_xscale('log')
+    ax2.set_yscale('log')
+    ax2.legend(fontsize=10)
+    ax2.grid(True, alpha=0.3, which='both')
+    ax2.tick_params(axis='both', which='major', labelsize=12)
+
+    plt.tight_layout()
+
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight', dpi=150)
+        print(f"Saved parameter displacement plot: {save_path}")
+
+    if show:
+        plt.show()
+    else:
+        plt.close()
+
+
+def plot_linearization_error(
+    all_results: Dict[int, List[Dict]],
+    save_path: Optional[str] = None,
+    show: bool = True
+) -> None:
+    """
+    Plot linearization error during training.
+
+    Args:
+        all_results: Dict mapping dimension to list of result dicts
+        save_path: Path to save the plot (optional)
+        show: Whether to show the plot
+    """
+    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+
+    all_dims = sorted(all_results.keys())
+    colors = sns.color_palette("crest", n_colors=len(all_dims))
+    dim_to_color = {d: colors[i] for i, d in enumerate(all_dims)}
+
+    # Left plot: Linearization error over training
+    ax1 = axes[0]
+    for dim in all_dims:
+        results = all_results[dim]
+        result = max(results, key=lambda r: r['n_samples'])
+
+        tracking_steps = result['tracking_steps']
+        lin_error = [t['output_relative_error'] for t in result['linearization_error_trace']]
+
+        ax1.plot(tracking_steps, lin_error, '-o', color=dim_to_color[dim],
+                 linewidth=2, markersize=6, alpha=0.8, label=f'dim={dim}')
+
+    ax1.set_xlabel('Training Steps', fontsize=14)
+    ax1.set_ylabel('||f(x;θ) - f_lin(x;θ)||_F / ||f(x;θ)||_F', fontsize=14)
+    ax1.set_title('Linearization Error During Training', fontsize=16, pad=10)
+    ax1.axhline(y=0.1, color='red', linestyle='--', alpha=0.5, label='Lazy threshold (0.1)')
+    ax1.legend(fontsize=10, loc='best')
+    ax1.grid(True, alpha=0.3)
+    ax1.tick_params(axis='both', which='major', labelsize=12)
+
+    # Right plot: Prediction agreement over training
+    ax2 = axes[1]
+    for dim in all_dims:
+        results = all_results[dim]
+        result = max(results, key=lambda r: r['n_samples'])
+
+        tracking_steps = result['tracking_steps']
+        agreement = [t['prediction_agreement'] for t in result['linearization_error_trace']]
+
+        ax2.plot(tracking_steps, agreement, '-o', color=dim_to_color[dim],
+                 linewidth=2, markersize=6, alpha=0.8, label=f'dim={dim}')
+
+    ax2.set_xlabel('Training Steps', fontsize=14)
+    ax2.set_ylabel('Prediction Agreement', fontsize=14)
+    ax2.set_title('Linear vs Actual Prediction Agreement', fontsize=16, pad=10)
+    ax2.axhline(y=0.9, color='red', linestyle='--', alpha=0.5, label='90% agreement')
+    ax2.set_ylim([0, 1.05])
+    ax2.legend(fontsize=10, loc='best')
+    ax2.grid(True, alpha=0.3)
+    ax2.tick_params(axis='both', which='major', labelsize=12)
+
+    plt.tight_layout()
+
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight', dpi=150)
+        print(f"Saved linearization error plot: {save_path}")
+
+    if show:
+        plt.show()
+    else:
+        plt.close()
+
+
+def plot_ntk_summary(
+    all_results: Dict[int, List[Dict]],
+    save_path: Optional[str] = None,
+    show: bool = True
+) -> None:
+    """
+    Create a summary plot of all NTK diagnostic metrics.
+
+    Args:
+        all_results: Dict mapping dimension to list of result dicts
+        save_path: Path to save the plot (optional)
+        show: Whether to show the plot
+    """
+    fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+
+    all_dims = sorted(all_results.keys())
+    colors = sns.color_palette("crest", n_colors=len(all_dims))
+    dim_to_color = {d: colors[i] for i, d in enumerate(all_dims)}
+
+    # Collect final metrics for each dimension
+    param_counts = []
+    final_ntk_changes = []
+    final_param_displacements = []
+    final_lin_errors = []
+    dims_plot = []
+
+    for dim in all_dims:
+        results = all_results[dim]
+        param_count = results[0]['param_count']
+
+        # Average over dataset sizes
+        avg_ntk = np.mean([r['ntk_change_trace'][-1]['relative_frobenius'] for r in results])
+        avg_param = np.mean([r['param_displacement_trace'][-1]['relative_l2'] for r in results])
+        avg_lin = np.mean([r['linearization_error_trace'][-1]['output_relative_error'] for r in results])
+
+        param_counts.append(param_count)
+        final_ntk_changes.append(avg_ntk)
+        final_param_displacements.append(avg_param)
+        final_lin_errors.append(avg_lin)
+        dims_plot.append(dim)
+
+    param_counts = np.array(param_counts)
+    final_ntk_changes = np.array(final_ntk_changes)
+    final_param_displacements = np.array(final_param_displacements)
+    final_lin_errors = np.array(final_lin_errors)
+
+    # Top left: NTK change vs parameters
+    ax1 = axes[0, 0]
+    scatter1 = ax1.scatter(param_counts, final_ntk_changes, c=dims_plot, cmap='crest',
+                           s=150, alpha=0.8, edgecolors='black', linewidths=1)
+    ax1.axhline(y=0.1, color='red', linestyle='--', alpha=0.5, label='Lazy threshold')
+    ax1.set_xlabel('Model Parameters', fontsize=12)
+    ax1.set_ylabel('NTK Change (Frobenius)', fontsize=12)
+    ax1.set_title('NTK Evolution', fontsize=14, pad=10)
+    ax1.set_xscale('log')
+    ax1.legend(fontsize=10)
+    ax1.grid(True, alpha=0.3)
+
+    # Top right: Parameter displacement vs parameters
+    ax2 = axes[0, 1]
+    ax2.scatter(param_counts, final_param_displacements, c=dims_plot, cmap='crest',
+                s=150, alpha=0.8, edgecolors='black', linewidths=1)
+    ax2.axhline(y=0.1, color='red', linestyle='--', alpha=0.5, label='Lazy threshold')
+    ax2.set_xlabel('Model Parameters', fontsize=12)
+    ax2.set_ylabel('Param Displacement (L2)', fontsize=12)
+    ax2.set_title('Parameter Movement', fontsize=14, pad=10)
+    ax2.set_xscale('log')
+    ax2.set_yscale('log')
+    ax2.legend(fontsize=10)
+    ax2.grid(True, alpha=0.3, which='both')
+
+    # Bottom left: Linearization error vs parameters
+    ax3 = axes[1, 0]
+    ax3.scatter(param_counts, final_lin_errors, c=dims_plot, cmap='crest',
+                s=150, alpha=0.8, edgecolors='black', linewidths=1)
+    ax3.axhline(y=0.1, color='red', linestyle='--', alpha=0.5, label='Lazy threshold')
+    ax3.set_xlabel('Model Parameters', fontsize=12)
+    ax3.set_ylabel('Linearization Error', fontsize=12)
+    ax3.set_title('Linearization Quality', fontsize=14, pad=10)
+    ax3.set_xscale('log')
+    ax3.legend(fontsize=10)
+    ax3.grid(True, alpha=0.3)
+
+    # Bottom right: Regime classification
+    ax4 = axes[1, 1]
+
+    # Determine regime based on thresholds
+    lazy_mask = (final_ntk_changes < 0.1) & (final_param_displacements < 0.1)
+    feature_mask = ~lazy_mask
+
+    # Plot as bar chart showing metrics
+    x = np.arange(len(dims_plot))
+    width = 0.25
+
+    ax4.bar(x - width, final_ntk_changes, width, label='NTK Change', color='#1f77b4', alpha=0.8)
+    ax4.bar(x, final_param_displacements, width, label='Param Displacement', color='#ff7f0e', alpha=0.8)
+    ax4.bar(x + width, final_lin_errors, width, label='Lin. Error', color='#2ca02c', alpha=0.8)
+
+    ax4.axhline(y=0.1, color='red', linestyle='--', alpha=0.5, label='Lazy threshold')
+    ax4.set_xlabel('Model Dimension', fontsize=12)
+    ax4.set_ylabel('Metric Value', fontsize=12)
+    ax4.set_title('NTK Regime Metrics by Model Size', fontsize=14, pad=10)
+    ax4.set_xticks(x)
+    ax4.set_xticklabels([f'd={d}' for d in dims_plot])
+    ax4.legend(fontsize=9, loc='upper right')
+    ax4.grid(True, alpha=0.3, axis='y')
+
+    # Add colorbar
+    plt.tight_layout()
+    fig.subplots_adjust(right=0.92)
+    cbar_ax = fig.add_axes([0.94, 0.15, 0.015, 0.7])
+    sm = plt.cm.ScalarMappable(cmap='crest',
+                               norm=plt.Normalize(vmin=min(dims_plot), vmax=max(dims_plot)))
+    sm.set_array([])
+    cbar = fig.colorbar(sm, cax=cbar_ax, label='Dimension')
+
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight', dpi=150)
+        print(f"Saved NTK summary plot: {save_path}")
+
+    if show:
+        plt.show()
+    else:
+        plt.close()
+
