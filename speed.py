@@ -353,7 +353,7 @@ def main():
     parser.add_argument('--heads', type=int, default=1, help='Attention heads')
     parser.add_argument('--dropout', type=float, default=0.2, 
                         help='Dropout (0.2 to match training)')
-    parser.add_argument('--dim-list', type=int, nargs='+', 
+    parser.add_argument('--dims', type=int, nargs='+', 
                         default=[20, 24, 28],
                         help='List of model dimensions to test')
     
@@ -379,7 +379,7 @@ def main():
                         help='Maximum epochs')
     parser.add_argument('--saturation-threshold', type=float, default=99.0,
                         help='Accuracy threshold to consider saturated (%%)')
-    parser.add_argument('--patience', type=int, default=10,
+    parser.add_argument('--patience', type=int, default=0,
                         help='Epochs to confirm saturation')
     
     # Output args
@@ -432,7 +432,7 @@ def main():
     n_tokens = args.p + 2
     bits_per_example = np.log2(n_tokens)
     
-    print(f"Model dimensions: {args.dim_list}")
+    print(f"Model dimensions: {args.dims}")
     print(f"Dataset sizes: {list(dataset_sizes)}")
     if args.rate:
         print(f"Rate estimation: enabled (k={args.rate_k})")
@@ -445,7 +445,7 @@ def main():
     # Run experiments
     all_results = {}
     
-    for dim in args.dim_list:
+    for dim in args.dims:
         print(f"\n{'='*60}")
         print(f"Model dimension: {dim}")
         print(f"{'='*60}")

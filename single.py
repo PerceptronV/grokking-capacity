@@ -140,19 +140,25 @@ def run_experiment(args):
     
     # Set early stopping threshold (None if disabled)
     early_stop_thresh = None if args.no_early_stopping else args.early_stopping_threshold
-    
+
     print(f"\nTraining settings:")
     print(f"  Epochs: {args.epochs}")
     print(f"  Batch size: {args.batch_size}")
     print(f"  Early stopping: {early_stop_thresh if early_stop_thresh is not None else 'Disabled'}")
-    
+    if args.patience >= 0:
+        print(f"  Patience: {args.patience} epochs (min_delta: {args.min_delta})")
+    else:
+        print(f"  Patience: Disabled")
+
     # Train
     results = trainer.train(
         train_data=(Xtrain_torch, Ttrain_torch),
         val_data=(Xtest_torch, Ttest_torch),
         epochs=args.epochs,
         shuffle=True,
-        early_stopping_threshold=early_stop_thresh
+        early_stopping_threshold=early_stop_thresh,
+        patience=args.patience,
+        min_delta=args.min_delta
     )
     
     train_acc = results['train_acc'] * 100
@@ -194,6 +200,8 @@ def run_experiment(args):
         'beta2': args.beta2,
         'batch_size': args.batch_size,
         'epochs': len(train_acc),  # Actual number of epochs trained
+        'patience': args.patience,
+        'min_delta': args.min_delta,
         'seed': args.seed,
         
         # Results
@@ -267,14 +275,18 @@ def main():
                        help='Adam beta2 parameter')
     
     # Training args
-    parser.add_argument('-b', '--batch-size', type=int, default=512, 
+    parser.add_argument('-b', '--batch-size', type=int, default=512,
                        help='Batch size')
-    parser.add_argument('-e', '--epochs', type=int, default=200, 
+    parser.add_argument('-e', '--epochs', type=int, default=200,
                        help='Maximum number of training epochs')
-    parser.add_argument('--early-stopping-threshold', type=float, default=1.0, 
+    parser.add_argument('--early-stopping-threshold', type=float, default=1.0,
                        help='Stop training when validation accuracy reaches this threshold')
     parser.add_argument('--no-early-stopping', action='store_true',
                        help='Disable early stopping and train for full epochs')
+    parser.add_argument('--patience', type=int, default=-1,
+                       help='Patience for early stopping (epochs without improvement). If negative, never stop early due to patience')
+    parser.add_argument('--min-delta', type=float, default=1e-4,
+                       help='Minimum validation accuracy improvement to reset patience')
     
     # Save/load args
     parser.add_argument('--save-dir', type=str, default='data/single', 

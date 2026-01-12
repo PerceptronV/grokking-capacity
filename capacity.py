@@ -401,8 +401,8 @@ def main():
     parser.add_argument('--heads', type=int, default=1, help='Attention heads')
     parser.add_argument('--dropout', type=float, default=0.0, 
                         help='Dropout (typically 0 for memorisation)')
-    parser.add_argument('--dim-list', type=int, nargs='+', 
-                        default=[10, 16, 20],
+    parser.add_argument('--dims', type=int, nargs='+', 
+                        default=[10, 16, 20, 28],
                         help='List of model dimensions to test')
     
     # Dataset size args
@@ -478,7 +478,7 @@ def main():
     ).astype(int)
     dataset_sizes = np.unique(dataset_sizes)  # Remove duplicates
     
-    print(f"Model dimensions: {args.dim_list}")
+    print(f"Model dimensions: {args.dims}")
     print(f"Dataset sizes: {list(dataset_sizes)}")
     print(f"p: {args.p}")
     print(f"Full vocab size: {args.p + 2}")
@@ -488,7 +488,7 @@ def main():
     # Run experiments
     all_results = {}
     
-    for dim in args.dim_list:
+    for dim in args.dims:
         print(f"\n{'='*60}")
         print(f"Model dimension: {dim}")
         print(f"{'='*60}")

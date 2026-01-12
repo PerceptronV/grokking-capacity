@@ -184,25 +184,34 @@ class GrokkingTrainer:
         val_data: Tuple[torch.Tensor, torch.Tensor],
         epochs: int = 200,
         shuffle: bool = True,
-        early_stopping_threshold: Optional[float] = None
+        early_stopping_threshold: Optional[float] = None,
+        patience: int = -1,
+        min_delta: float = 1e-4
     ) -> Dict:
         """
         Train the model with memorisation tracking.
-        
+
         Args:
             train_data: Tuple of (X_train, T_train)
             val_data: Tuple of (X_val, T_val)
             epochs: Maximum number of epochs
             shuffle: Whether to shuffle training data each epoch
             early_stopping_threshold: Stop when val accuracy reaches this (e.g., 0.99)
-        
+            patience: Number of epochs to wait for improvement before stopping. If negative, never stop early due to patience.
+            min_delta: Minimum change in validation accuracy to qualify as an improvement
+
         Returns:
             Dictionary with training results including log probs traces
         """
         X_train, T_train = train_data
         X_val, T_val = val_data
         n_train = X_train.shape[0]
-        
+
+        # Initialize patience tracking
+        best_val_acc = 0.0
+        epochs_without_improvement = 0
+        use_patience = patience >= 0
+
         epoch_bar = tqdm(range(epochs), desc='Training', unit='epoch')
         
         for epoch in epoch_bar:
@@ -270,11 +279,23 @@ class GrokkingTrainer:
                 postfix['M_U'] = f'{mem_u:.1f}'
             
             epoch_bar.set_postfix(postfix)
-            
-            # Early stopping
+
+            # Early stopping based on threshold
             if early_stopping_threshold is not None and val_acc >= early_stopping_threshold:
                 print(f"\nEarly stopping: val acc {val_acc:.3f} >= {early_stopping_threshold:.3f}")
                 break
+
+            # Early stopping based on patience
+            if use_patience:
+                if val_acc > best_val_acc + min_delta:
+                    best_val_acc = val_acc
+                    epochs_without_improvement = 0
+                else:
+                    epochs_without_improvement += 1
+
+                if epochs_without_improvement >= patience:
+                    print(f"\nEarly stopping: validation accuracy did not improve for {patience} epochs")
+                    break
         
         # Stack log probs: shape (epochs, n_samples)
         train_log_probs_array = np.stack(self.train_log_probs_trace, axis=0)
@@ -463,14 +484,16 @@ def run_experiment(dim, args, baseline_model=None, baseline_path=None):
     
     # Set early stopping threshold
     early_stop_thresh = None if args.no_early_stopping else args.early_stopping_threshold
-    
+
     # Train
     results = trainer.train(
         train_data=(Xtrain, Ttrain),
         val_data=(Xtest, Ttest),
         epochs=args.epochs,
         shuffle=True,
-        early_stopping_threshold=early_stop_thresh
+        early_stopping_threshold=early_stop_thresh,
+        patience=args.patience,
+        min_delta=args.min_delta
     )
     
     # Convert to percentages for consistency
@@ -568,10 +591,14 @@ def main():
     # Training args
     parser.add_argument('-b', '--batch-size', type=int, default=512, help='batch size')
     parser.add_argument('-e', '--epochs', type=int, default=200, help='number of epochs')
-    parser.add_argument('--early-stopping-threshold', type=float, default=0.99, 
+    parser.add_argument('--early-stopping-threshold', type=float, default=0.99,
                        help='stop training when val accuracy reaches this threshold (default: 0.99, set to None to disable)')
     parser.add_argument('--no-early-stopping', action='store_true',
                        help='disable early stopping and train for full epochs')
+    parser.add_argument('--patience', type=int, default=100,
+                       help='patience for early stopping (epochs without improvement). If negative, never stop early due to patience (default: -1)')
+    parser.add_argument('--min-delta', type=float, default=1e-4,
+                       help='minimum validation accuracy improvement to reset patience (default: 1e-4)')
     parser.add_argument('--data-dir', type=str, default='data/groks', help='data output directory')
     parser.add_argument('--plot-dir', type=str, default='media/groks', help='plot output directory')
     

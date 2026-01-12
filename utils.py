@@ -1,4 +1,5 @@
 import os
+import math
 import torch
 from models import TransformerTorch
 
@@ -67,3 +68,21 @@ def load_model(model_path, device='cpu'):
     print(f"Final validation accuracy: {metadata['val_acc'][-1]:.2f}%")
     
     return model, metadata
+
+
+def compute_dataset_size_bits(p: int, op: str = '/', training_fraction: float = 0.5) -> float:
+    """
+    Compute dataset size in samples and bits.
+    
+    Args:
+        p: Prime number
+        op: Operation ('/' for division, others for full table)
+        training_fraction: Fraction of data used for training
+    
+    Returns:
+        Dataset size in samples and bits
+    """
+    n = p * (p - 1) if op == '/' else p * p
+    n *= training_fraction
+    size = n * math.log2(p + 2)
+    return int(n), size

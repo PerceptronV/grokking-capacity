@@ -40,6 +40,7 @@ from plotting import (
     plot_saturation_steps_vs_params,
     plot_rate_vs_dataset_size
 )
+from utils import compute_dataset_size_bits
 import consts
 
 
@@ -282,9 +283,7 @@ def groks(args):
         return
     
     # Calculate number of parameters to lower bound capacity of model to memorise all training data
-    n = args.p * (args.p - 1) if args.op == '/' else args.p * args.p
-    n *= args.training_fraction
-    size = n * np.log2(args.p + 2)
+    n, size = compute_dataset_size_bits(args.p, args.op, args.training_fraction)
     threshold_params = size / consts.C
     
     print(f"Found {len(files)} files to analyze:")
@@ -413,12 +412,13 @@ def groks(args):
             if speed_files:
                 for sf in speed_files:
                     data = np.load(sf)
-                    speed_data.append({
-                        'dim': int(data['dim']),
-                        'param_count': int(data['param_count']),
-                        'saturation_step': int(data['saturation_step']),
-                        'n_samples': int(data['n_samples'])
-                    })
+                    if int(data['n_samples']) == int(n):
+                        speed_data.append({
+                            'dim': int(data['dim']),
+                            'param_count': int(data['param_count']),
+                            'saturation_step': int(data['saturation_step']),
+                            'n_samples': int(data['n_samples'])
+                        })
                 print(f"Loaded {len(speed_data)} speed experiments from {speed_dir} (matching seed)")
 
         # If no matching seed found, search for any available seed with same p
@@ -439,21 +439,18 @@ def groks(args):
                     speed_files = glob(os.path.join(fallback_dir, 'speed_dim*.npz'))
                     for sf in speed_files:
                         data = np.load(sf)
-                        speed_data.append({
-                            'dim': int(data['dim']),
-                            'param_count': int(data['param_count']),
-                            'saturation_step': int(data['saturation_step']),
-                            'n_samples': int(data['n_samples'])
-                        })
+                        if int(data['n_samples']) == int(n):
+                            speed_data.append({
+                                'dim': int(data['dim']),
+                                'param_count': int(data['param_count']),
+                                'saturation_step': int(data['saturation_step']),
+                                'n_samples': int(data['n_samples'])
+                            })
                     print(f"Loaded {len(speed_data)} speed experiments from {fallback_dir} (fallback seed)")
                 else:
-                    print(f"Warning: No speed data found for p={args.p} with any seed")
+                    print(f"Warning: No speed data found for p={args.p} with any seed for size {n}")
             else:
                 print(f"Warning: Speed data directory not found at {speed_base_dir}")
-        
-        # Calculate number of training samples
-        n_train = args.p * (args.p - 1) if args.op == '/' else args.p * args.p
-        n_train = int(n_train * args.training_fraction)
         
         save_path = os.path.join(plot_dir, f'delay_with_speed_p{args.p}.pdf') if args.save else None
         plot_grokking_delay_with_speed(
@@ -463,7 +460,7 @@ def groks(args):
             threshold_val=args.threshold_val,
             threshold_params=threshold_params,
             batch_size=args.batch_size,
-            n_train_samples=n_train,
+            n_train_samples=n,
             save_path=save_path,
             show=show
         )
@@ -728,24 +725,6 @@ def parse_signature(signature: str) -> dict:
     }
 
 
-def compute_dataset_size_bits(p: int, op: str = '/', training_fraction: float = 0.5) -> float:
-    """
-    Compute dataset size in bits.
-    
-    Args:
-        p: Prime number
-        op: Operation ('/' for division, others for full table)
-        training_fraction: Fraction of data used for training
-    
-    Returns:
-        Dataset size in bits
-    """
-    n = p * (p - 1) if op == '/' else p * p
-    n *= training_fraction
-    size = n * np.log2(p + 2)
-    return size
-
-
 def cross_exp(args):
     """Handle cross-exp subcommand."""
     if not args.sigs:
@@ -771,7 +750,7 @@ def cross_exp(args):
         p = sig_params['p']
         
         # Compute dataset size in bits
-        dataset_bits = compute_dataset_size_bits(p, op=args.op, training_fraction=args.training_fraction)
+        _, dataset_bits = compute_dataset_size_bits(p, op=args.op, training_fraction=args.training_fraction)
         print(f"  p={p}, dataset size = {dataset_bits:,.0f} bits")
         
         # Find and load grokking results for this signature
