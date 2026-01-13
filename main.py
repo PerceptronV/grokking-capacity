@@ -280,17 +280,17 @@ def generate_commands(p_start, p_end, training_fraction=0.5, seed=42, operation=
 
     # Speed and grokking experiments for each prime
     for p in primes:
+        for gs, ge, gt in zip(grok_starts, grok_ends, grok_steps):
+            commands.append(
+                f"python groks.py --p {p} --no-show --dim-start {gs} --dim-end {ge} --dim-step {gt}"
+                f"--train-fraction {training_fraction} --seed {seed} --epochs 5000 --split-type {split_type}"
+            )
+        
         for d in speed_dims:
             n, size = compute_dataset_size_bits(p, operation, training_fraction)
             commands.append(
                 f"python speed.py --p {p} --no-show --dims {d} --samples-start {n} "
                 f"--samples-end {n} --samples-steps 1 --seed {seed}"
-            )
-
-        for gs, ge, gt in zip(grok_starts, grok_ends, grok_steps):
-            commands.append(
-                f"python groks.py --p {p} --no-show --dim-start {gs} --dim-end {ge} --dim-step {gt}"
-                f"--train-fraction {training_fraction} --seed {seed} --epochs 5000 --split-type {split_type}"
             )
 
     return commands
