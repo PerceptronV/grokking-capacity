@@ -283,7 +283,7 @@ def generate_commands(p_start, p_end, train_fraction=0.5, seed=42, operation='/'
         for gs, ge, gt in zip(grok_starts, grok_ends, grok_steps):
             commands.append(
                 f"python groks.py --p {p} --no-show --dim-start {gs} --dim-end {ge} --dim-step {gt} "
-                f"--train-fraction {train_fraction} --seed {seed} --epochs 5000 --split-type {split_type}"
+                f"--train-fraction {train_fraction} --seed {seed} --epochs 5000 --split-type {split_type} "
                 f"--op {operation} --ignore-memorisation"
             )
         
