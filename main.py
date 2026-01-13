@@ -262,7 +262,7 @@ def run_experiment(commands, max_workers=None):
     return 0
 
 
-def generate_commands(p_start, p_end, training_fraction=0.5, seed=42, operation='/', split_type='sequential'):
+def generate_commands(p_start, p_end, train_fraction=0.5, seed=42, operation='/', split_type='sequential'):
     """Generate commands for the experiment"""
     primes = primes_in_range(p_start, p_end)
     p_mid = primes[len(primes) // 2]
@@ -282,12 +282,12 @@ def generate_commands(p_start, p_end, training_fraction=0.5, seed=42, operation=
     for p in primes:
         for gs, ge, gt in zip(grok_starts, grok_ends, grok_steps):
             commands.append(
-                f"python groks.py --p {p} --no-show --dim-start {gs} --dim-end {ge} --dim-step {gt}"
-                f"--train-fraction {training_fraction} --seed {seed} --epochs 5000 --split-type {split_type}"
+                f"python groks.py --p {p} --no-show --dim-start {gs} --dim-end {ge} --dim-step {gt} "
+                f"--train-fraction {train_fraction} --seed {seed} --epochs 5000 --split-type {split_type}"
             )
         
         for d in speed_dims:
-            n, size = compute_dataset_size_bits(p, operation, training_fraction)
+            n, size = compute_dataset_size_bits(p, operation, train_fraction)
             commands.append(
                 f"python speed.py --p {p} --no-show --dims {d} --samples-start {n} "
                 f"--samples-end {n} --samples-steps 1 --seed {seed}"
@@ -312,7 +312,7 @@ def main():
                        help='Ending prime number for the range')
 
     # Experiment parameters
-    parser.add_argument('--training-fraction', type=float, default=0.5,
+    parser.add_argument('--train-fraction', type=float, default=0.5,
                        help='Fraction of data to use for training')
     parser.add_argument('--seed', type=int, default=42,
                        help='Random seed for reproducibility')
@@ -333,7 +333,7 @@ def main():
     commands = generate_commands(
         p_start=args.p_start,
         p_end=args.p_end,
-        training_fraction=args.training_fraction,
+        train_fraction=args.train_fraction,
         seed=args.seed,
         operation=args.operation,
         split_type=args.split_type
