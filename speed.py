@@ -399,7 +399,7 @@ def main():
                         help='Do not display plots (just save)')
     parser.add_argument('--rate', action='store_true',
                         help='Generate additional runs at n+k samples for rate estimation (dT/dS)')
-    parser.add_argument('--rate-k', type=int, default=10,
+    parser.add_argument('--rate-k', type=int, default=50,
                         help='Delta for rate estimation: measure at n and n+k samples (default: 10)')
     
     args = parser.parse_args()
