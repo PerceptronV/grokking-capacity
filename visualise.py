@@ -406,6 +406,8 @@ def groks(args):
         speed_signature = f'p{args.p}_seed{args.training_seed}'
         speed_dir = os.path.join('data/speed', speed_signature)
 
+        print(f"Expecting speed data with {n} samples for p={args.p}, training fraction={args.training_fraction}.")
+
         # First try to load with matching seed
         if os.path.exists(speed_dir):
             speed_files = glob(os.path.join(speed_dir, 'speed_dim*.npz'))
