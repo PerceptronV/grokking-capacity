@@ -415,13 +415,17 @@ def groks(args):
                 for sf in speed_files:
                     data = np.load(sf)
                     if int(data['n_samples']) in (int(n), int(n) - 1, int(n) + 1):  # allow rounding errors
-                        speed_data.append({
-                            'dim': int(data['dim']),
-                            'param_count': int(data['param_count']),
-                            'saturation_step': int(data['saturation_step']),
-                            'n_samples': int(data['n_samples'])
-                        })
-                print(f"Loaded {len(speed_data)} speed experiments from {speed_dir} (matching seed)")
+                        # Only include saturated results
+                        saturated = bool(data.get('saturated', True))
+                        if saturated:
+                            speed_data.append({
+                                'dim': int(data['dim']),
+                                'param_count': int(data['param_count']),
+                                'saturation_step': int(data['saturation_step']),
+                                'n_samples': int(data['n_samples']),
+                                'saturated': saturated
+                            })
+                print(f"Loaded {len(speed_data)} saturated speed experiments from {speed_dir} (matching seed)")
 
         # If no matching seed found, search for any available seed with same p
         if not speed_data:
@@ -442,13 +446,17 @@ def groks(args):
                     for sf in speed_files:
                         data = np.load(sf)
                         if int(data['n_samples']) in (int(n), int(n) - 1, int(n) + 1):  # allow rounding errors
-                            speed_data.append({
-                                'dim': int(data['dim']),
-                                'param_count': int(data['param_count']),
-                                'saturation_step': int(data['saturation_step']),
-                                'n_samples': int(data['n_samples'])
-                            })
-                    print(f"Loaded {len(speed_data)} speed experiments from {fallback_dir} (fallback seed)")
+                            # Only include saturated results
+                            saturated = bool(data.get('saturated', True))
+                            if saturated:
+                                speed_data.append({
+                                    'dim': int(data['dim']),
+                                    'param_count': int(data['param_count']),
+                                    'saturation_step': int(data['saturation_step']),
+                                    'n_samples': int(data['n_samples']),
+                                    'saturated': saturated
+                                })
+                    print(f"Loaded {len(speed_data)} saturated speed experiments from {fallback_dir} (fallback seed)")
                 else:
                     print(f"Warning: No speed data found for p={args.p} with any seed for size {n}")
             else:
@@ -809,12 +817,16 @@ def cross_exp(args):
             if speed_files:
                 for sf in speed_files:
                     data = np.load(sf)
-                    speed_data.append({
-                        'dim': int(data['dim']),
-                        'param_count': int(data['param_count']),
-                        'saturation_step': int(data['saturation_step']),
-                        'n_samples': int(data['n_samples'])
-                    })
+                    # Only include saturated results
+                    saturated = bool(data.get('saturated', True))
+                    if saturated:
+                        speed_data.append({
+                            'dim': int(data['dim']),
+                            'param_count': int(data['param_count']),
+                            'saturation_step': int(data['saturation_step']),
+                            'n_samples': int(data['n_samples']),
+                            'saturated': saturated
+                        })
 
         # If no matching seed found, search for any available seed with same p
         if not speed_data:
@@ -833,12 +845,16 @@ def cross_exp(args):
                     speed_files = glob(os.path.join(fallback_dir, 'speed_dim*.npz'))
                     for sf in speed_files:
                         data = np.load(sf)
-                        speed_data.append({
-                            'dim': int(data['dim']),
-                            'param_count': int(data['param_count']),
-                            'saturation_step': int(data['saturation_step']),
-                            'n_samples': int(data['n_samples'])
-                        })
+                        # Only include saturated results
+                        saturated = bool(data.get('saturated', True))
+                        if saturated:
+                            speed_data.append({
+                                'dim': int(data['dim']),
+                                'param_count': int(data['param_count']),
+                                'saturation_step': int(data['saturation_step']),
+                                'n_samples': int(data['n_samples']),
+                                'saturated': saturated
+                            })
 
         # Compute critical parameter count using intersection method if speed data available
         critical_params_speed = None

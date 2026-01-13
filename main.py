@@ -267,7 +267,7 @@ def generate_commands(p_start, p_end, train_fraction=0.5, seed=42, operation='/'
     primes = primes_in_range(p_start, p_end)
     p_mid = primes[len(primes) // 2]
 
-    speed_dims = list(range(40, 128, 4)) + list(range(128, 264, 8))
+    speed_dims = list(range(20, 128, 4)) + list(range(128, 264, 8))
     grok_starts = [20, 130]
     grok_ends = [128, 200]
     grok_steps = [2, 10]

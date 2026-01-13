@@ -2500,6 +2500,10 @@ def plot_saturation_time_vs_capacity_fraction(
             dim = key
 
         for result in results:
+            # Skip non-saturated results
+            if not result.get('saturated', True):
+                continue
+
             P = result['param_count']
             S = result['dataset_bits']
             saturation_step = result['saturation_step']
@@ -2666,7 +2670,9 @@ def plot_saturation_steps_vs_params(
     all_dataset_sizes = set()
     for results in all_results.values():
         for result in results:
-            all_dataset_sizes.add(result['n_samples'])
+            # Only include saturated results
+            if result.get('saturated', True):
+                all_dataset_sizes.add(result['n_samples'])
 
     # Sort dataset sizes for consistent ordering
     sorted_dataset_sizes = sorted(all_dataset_sizes)
@@ -2679,6 +2685,10 @@ def plot_saturation_steps_vs_params(
     dataset_size_groups = {}
     for dim, results in all_results.items():
         for result in results:
+            # Skip non-saturated results
+            if not result.get('saturated', True):
+                continue
+
             n_samples = result['n_samples']
             if n_samples not in dataset_size_groups:
                 dataset_size_groups[n_samples] = []
@@ -2773,9 +2783,16 @@ def plot_rate_vs_dataset_size(
     for dim in dims:
         results = all_results[dim]
 
+        # Filter to only saturated results
+        saturated_results = [r for r in results if r.get('saturated', True)]
+
+        # Skip if no saturated results for this dimension
+        if not saturated_results:
+            continue
+
         # Build mappings from n_samples to saturation_step and dataset_bits
-        samples_to_step = {r['n_samples']: r['saturation_step'] for r in results}
-        samples_to_bits = {r['n_samples']: r['dataset_bits'] for r in results}
+        samples_to_step = {r['n_samples']: r['saturation_step'] for r in saturated_results}
+        samples_to_bits = {r['n_samples']: r['dataset_bits'] for r in saturated_results}
 
         # Find all pairs (n, n+k) and compute dT/dS
         rates = []
@@ -2799,7 +2816,7 @@ def plot_rate_vs_dataset_size(
         x_vals = [r[0] for r in rates]
         y_vals = [r[1] for r in rates]
 
-        param_count = results[0]['param_count']
+        param_count = saturated_results[0]['param_count']
         ax.plot(
             x_vals,
             y_vals,
