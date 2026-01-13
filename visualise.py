@@ -414,7 +414,7 @@ def groks(args):
             if speed_files:
                 for sf in speed_files:
                     data = np.load(sf)
-                    if int(data['n_samples']) == int(n):
+                    if int(data['n_samples']) in (int(n), int(n) - 1, int(n) + 1):  # allow rounding errors
                         speed_data.append({
                             'dim': int(data['dim']),
                             'param_count': int(data['param_count']),
@@ -441,7 +441,7 @@ def groks(args):
                     speed_files = glob(os.path.join(fallback_dir, 'speed_dim*.npz'))
                     for sf in speed_files:
                         data = np.load(sf)
-                        if int(data['n_samples']) == int(n):
+                        if int(data['n_samples']) in (int(n), int(n) - 1, int(n) + 1):  # allow rounding errors
                             speed_data.append({
                                 'dim': int(data['dim']),
                                 'param_count': int(data['param_count']),
