@@ -548,7 +548,7 @@ def plot_results(results, args):
 
     # Create grokking time plot using shared utility
     fname = os.path.join(args.plot_dir, f'grokking_time_vs_params_{args.depth}-{args.heads}.pdf')
-    plot_grokking_time(results, threshold_val=97.0, max_epochs=args.epochs,
+    plot_grokking_time(results, threshold_val=args.threshold_val, max_epochs=args.epochs,
                       save_path=fname, show=not args.no_show)
 
 

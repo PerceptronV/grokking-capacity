@@ -8,7 +8,7 @@ import os
 from typing import Dict, List, Tuple, Optional
 
 
-def calculate_grokking_delay(train_acc, val_acc, threshold_train=99.0, threshold_val=97.0):
+def calculate_grokking_delay(train_acc, val_acc, threshold_train=99.0, threshold_val=99.0):
     """
     Calculate grokking delay: difference in epochs between train and val reaching threshold_train and threshold_val respectively.
     Returns (train_epoch, val_epoch, delay) or (None, None, None) if either doesn't reach threshold.
@@ -367,7 +367,7 @@ def plot_separate_curves_with_memorization(
         plt.close()
 
 
-def plot_grokking_delay(results, threshold_train=99.0, threshold_val=97.0, threshold_params=None, title=None, save_path=None, show=True):
+def plot_grokking_delay(results, threshold_train=99.0, threshold_val=99.0, threshold_params=None, title=None, save_path=None, show=True):
     """
     Plot grokking delay vs parameter count.
     
@@ -501,7 +501,7 @@ def plot_grokking_delay_with_speed(
     results: List[Dict],
     speed_data: List[Dict],
     threshold_train: float = 99.0,
-    threshold_val: float = 97.0,
+    threshold_val: float = 99.0,
     threshold_params: Optional[float] = None,
     batch_size: int = 512,
     n_train_samples: int = 4656,
@@ -722,7 +722,7 @@ def plot_delay_vs_memorization(
     results: List[Dict],
     mem_key: str = 'mem_u_trace',
     threshold_train: float = 99.0,
-    threshold_val: float = 97.0,
+    threshold_val: float = 99.0,
     title: Optional[str] = None,
     save_path: Optional[str] = None,
     show: bool = True
@@ -856,7 +856,7 @@ def plot_delay_vs_memorization(
 def _compute_critical_capacity_data(
     results: List[Dict],
     threshold_train: float = 99.0,
-    threshold_val: float = 97.0,
+    threshold_val: float = 99.0,
     delay_threshold: float = 0.5,
     verbose: bool = True
 ) -> Optional[Dict]:
@@ -974,7 +974,7 @@ def _compute_critical_capacity_data(
 def plot_grokking_critical_capacity(
     results: List[Dict],
     threshold_train: float = 99.0,
-    threshold_val: float = 97.0,
+    threshold_val: float = 99.0,
     delay_threshold: float = 1.0,
     title: Optional[str] = None,
     save_path: Optional[str] = None,
@@ -1079,7 +1079,7 @@ def plot_delay_and_memorization_vs_params(
     results: List[Dict],
     mem_key: str = 'mem_u_trace',
     threshold_train: float = 99.0,
-    threshold_val: float = 97.0,
+    threshold_val: float = 99.0,
     title: Optional[str] = None,
     save_path: Optional[str] = None,
     show: bool = True
@@ -1211,7 +1211,7 @@ def plot_delay_and_memorization_vs_params(
     return data_points
 
 
-def plot_grokking_time(results, threshold_val=97.0, max_epochs=None, title=None, save_path=None, show=True):
+def plot_grokking_time(results, threshold_val=99.0, max_epochs=None, title=None, save_path=None, show=True):
     """
     Plot when each model reaches a threshold accuracy (grokking time).
     
@@ -1912,7 +1912,7 @@ def plot_grokking_with_memorization(
 def compute_critical_params(
     results: List[Dict],
     threshold_train: float = 99.0,
-    threshold_val: float = 97.0,
+    threshold_val: float = 99.0,
     delay_threshold: float = 1.0,
 ) -> Optional[float]:
     """
@@ -1942,7 +1942,7 @@ def compute_critical_params_from_speed(
     results: List[Dict],
     speed_data: List[Dict],
     threshold_train: float = 99.0,
-    threshold_val: float = 97.0,
+    threshold_val: float = 99.0,
 ) -> Optional[float]:
     """
     Compute the critical parameter count using empirical intersection of curves.
@@ -2472,7 +2472,8 @@ def plot_saturation_time_vs_capacity_fraction(
     Uses log y-scale and fits an exponential curve: steps = a * exp(b * f)
 
     Args:
-        all_results: Dict mapping dimension to list of result dicts
+        all_results: Dict mapping dimension to list of result dicts, OR
+                     Dict mapping (prime, dimension) tuples to list of result dicts (for multi-prime plots)
         C: Capacity constant (bits per parameter)
         save_path: Path to save the plot (optional)
         show: Whether to show the plot
@@ -2480,17 +2481,32 @@ def plot_saturation_time_vs_capacity_fraction(
     Returns:
         Tuple of (exponent, coefficient, r_squared) from exponential fit
     """
+    # Detect if we have multi-prime data (keys are tuples) or single-prime (keys are ints)
+    first_key = next(iter(all_results.keys()))
+    is_multi_prime = isinstance(first_key, tuple)
+
     # Collect all data points across all dimensions and dataset sizes
     f_values = []
     saturation_steps_values = []
     dims = []
+    primes = []
     param_counts = []
 
-    for dim, results in all_results.items():
+    for key, results in all_results.items():
+        if is_multi_prime:
+            p, dim = key
+        else:
+            p = None
+            dim = key
+
         for result in results:
             P = result['param_count']
             S = result['dataset_bits']
             saturation_step = result['saturation_step']
+
+            # Get prime from result if not from key
+            if p is None:
+                p = result.get('p', 0)
 
             # Calculate fraction of capacity: f = S / (C * P)
             f = S / (C * P)
@@ -2498,6 +2514,7 @@ def plot_saturation_time_vs_capacity_fraction(
             f_values.append(f)
             saturation_steps_values.append(saturation_step)
             dims.append(dim)
+            primes.append(p)
             param_counts.append(P)
 
     if len(f_values) < 2:
@@ -2507,6 +2524,7 @@ def plot_saturation_time_vs_capacity_fraction(
     f_values = np.array(f_values)
     saturation_steps_values = np.array(saturation_steps_values)
     dims = np.array(dims)
+    primes = np.array(primes)
 
     # Fit exponential in semi-log space: log(steps) = b * f + log(a)
     # This gives us: steps = a * exp(b * f)
@@ -2524,33 +2542,75 @@ def plot_saturation_time_vs_capacity_fraction(
     # Create plot
     fig, ax = plt.subplots(figsize=(12, 8))
 
-    # Color by dimension
-    unique_dims = sorted(set(dims))
-    colors = sns.color_palette("crest", n_colors=len(unique_dims))
-    dim_to_color = {d: colors[i] for i, d in enumerate(unique_dims)}
+    if is_multi_prime:
+        # Color by prime for multi-prime plots
+        unique_primes = sorted(set(primes))
+        colors = sns.color_palette("Set2", n_colors=len(unique_primes))
+        prime_to_color = {p: colors[i] for i, p in enumerate(unique_primes)}
 
-    for dim in unique_dims:
-        mask = dims == dim
-        ax.scatter(
-            f_values[mask],
-            saturation_steps_values[mask],
-            c=[dim_to_color[dim]],
-            s=100,
-            alpha=0.7,
-            edgecolors='black',
-            linewidths=1,
-            label=f'dim={dim}'
-        )
+        # Plot data points colored by prime
+        for p in unique_primes:
+            mask = primes == p
+            ax.scatter(
+                f_values[mask],
+                saturation_steps_values[mask],
+                c=[prime_to_color[p]],
+                s=100,
+                alpha=0.7,
+                edgecolors='black',
+                linewidths=1,
+                label=f'p={p}'
+            )
 
-    # Plot fitted exponential curve
-    x_fit = np.linspace(f_values.min() * 0.95, f_values.max() * 1.05, 100)
-    y_fit = a * np.exp(b * x_fit)
-    ax.plot(x_fit, y_fit, '--', color='red', linewidth=2, alpha=0.7,
-            label=f'Fit: steps = {a:.1f} × exp({b:.2f} × f)')
+            # Fit and plot separate curve for this prime
+            if np.sum(mask) >= 2:
+                f_prime = f_values[mask]
+                steps_prime = saturation_steps_values[mask]
+                log_steps_prime = np.log(steps_prime)
+
+                b_prime, log_a_prime = np.polyfit(f_prime, log_steps_prime, 1)
+                a_prime = np.exp(log_a_prime)
+
+                # Plot fitted curve for this prime
+                x_fit_prime = np.linspace(f_prime.min() * 0.95, f_prime.max() * 1.05, 100)
+                y_fit_prime = a_prime * np.exp(b_prime * x_fit_prime)
+                ax.plot(x_fit_prime, y_fit_prime, '--', color=prime_to_color[p],
+                       linewidth=2, alpha=0.8)
+    else:
+        # Color by dimension for single-prime plots
+        unique_dims = sorted(set(dims))
+        colors = sns.color_palette("crest", n_colors=len(unique_dims))
+        dim_to_color = {d: colors[i] for i, d in enumerate(unique_dims)}
+
+        for dim in unique_dims:
+            mask = dims == dim
+            ax.scatter(
+                f_values[mask],
+                saturation_steps_values[mask],
+                c=[dim_to_color[dim]],
+                s=100,
+                alpha=0.7,
+                edgecolors='black',
+                linewidths=1,
+                label=f'dim={dim}'
+            )
+
+        # Plot overall fitted exponential curve for single prime
+        x_fit = np.linspace(f_values.min() * 0.95, f_values.max() * 1.05, 100)
+        y_fit = a * np.exp(b * x_fit)
+        ax.plot(x_fit, y_fit, '--', color='red', linewidth=2, alpha=0.7,
+                label=f'Fit: steps = {a:.1f} × exp({b:.2f} × f)')
 
     ax.set_xlabel('f = S/(CP) (Capacity Fraction)', fontsize=14)
     ax.set_ylabel('Steps to Saturation', fontsize=14)
-    ax.set_title(f'Saturation Time vs Capacity Fraction (C={C:.2f} bits/param)', fontsize=16, pad=20)
+
+    if is_multi_prime:
+        ax.set_title(f'Saturation Time vs Capacity Fraction - Multiple Primes (C={C:.2f} bits/param)',
+                    fontsize=16, pad=20)
+    else:
+        ax.set_title(f'Saturation Time vs Capacity Fraction (C={C:.2f} bits/param)',
+                    fontsize=16, pad=20)
+
     ax.tick_params(axis='both', which='major', labelsize=12)
 
     # Use log y-scale only
@@ -2560,10 +2620,16 @@ def plot_saturation_time_vs_capacity_fraction(
     ax.grid(True, alpha=0.3, which='both')
 
     # Add text box with stats
-    textstr = f'Exponential: steps = {a:.1f} × exp({b:.2f} × f)\n'
-    textstr += f'Exponent: {b:.2f}\n'
-    textstr += f'R²: {r_squared:.3f}\n'
-    textstr += f'C = {C:.2f} bits/param'
+    if is_multi_prime:
+        textstr = f'Overall fit: steps = {a:.1f} × exp({b:.2f} × f)\n'
+        textstr += f'Exponent: {b:.2f}\n'
+        textstr += f'R²: {r_squared:.3f}\n'
+        textstr += f'C = {C:.2f} bits/param'
+    else:
+        textstr = f'Exponential: steps = {a:.1f} × exp({b:.2f} × f)\n'
+        textstr += f'Exponent: {b:.2f}\n'
+        textstr += f'R²: {r_squared:.3f}\n'
+        textstr += f'C = {C:.2f} bits/param'
     ax.text(0.05, 0.95, textstr, transform=ax.transAxes, fontsize=11,
             verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
 

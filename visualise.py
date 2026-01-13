@@ -120,7 +120,7 @@ def plot_result(result_file):
     plt.show()
 
 
-def plot_grokking_delay(result_files, threshold_train=99.0, threshold_val=97.0, 
+def plot_grokking_delay(result_files, threshold_train=99.0, threshold_val=99.0, 
                         threshold_params=None, save_path=None, show=True):
     """Plot grokking delay vs parameter count."""
     if not result_files:
@@ -147,7 +147,7 @@ def plot_grokking_delay(result_files, threshold_train=99.0, threshold_val=97.0,
                     threshold_params=threshold_params, save_path=save_path, show=show)
 
 
-def plot_grokking_time(result_files, threshold_val=97.0, save_path=None, show=True):
+def plot_grokking_time(result_files, threshold_val=99.0, save_path=None, show=True):
     """Plot absolute grokking time (epochs to reach threshold) vs parameter count."""
     if not result_files:
         print("No files to compare")
@@ -936,23 +936,8 @@ def list_speed_results(data_dir: str, pattern: str = 'speed_dim*.npz') -> List[D
     return results
 
 
-def speed(args):
-    """Handle speed subcommand."""
-    signature = f'p{args.p}_seed{args.seed}'
-    data_dir = os.path.join(args.data_dir, signature)
-    plot_dir = os.path.join(args.plot_dir, signature)
-
-    print(f'Data directory: {data_dir}')
-    print(f'Plot directory: {plot_dir}')
-
-    # List results
-    if args.list:
-        # Use default pattern when none is provided
-        pattern = args.pattern or 'speed_dim*.npz'
-        list_speed_results(data_dir, pattern)
-        return
-
-    # Collect files based on selection criteria
+def collect_speed_files(data_dir: str, args) -> List[str]:
+    """Collect speed experiment files based on args selection criteria."""
     files = set()
 
     if args.files:
@@ -971,17 +956,11 @@ def speed(args):
             pattern = os.path.join(data_dir, f'speed_dim{d}_samples*.npz')
             files.update(glob(pattern))
 
-    files = sorted(files, key=lambda f: (extract_dim(f), extract_samples(f)))
+    return sorted(files, key=lambda f: (extract_dim(f), extract_samples(f)))
 
-    if not files:
-        print("No files found. Use --list to see available results, or --all to select all.")
-        return
 
-    print(f"\nFound {len(files)} files to analyze:")
-    for f in files:
-        print(f"  - {os.path.basename(f)}")
-
-    # Load all results and group by dimension
+def load_speed_results(files: List[str], p: int) -> Dict[int, List[Dict]]:
+    """Load speed experiment results from files and group by dimension."""
     all_results = {}
     for fname in files:
         if not os.path.exists(fname):
@@ -996,7 +975,7 @@ def speed(args):
             'depth': int(data['depth']),
             'heads': int(data['heads']),
             'param_count': int(data['param_count']),
-            'p': int(data['p']),
+            'p': p,
             'saturation_step': int(data['saturation_step']),
             'final_acc': float(data['final_acc']),
             'dataset_bits': float(data['dataset_bits']),
@@ -1007,120 +986,213 @@ def speed(args):
             all_results[dim] = []
         all_results[dim].append(result)
 
-    # Generate requested plots
-    os.makedirs(plot_dir, exist_ok=True)
+    return all_results
 
+
+def speed(args):
+    """Handle speed subcommand."""
+    # Ensure args.p is a list
+    primes = args.p if isinstance(args.p, list) else [args.p]
     show = not args.no_show
 
-    if args.curves:
-        print("\nPlotting learning speed curves...")
-        save_path = os.path.join(plot_dir, 'learning_speed_curves.pdf') if args.save else None
-        speed_estimates = plot_learning_speed_curves(
-            all_results,
-            p=args.p,
-            save_path=save_path,
-            show=show
-        )
+    # List results for each prime
+    if args.list:
+        pattern = args.pattern or 'speed_dim*.npz'
+        for p in primes:
+            signature = f'p{p}_seed{args.seed}'
+            data_dir = os.path.join(args.data_dir, signature)
+            print(f'\n{"="*80}')
+            print(f'Prime p={p}, Data directory: {data_dir}')
+            print(f'{"="*80}')
+            list_speed_results(data_dir, pattern)
+        return
 
-        # Plot steps to saturation vs model parameters
-        print("\nPlotting steps to saturation vs model parameters...")
-        save_path = os.path.join(plot_dir, 'saturation_steps_vs_params.pdf') if args.save else None
-        plot_saturation_steps_vs_params(
-            all_results,
-            save_path=save_path,
-            show=show
-        )
-
-        # Also plot speed vs model size if we have multiple model sizes
-        if len(speed_estimates) >= 2:
-            print("\nPlotting speed vs model size...")
-            save_path = os.path.join(plot_dir, 'speed_vs_model_size.pdf') if args.save else None
-            b, log_a, r_squared = plot_speed_vs_model_size(
-                speed_estimates,
-                save_path=save_path,
-                show=show
-            )
-
-            print("\n" + "="*60)
-            print("SPEED SCALING")
-            print("="*60)
-            print(f"Power law exponent: {b:.3f}")
-            print(f"R²: {r_squared:.3f}")
-            if b < 0:
-                print(f"Larger models learn FASTER (fewer steps per bit)")
-            else:
-                print(f"Larger models learn SLOWER (more steps per bit)")
-
-    if args.combined:
-        print("\nPlotting combined speed analysis...")
-        save_path = os.path.join(plot_dir, 'speed_analysis_combined.pdf') if args.save else None
-        speed_estimates = plot_combined_speed_analysis(
-            all_results,
-            p=args.p,
-            save_path=save_path,
-            show=show
-        )
-
+    # For --fraction mode, collect data from all primes to plot together
     if args.fraction:
-        print("\nPlotting saturation time vs capacity fraction...")
-        save_path = os.path.join(plot_dir, 'saturation_time_vs_capacity_fraction.pdf') if args.save else None
+        print("\nPlotting saturation time vs capacity fraction (separate line for each prime)...")
+
+        # Collect data from all primes, keyed by (p, dim)
+        combined_results = {}
+        for p in primes:
+            signature = f'p{p}_seed{args.seed}'
+            data_dir = os.path.join(args.data_dir, signature)
+
+            files = collect_speed_files(data_dir, args)
+            if not files:
+                print(f"Warning: No files found for p={p}")
+                continue
+
+            print(f"\nLoading data for p={p}: {len(files)} files")
+
+            # Load results for this prime
+            for fname in files:
+                if not os.path.exists(fname):
+                    continue
+                data = np.load(fname)
+                dim = int(data['dim'])
+                result = {
+                    'n_samples': int(data['n_samples']),
+                    'dim': dim,
+                    'depth': int(data['depth']),
+                    'heads': int(data['heads']),
+                    'param_count': int(data['param_count']),
+                    'p': p,
+                    'saturation_step': int(data['saturation_step']),
+                    'final_acc': float(data['final_acc']),
+                    'dataset_bits': float(data['dataset_bits']),
+                    'saturated': bool(data.get('saturated', True))
+                }
+
+                # Key by (p, dim) - each prime gets its own color/line in the plot
+                key = (p, dim)
+                if key not in combined_results:
+                    combined_results[key] = []
+                combined_results[key].append(result)
+
+        if not combined_results:
+            print("No data found for any prime")
+            return
+
+        # Plot all data together
+        plot_dir = args.plot_dir
+        os.makedirs(plot_dir, exist_ok=True)
+        save_path = os.path.join(plot_dir, 'saturation_time_vs_capacity_fraction_all_primes.pdf') if args.save else None
         exponent, coefficient, r_squared = plot_saturation_time_vs_capacity_fraction(
-            all_results,
+            combined_results,
             C=consts.C,
             save_path=save_path,
             show=show
         )
 
         print("\n" + "="*60)
-        print("CAPACITY FRACTION ANALYSIS")
+        print("CAPACITY FRACTION ANALYSIS (ALL PRIMES)")
         print("="*60)
         print(f"Power law fit: steps = {coefficient:.1f} × f^{exponent:.2f}")
         print(f"Exponent: {exponent:.2f}")
         print(f"R²: {r_squared:.3f}")
         print(f"Capacity constant C = {consts.C:.2f} bits/param")
         print("="*60)
+        return
 
-    if args.rate:
-        print(f"\nPlotting dT/dS vs dataset size (k={args.rate_k})...")
-        save_path = os.path.join(plot_dir, f'rate_vs_dataset_size_k{args.rate_k}.pdf') if args.save else None
-        rate_data = plot_rate_vs_dataset_size(
-            all_results,
-            k=args.rate_k,
-            save_path=save_path,
-            show=show
-        )
+    # For other modes (--curves, --rate, --combined, --summary), process each prime separately
+    for p in primes:
+        signature = f'p{p}_seed{args.seed}'
+        data_dir = os.path.join(args.data_dir, signature)
+        plot_dir = os.path.join(args.plot_dir, signature)
 
-        if rate_data:
-            print("\n" + "="*60)
-            print(f"RATE ESTIMATION (k={args.rate_k} samples)")
-            print("="*60)
-            for dim in sorted(rate_data.keys()):
-                rates = rate_data[dim]
-                if rates:
-                    avg_rate = np.mean([r[1] for r in rates])
-                    print(f"dim={dim:3d}: avg dT/dS = {avg_rate:.2f} steps/bit")
-            print("="*60)
-        else:
-            print("No paired data points found. Run speed.py with --rate to generate paired data.")
+        print(f'\n{"="*80}')
+        print(f'Processing prime p={p}')
+        print(f'Data directory: {data_dir}')
+        print(f'Plot directory: {plot_dir}')
+        print(f'{"="*80}')
 
-    if args.summary:
-        print("\n" + "="*70)
-        print("SPEED SUMMARY")
-        print("="*70)
+        # Collect and load files
+        files = collect_speed_files(data_dir, args)
 
-        for dim in sorted(all_results.keys()):
-            results = all_results[dim]
-            param_count = results[0]['param_count']
+        if not files:
+            print("No files found. Use --list to see available results, or --all to select all.")
+            continue
 
-            # Average steps per bit across dataset sizes
-            saturated = [r for r in results if r.get('saturated', True)]
-            if saturated:
-                avg_speed = np.mean([r['saturation_step'] / r['dataset_bits']
-                                    for r in saturated if r['dataset_bits'] > 0])
-                print(f"dim={dim:3d}: {param_count:8,} params, "
-                      f"avg speed: {avg_speed:.2f} steps/bit")
+        print(f"\nFound {len(files)} files to analyze:")
+        for f in files:
+            print(f"  - {os.path.basename(f)}")
 
-        print("="*70)
+        # Load all results and group by dimension
+        all_results = load_speed_results(files, p)
+
+        # Generate requested plots
+        os.makedirs(plot_dir, exist_ok=True)
+
+        if args.curves:
+            print(f"\nPlotting learning speed curves for p={p}...")
+            save_path = os.path.join(plot_dir, f'learning_speed_curves_p{p}.pdf') if args.save else None
+            speed_estimates = plot_learning_speed_curves(
+                all_results,
+                p=p,
+                save_path=save_path,
+                show=show
+            )
+
+            # Plot steps to saturation vs model parameters
+            print(f"\nPlotting steps to saturation vs model parameters for p={p}...")
+            save_path = os.path.join(plot_dir, f'saturation_steps_vs_params_p{p}.pdf') if args.save else None
+            plot_saturation_steps_vs_params(
+                all_results,
+                save_path=save_path,
+                show=show
+            )
+
+            # Also plot speed vs model size if we have multiple model sizes
+            if len(speed_estimates) >= 2:
+                print(f"\nPlotting speed vs model size for p={p}...")
+                save_path = os.path.join(plot_dir, f'speed_vs_model_size_p{p}.pdf') if args.save else None
+                b, log_a, r_squared = plot_speed_vs_model_size(
+                    speed_estimates,
+                    save_path=save_path,
+                    show=show
+                )
+
+                print("\n" + "="*60)
+                print(f"SPEED SCALING (p={p})")
+                print("="*60)
+                print(f"Power law exponent: {b:.3f}")
+                print(f"R²: {r_squared:.3f}")
+                if b < 0:
+                    print(f"Larger models learn FASTER (fewer steps per bit)")
+                else:
+                    print(f"Larger models learn SLOWER (more steps per bit)")
+
+        if args.combined:
+            print(f"\nPlotting combined speed analysis for p={p}...")
+            save_path = os.path.join(plot_dir, f'speed_analysis_combined_p{p}.pdf') if args.save else None
+            speed_estimates = plot_combined_speed_analysis(
+                all_results,
+                p=p,
+                save_path=save_path,
+                show=show
+            )
+
+        if args.rate:
+            print(f"\nPlotting dT/dS vs dataset size for p={p} (k={args.rate_k})...")
+            save_path = os.path.join(plot_dir, f'rate_vs_dataset_size_p{p}_k{args.rate_k}.pdf') if args.save else None
+            rate_data = plot_rate_vs_dataset_size(
+                all_results,
+                k=args.rate_k,
+                save_path=save_path,
+                show=show
+            )
+
+            if rate_data:
+                print("\n" + "="*60)
+                print(f"RATE ESTIMATION (p={p}, k={args.rate_k} samples)")
+                print("="*60)
+                for dim in sorted(rate_data.keys()):
+                    rates = rate_data[dim]
+                    if rates:
+                        avg_rate = np.mean([r[1] for r in rates])
+                        print(f"dim={dim:3d}: avg dT/dS = {avg_rate:.2f} steps/bit")
+                print("="*60)
+            else:
+                print("No paired data points found. Run speed.py with --rate to generate paired data.")
+
+        if args.summary:
+            print("\n" + "="*70)
+            print(f"SPEED SUMMARY (p={p})")
+            print("="*70)
+
+            for dim in sorted(all_results.keys()):
+                results = all_results[dim]
+                param_count = results[0]['param_count']
+
+                # Average steps per bit across dataset sizes
+                saturated = [r for r in results if r.get('saturated', True)]
+                if saturated:
+                    avg_speed = np.mean([r['saturation_step'] / r['dataset_bits']
+                                        for r in saturated if r['dataset_bits'] > 0])
+                    print(f"dim={dim:3d}: {param_count:8,} params, "
+                          f"avg speed: {avg_speed:.2f} steps/bit")
+
+            print("="*70)
 
 
 def main():
@@ -1201,8 +1273,8 @@ Examples:
                             'When used with --delay: also plot delay vs maximum memorisation.')
     grok_subparser.add_argument('--threshold-train', type=float, default=99.0,
                        help='Accuracy threshold for training (default: 99.0)')
-    grok_subparser.add_argument('--threshold-val', type=float, default=97.0,
-                       help='Accuracy threshold for validation (default: 97.0)')
+    grok_subparser.add_argument('--threshold-val', type=float, default=99.0,
+                       help='Accuracy threshold for validation (default: 99.0)')
     grok_subparser.add_argument('--delay-threshold', type=float, default=0.5,
                        help='Minimum delay to include in critical capacity fit (default: 1.0)')
     grok_subparser.add_argument('--depth', type=int, default=2,
@@ -1328,8 +1400,8 @@ Examples:
     # Threshold parameters
     cross_exp_subparser.add_argument('--threshold-train', type=float, default=99.0,
                                      help='Accuracy threshold for training (default: 99.0)')
-    cross_exp_subparser.add_argument('--threshold-val', type=float, default=97.0,
-                                     help='Accuracy threshold for validation (default: 97.0)')
+    cross_exp_subparser.add_argument('--threshold-val', type=float, default=99.0,
+                                     help='Accuracy threshold for validation (default: 99.0)')
     cross_exp_subparser.add_argument('--delay-threshold', type=float, default=0.5,
                                      help='Minimum delay to include in critical capacity fit (default: 1.0)')
     
@@ -1380,8 +1452,8 @@ Examples:
                                  help='Data directory (default: data/speed)')
     speed_subparser.add_argument('--plot-dir', type=str, default='media/speed',
                                  help='Plot output directory (default: media/speed)')
-    speed_subparser.add_argument('--p', type=int, default=97,
-                                 help='Prime number (default: 97)')
+    speed_subparser.add_argument('--p', nargs='+', type=int, default=[97],
+                                 help='Prime number(s) (default: 97). Can specify multiple primes.')
     speed_subparser.add_argument('--seed', type=int, default=42,
                                  help='Random seed (default: 42)')
 
