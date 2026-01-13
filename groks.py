@@ -184,7 +184,8 @@ class GrokkingTrainer:
         val_data: Tuple[torch.Tensor, torch.Tensor],
         epochs: int = 200,
         shuffle: bool = True,
-        early_stopping_threshold: Optional[float] = None,
+        early_stopping_train: Optional[float] = None,
+        early_stopping_val: Optional[float] = None,
         patience: int = -1,
         min_delta: float = 1e-4
     ) -> Dict:
@@ -196,7 +197,8 @@ class GrokkingTrainer:
             val_data: Tuple of (X_val, T_val)
             epochs: Maximum number of epochs
             shuffle: Whether to shuffle training data each epoch
-            early_stopping_threshold: Stop when val accuracy reaches this (e.g., 0.99)
+            early_stopping_train: Stop when train accuracy reaches this (e.g., 0.99) and val accuracy is also reached
+            early_stopping_val: Stop when val accuracy reaches this (e.g., 0.99) and train accuracy is also reached
             patience: Number of epochs to wait for improvement before stopping. If negative, never stop early due to patience.
             min_delta: Minimum change in validation accuracy to qualify as an improvement
 
@@ -281,8 +283,9 @@ class GrokkingTrainer:
             epoch_bar.set_postfix(postfix)
 
             # Early stopping based on threshold
-            if early_stopping_threshold is not None and val_acc >= early_stopping_threshold:
-                print(f"\nEarly stopping: val acc {val_acc:.3f} >= {early_stopping_threshold:.3f}")
+            if ((early_stopping_val is not None and val_acc >= early_stopping_val)
+                and (early_stopping_train is not None and train_acc >= early_stopping_train)):
+                print(f"\nEarly stopping: val acc {val_acc:.3f} >= {early_stopping_val:.3f} and train acc {train_acc:.3f} >= {early_stopping_train:.3f}")
                 break
 
             # Early stopping based on patience
@@ -483,7 +486,8 @@ def run_experiment(dim, args, baseline_model=None, baseline_path=None):
     )
     
     # Set early stopping threshold
-    early_stop_thresh = None if args.no_early_stopping else args.early_stopping_threshold
+    early_stop_train = None if args.no_early_stopping else args.early_stopping_train
+    early_stop_val = None if args.no_early_stopping else args.early_stopping_val
 
     # Train
     results = trainer.train(
@@ -491,7 +495,8 @@ def run_experiment(dim, args, baseline_model=None, baseline_path=None):
         val_data=(Xtest, Ttest),
         epochs=args.epochs,
         shuffle=True,
-        early_stopping_threshold=early_stop_thresh,
+        early_stopping_train=early_stop_train,
+        early_stopping_val=early_stop_val,
         patience=args.patience,
         min_delta=args.min_delta
     )
@@ -591,8 +596,10 @@ def main():
     # Training args
     parser.add_argument('-b', '--batch-size', type=int, default=512, help='batch size')
     parser.add_argument('-e', '--epochs', type=int, default=200, help='number of epochs')
-    parser.add_argument('--early-stopping-threshold', type=float, default=0.99,
-                       help='stop training when val accuracy reaches this threshold (default: 0.99, set to None to disable)')
+    parser.add_argument('--early-stopping-train', type=float, default=0.99,
+                       help='stop training when train accuracy reaches this threshold (default: 0.99), if val accuracy is also reached, stop training')
+    parser.add_argument('--early-stopping-val', type=float, default=0.99,
+                       help='stop training when val accuracy reaches this threshold (default: 0.99), if train accuracy is also reached, stop training')
     parser.add_argument('--no-early-stopping', action='store_true',
                        help='disable early stopping and train for full epochs')
     parser.add_argument('--patience', type=int, default=-1,

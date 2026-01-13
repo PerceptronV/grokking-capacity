@@ -262,7 +262,7 @@ def run_experiment(commands, max_workers=None):
     return 0
 
 
-def generate_commands(p_start, p_end, training_fraction=0.5, seed=42, operation='/'):
+def generate_commands(p_start, p_end, training_fraction=0.5, seed=42, operation='/', split_type='sequential'):
     """Generate commands for the experiment"""
     primes = primes_in_range(p_start, p_end)
     p_mid = primes[len(primes) // 2]
@@ -289,8 +289,8 @@ def generate_commands(p_start, p_end, training_fraction=0.5, seed=42, operation=
 
         for gs, ge, gt in zip(grok_starts, grok_ends, grok_steps):
             commands.append(
-                f"python groks.py --p {p} --no-show --dim-start {gs} --dim-end {ge} "
-                f"--dim-step {gt} --train-fraction {training_fraction} --seed {seed} --epochs 5000"
+                f"python groks.py --p {p} --no-show --dim-start {gs} --dim-end {ge} --dim-step {gt}"
+                f"--train-fraction {training_fraction} --seed {seed} --epochs 5000 --split-type {split_type}"
             )
 
     return commands
@@ -319,6 +319,9 @@ def main():
     parser.add_argument('--operation', type=str, default='/',
                        choices=['*', '/', '+', '-'],
                        help='Arithmetic operation to use')
+    parser.add_argument('--split-type', type=str, default='sequential',
+                       choices=['random', 'sequential', 'alternating'],
+                       help='Type of train/val split')
 
     # Parallelization options
     parser.add_argument('--max-workers', type=int, default=None,
@@ -332,7 +335,8 @@ def main():
         p_end=args.p_end,
         training_fraction=args.training_fraction,
         seed=args.seed,
-        operation=args.operation
+        operation=args.operation,
+        split_type=args.split_type
     )
     return_code = run_experiment(commands, max_workers=args.max_workers)
 
