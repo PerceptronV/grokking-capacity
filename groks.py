@@ -595,7 +595,7 @@ def main():
                        help='stop training when val accuracy reaches this threshold (default: 0.99, set to None to disable)')
     parser.add_argument('--no-early-stopping', action='store_true',
                        help='disable early stopping and train for full epochs')
-    parser.add_argument('--patience', type=int, default=100,
+    parser.add_argument('--patience', type=int, default=-1,
                        help='patience for early stopping (epochs without improvement). If negative, never stop early due to patience (default: -1)')
     parser.add_argument('--min-delta', type=float, default=1e-4,
                        help='minimum validation accuracy improvement to reset patience (default: 1e-4)')

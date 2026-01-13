@@ -1,7 +1,7 @@
 import os
 import argparse
 import sys
-import signal
+import psutil
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from threading import Lock, Event
 import torch
@@ -21,10 +21,32 @@ def primes_in_range(start, end):
     return [i for i in range(start, end + 1) if sieve[i]]
 
 
-def signal_handler(signum, frame):
-    """Handle keyboard interrupt"""
-    print("\n\nKeyboard interrupt received. Shutting down gracefully...")
-    shutdown_event.set()
+def kill_child_processes():
+    """Kill all child python processes"""
+    try:
+        current_process = psutil.Process()
+        children = current_process.children(recursive=True)
+
+        if children:
+            print(f"\nTerminating {len(children)} child process(es)...")
+            for child in children:
+                try:
+                    child.terminate()
+                except psutil.NoSuchProcess:
+                    pass
+
+            # Wait a bit for graceful termination
+            _, alive = psutil.wait_procs(children, timeout=3)
+
+            # Force kill any remaining processes
+            for child in alive:
+                try:
+                    print(f"Force killing process {child.pid}...")
+                    child.kill()
+                except psutil.NoSuchProcess:
+                    pass
+    except Exception as e:
+        print(f"Error killing child processes: {e}")
 
 
 def run_in_env(cmd):
@@ -39,6 +61,57 @@ def get_cuda_devices():
     if torch.cuda.is_available():
         return torch.cuda.device_count()
     return 0
+
+
+def get_workers_per_gpu(device_id):
+    """Determine number of workers a GPU can support based on compute capability
+
+    Mapping based on GPU architecture:
+    - Compute 9.0+ (H100, H200): 4 workers
+    - Compute 8.0-8.9 (A100, A10): 3 workers
+    - Compute 7.0-7.9 (V100, T4): 2 workers
+    - Compute < 7.0: 1 worker
+    """
+    if not torch.cuda.is_available():
+        return 1
+
+    capability = torch.cuda.get_device_capability(device_id)
+    major, minor = capability
+    compute_capability = major + minor / 10
+
+    if compute_capability >= 9.0:
+        return 4  # H100, H200
+    elif compute_capability >= 8.0:
+        return 3  # A100, A10
+    elif compute_capability >= 7.0:
+        return 2  # V100, T4
+    else:
+        return 1  # Older GPUs
+
+
+def get_total_workers():
+    """Calculate total workers based on compute capability of all GPUs"""
+    num_devices = get_cuda_devices()
+    if num_devices == 0:
+        return os.cpu_count()
+
+    total_workers = 0
+    gpu_info = []
+    for device_id in range(num_devices):
+        workers = get_workers_per_gpu(device_id)
+        total_workers += workers
+
+        # Get GPU name and capability for logging
+        props = torch.cuda.get_device_properties(device_id)
+        capability = torch.cuda.get_device_capability(device_id)
+        gpu_info.append({
+            'id': device_id,
+            'name': props.name,
+            'capability': f"{capability[0]}.{capability[1]}",
+            'workers': workers
+        })
+
+    return total_workers, gpu_info
 
 
 def run_command_with_device(cmd, device_id, print_lock):
@@ -61,6 +134,14 @@ def run_command_with_device(cmd, device_id, print_lock):
 
     exit_status = run_in_env(cmd_with_device)
 
+    # Check if command was interrupted (exit code 130 = SIGINT, 256*130 = 33280 on some systems)
+    # os.system returns the exit code in the wait() format, so SIGINT (2) is encoded as 2 or 130
+    if exit_status in (2, 130, 33280) or (exit_status >> 8) == 130:
+        with print_lock:
+            print(f"[{device_str}] Interrupted by user")
+        shutdown_event.set()
+        return -1
+
     with print_lock:
         status = "✓" if exit_status == 0 else "✗"
         print(f"[{device_str}] {status} Completed")
@@ -68,8 +149,7 @@ def run_command_with_device(cmd, device_id, print_lock):
     return exit_status
 
 
-def run_experiment(p_start, p_end, training_fraction=0.5, seed=42,
-                   max_workers=None, operation='/'):
+def run_experiment(commands, max_workers=None):
     """Run grokking experiments across a range of primes with multithreading
 
     Note: Activate your conda environment before running this script:
@@ -80,41 +160,32 @@ def run_experiment(p_start, p_end, training_fraction=0.5, seed=42,
     num_devices = get_cuda_devices()
     print(f"Found {num_devices} CUDA device(s)")
 
-    # Determine number of workers
+    # Determine number of workers based on GPU compute capability
     if max_workers is None:
-        max_workers = max(1, num_devices) if num_devices > 0 else os.cpu_count()
-    print(f"Using {max_workers} worker thread(s)\n")
+        if num_devices > 0:
+            max_workers, gpu_info = get_total_workers()
+            print("\nGPU Worker Allocation:")
+            for info in gpu_info:
+                print(f"  GPU {info['id']}: {info['name']} "
+                      f"(Compute {info['capability']}) -> {info['workers']} workers")
+        else:
+            max_workers = os.cpu_count()
+            gpu_info = None
+    else:
+        # Manual worker count specified, but still get GPU info for device assignment
+        if num_devices > 0:
+            _, gpu_info = get_total_workers()
+        else:
+            gpu_info = None
 
-    primes = primes_in_range(p_start, p_end)
-    p_mid = primes[len(primes) // 2]
-
-    speed_dims = list(range(60, 128, 4)) + list(range(128, 264, 8))
-    grok_starts = [20, 130]
-    grok_ends = [128, 200]
-    grok_steps = [2, 10]
-
-    # Collect all commands to run
-    commands = []
-
-    # Capacity experiment (single run)
-    commands.append(f"python capacity.py --p {p_mid} --no-show --seed {seed}")
-
-    # Speed and grokking experiments for each prime
-    for p in primes:
-        for d in speed_dims:
-            n, size = compute_dataset_size_bits(p, operation, training_fraction)
-            commands.append(
-                f"python speed.py --p {p} --no-show --dims {d} --samples-start {n} "
-                f"--samples-end {n} --samples-steps 1 --seed {seed}"
-            )
-
-        for gs, ge, gt in zip(grok_starts, grok_ends, grok_steps):
-            commands.append(
-                f"python groks.py --p {p} --no-show --dim-start {gs} --dim-end {ge} "
-                f"--dim-step {gt} --train-fraction {training_fraction} --seed {seed} --epochs 5000"
-            )
-
+    print(f"\nUsing {max_workers} worker thread(s)\n")
     print(f"Total commands to execute: {len(commands)}\n")
+
+    # Create device assignment list based on workers per GPU
+    device_assignment = []
+    if num_devices > 0 and gpu_info is not None:
+        for info in gpu_info:
+            device_assignment.extend([info['id']] * info['workers'])
 
     # Execute commands in parallel with device assignment
     print_lock = Lock()
@@ -128,8 +199,11 @@ def run_experiment(p_start, p_end, training_fraction=0.5, seed=42,
             for idx, cmd in enumerate(commands):
                 if shutdown_event.is_set():
                     break
-                # Assign device in round-robin fashion if GPUs available
-                device_id = idx % num_devices if num_devices > 0 else None
+                # Assign device in round-robin fashion from device_assignment list
+                if device_assignment:
+                    device_id = device_assignment[idx % len(device_assignment)]
+                else:
+                    device_id = None
                 future = executor.submit(run_command_with_device, cmd, device_id,
                                         print_lock)
                 future_to_cmd[future] = cmd
@@ -159,6 +233,10 @@ def run_experiment(p_start, p_end, training_fraction=0.5, seed=42,
     except KeyboardInterrupt:
         print("\nKeyboard interrupt in main thread, shutting down...")
         shutdown_event.set()
+        kill_child_processes()
+
+    # Ensure all child processes are terminated
+    kill_child_processes()
 
     # Report results
     print("\n" + "="*80)
@@ -184,9 +262,43 @@ def run_experiment(p_start, p_end, training_fraction=0.5, seed=42,
     return 0
 
 
+def generate_commands(p_start, p_end, training_fraction=0.5, seed=42, operation='/'):
+    """Generate commands for the experiment"""
+    primes = primes_in_range(p_start, p_end)
+    p_mid = primes[len(primes) // 2]
+
+    speed_dims = list(range(60, 128, 4)) + list(range(128, 264, 8))
+    grok_starts = [20, 130]
+    grok_ends = [128, 200]
+    grok_steps = [2, 10]
+
+    # Collect all commands to run
+    commands = []
+
+    # Capacity experiment (single run)
+    commands.append(f"python capacity.py --p {p_mid} --no-show --seed {seed}")
+
+    # Speed and grokking experiments for each prime
+    for p in primes:
+        for d in speed_dims:
+            n, size = compute_dataset_size_bits(p, operation, training_fraction)
+            commands.append(
+                f"python speed.py --p {p} --no-show --dims {d} --samples-start {n} "
+                f"--samples-end {n} --samples-steps 1 --seed {seed}"
+            )
+
+        for gs, ge, gt in zip(grok_starts, grok_ends, grok_steps):
+            commands.append(
+                f"python groks.py --p {p} --no-show --dim-start {gs} --dim-end {ge} "
+                f"--dim-step {gt} --train-fraction {training_fraction} --seed {seed} --epochs 5000"
+            )
+
+    return commands
+
+
 def main():
-    # Register signal handler for graceful shutdown
-    signal.signal(signal.SIGINT, signal_handler)
+    # Don't register custom SIGINT handler - let default KeyboardInterrupt work
+    # signal.signal(signal.SIGINT, signal_handler)
 
     parser = argparse.ArgumentParser(
         description='Run grokking experiments across a range of prime numbers with multithreading',
@@ -215,14 +327,14 @@ def main():
     args = parser.parse_args()
 
     # Run the experiment
-    return_code = run_experiment(
+    commands = generate_commands(
         p_start=args.p_start,
         p_end=args.p_end,
         training_fraction=args.training_fraction,
         seed=args.seed,
-        max_workers=args.max_workers,
         operation=args.operation
     )
+    return_code = run_experiment(commands, max_workers=args.max_workers)
 
     sys.exit(return_code)
 

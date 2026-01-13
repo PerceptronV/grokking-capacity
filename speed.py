@@ -70,7 +70,7 @@ class SpeedTrainer:
         train_data: Tuple[torch.Tensor, torch.Tensor],
         max_epochs: int = 10000,
         saturation_threshold: float = 99.5,
-        patience: int = 50,
+        patience: int = 0,
         verbose: bool = True
     ) -> Dict:
         """
