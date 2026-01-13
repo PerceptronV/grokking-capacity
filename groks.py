@@ -379,19 +379,20 @@ def save_individual_results(dim, train_acc, val_acc, param_count, args,
         'n_train': train_log_probs.shape[1] if train_log_probs is not None else 0,
         'n_val': val_log_probs.shape[1] if val_log_probs is not None else 0,
     }
-    
-    # Add log probs for memorisation reconstruction
-    if train_log_probs is not None:
-        data_dict['train_log_probs'] = train_log_probs
-    if val_log_probs is not None:
-        data_dict['val_log_probs'] = val_log_probs
-    
-    # Add memorisation traces
-    if mem_t_trace is not None:
-        data_dict['mem_t_trace'] = mem_t_trace
-    if mem_u_trace is not None:
-        data_dict['mem_u_trace'] = mem_u_trace
-        data_dict['baseline_path'] = baseline_path
+
+    if not args.ignore_memorisation:
+        # Add log probs for memorisation reconstruction
+        if train_log_probs is not None:
+            data_dict['train_log_probs'] = train_log_probs
+        if val_log_probs is not None:
+            data_dict['val_log_probs'] = val_log_probs
+        
+        # Add memorisation traces
+        if mem_t_trace is not None:
+            data_dict['mem_t_trace'] = mem_t_trace
+        if mem_u_trace is not None:
+            data_dict['mem_u_trace'] = mem_u_trace
+            data_dict['baseline_path'] = baseline_path
     
     # Save raw data
     data_fname = os.path.join(args.data_dir, f'grokking_dim{dim}_depth{args.depth}_heads{args.heads}.npz')
@@ -610,6 +611,8 @@ def main():
     parser.add_argument('--plot-dir', type=str, default='media/groks', help='plot output directory')
     
     # Memorisation tracking
+    parser.add_argument('--ignore-memorisation', action='store_true',
+                       help='ignore memorisation tracking and do not store memorisation data')
     parser.add_argument('--baseline', type=str, default=None, 
                        help='Path to baseline model directory (e.g., "p97_seed42_splitrandom/dim24_depth2_heads1"). '
                             'When provided, computes unintended memorisation M_U at each epoch on training set.')

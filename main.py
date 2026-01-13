@@ -262,7 +262,7 @@ def run_experiment(commands, max_workers=None):
     return 0
 
 
-def generate_commands(p_start, p_end, train_fraction=0.5, seed=42, operation='/', split_type='sequential'):
+def generate_commands(p_start, p_end, train_fraction=0.5, seed=42, operation='/', split_type='random'):
     """Generate commands for the experiment"""
     primes = primes_in_range(p_start, p_end)
     p_mid = primes[len(primes) // 2]
@@ -284,7 +284,7 @@ def generate_commands(p_start, p_end, train_fraction=0.5, seed=42, operation='/'
             commands.append(
                 f"python groks.py --p {p} --no-show --dim-start {gs} --dim-end {ge} --dim-step {gt} "
                 f"--train-fraction {train_fraction} --seed {seed} --epochs 5000 --split-type {split_type}"
-                f"--op {operation}"
+                f"--op {operation} --ignore-memorisation"
             )
         
         n, size = compute_dataset_size_bits(p, operation, train_fraction)
@@ -319,7 +319,7 @@ def main():
     parser.add_argument('--operation', type=str, default='/',
                        choices=['*', '/', '+', '-'],
                        help='Arithmetic operation to use')
-    parser.add_argument('--split-type', type=str, default='sequential',
+    parser.add_argument('--split-type', type=str, default='random',
                        choices=['random', 'sequential', 'alternating'],
                        help='Type of train/val split')
 
