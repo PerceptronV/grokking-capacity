@@ -531,19 +531,19 @@ def plot_results(results, args):
     
     # Create separate subplots for validation and training using shared utility
     fname_separate = os.path.join(args.plot_dir, f'grokking_vs_dimension_depth{args.depth}_heads{args.heads}.pdf')
-    plot_separate_curves(results, 
+    plot_separate_curves(results,
                         title_val='Grokking Curves vs. Model Dimension',
                         title_train='Training Curves vs. Model Dimension',
-                        save_path=fname_separate, show=True)
-    
+                        save_path=fname_separate, show=not args.no_show)
+
     # Create a combined plot with both train and val on same axes using shared utility
     fname_combined = os.path.join(args.plot_dir, f'grokking_combined_depth{args.depth}_heads{args.heads}.pdf')
-    plot_combined_curves(results, save_path=fname_combined, show=True)
-    
+    plot_combined_curves(results, save_path=fname_combined, show=not args.no_show)
+
     # Create grokking time plot using shared utility
     fname = os.path.join(args.plot_dir, f'grokking_time_vs_params_{args.depth}-{args.heads}.pdf')
-    plot_grokking_time(results, threshold_val=97.0, max_epochs=args.epochs, 
-                      save_path=fname, show=True)
+    plot_grokking_time(results, threshold_val=97.0, max_epochs=args.epochs,
+                      save_path=fname, show=not args.no_show)
 
 
 def compute_mem_t_from_log_probs(log_probs: np.ndarray, n_tokens: int) -> float:
@@ -610,9 +610,11 @@ def main():
     # Misc args
     parser.add_argument('--seed', type=int, default=42, help='random seed')
     parser.add_argument('--cpu', action='store_true', help='use cpu only')
-    parser.add_argument('--device', type=str, default=None, 
+    parser.add_argument('--device', type=str, default=None,
                        help='device to use (e.g., "cuda:0", "cuda:1", "cpu", "mps"). Overrides --cpu flag if specified.')
     parser.add_argument('--force', action='store_true', help='force re-run even if results exist')
+    parser.add_argument('--no-show', action='store_true',
+                       help='Do not display plots (just save)')
     
     args = parser.parse_args()
 
