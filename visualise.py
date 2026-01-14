@@ -5,6 +5,7 @@ Subcommands:
     groks       - Grokking experiment visualizations
     capacity    - Model capacity (memorisation) experiment visualizations
     speed       - Learning speed experiment visualizations
+    primes      - Multi-prime analysis visualizations
 """
 import re
 import argparse
@@ -38,7 +39,10 @@ from plotting import (
     plot_combined_speed_analysis,
     plot_saturation_time_vs_capacity_fraction,
     plot_saturation_steps_vs_params,
-    plot_rate_vs_dataset_size
+    plot_rate_vs_dataset_size,
+    plot_predicted_vs_empirical_grokking,
+    plot_critical_params_vs_prime,
+    calculate_grokking_delay
 )
 from utils import compute_dataset_size_bits
 import consts
@@ -207,13 +211,20 @@ def extract_samples(fname):
 
 
 def groks(args):
+    # Ensure args.p is a list and use only the first prime
+    primes = args.p if isinstance(args.p, list) else [args.p]
+    p = primes[0]
+
+    if len(primes) > 1:
+        print("Warning: groks command only uses the first prime. For multi-prime analysis, use 'primes' command.")
+
     # Set data and plot directories
-    signature = f'p{args.p}_seed{args.training_seed}_split{args.split_type}'
+    signature = f'p{p}_seed{args.training_seed}_split{args.split_type}'
     data_dir = os.path.join(args.data_dir, signature)
     plot_dir = os.path.join(args.plot_dir, signature)
 
     print(f'Using signature {signature}')
-    
+
     # Determine show/save settings
     show = not args.no_show
     
@@ -283,7 +294,7 @@ def groks(args):
         return
     
     # Calculate number of parameters to lower bound capacity of model to memorise all training data
-    n, size = compute_dataset_size_bits(args.p, args.op, args.training_fraction)
+    n, size = compute_dataset_size_bits(p, args.op, args.training_fraction)
     threshold_params = size / consts.C
     
     print(f"Found {len(files)} files to analyze:")
@@ -333,61 +344,61 @@ def groks(args):
         else:
             # Plot M_T curves over training (if available)
             if results_with_mem_t:
-                save_path = os.path.join(plot_dir, f'mem_t_p{args.p}.pdf') if args.save else None
+                save_path = os.path.join(plot_dir, f'mem_t_p{p}.pdf') if args.save else None
                 plot_memorization_curves(results_with_mem_t, mem_key='mem_t_trace', title='Total Memorisation (M_T)',
                                         save_path=save_path, show=show)
-                
+
                 # Plot final M_T vs parameter count
-                save_path = os.path.join(plot_dir, f'mem_t_vs_params_p{args.p}.pdf') if args.save else None
+                save_path = os.path.join(plot_dir, f'mem_t_vs_params_p{p}.pdf') if args.save else None
                 plot_max_memorization_vs_params(results_with_mem_t, mem_key='mem_t_trace', title='Final M_T vs Parameters',
                                                  save_path=save_path, show=show)
-            
+
             # Plot M_U curves over training (if available)
             if results_with_mem_u:
-                save_path = os.path.join(plot_dir, f'mem_u_p{args.p}.pdf') if args.save else None
+                save_path = os.path.join(plot_dir, f'mem_u_p{p}.pdf') if args.save else None
                 plot_memorization_curves(results_with_mem_u, mem_key='mem_u_trace', title='Unintended Memorisation (M_U)',
                                         save_path=save_path, show=show)
-                
+
                 # Plot final M_U vs parameter count
-                save_path = os.path.join(plot_dir, f'mem_u_vs_params_p{args.p}.pdf') if args.save else None
+                save_path = os.path.join(plot_dir, f'mem_u_vs_params_p{p}.pdf') if args.save else None
                 plot_max_memorization_vs_params(results_with_mem_u, mem_key='mem_u_trace', title='Final M_U vs Parameters',
                                                  save_path=save_path, show=show)
 
     if args.separate:
         print(f"Plotting separate curves for {len(files)} results...")
-        save_path = os.path.join(plot_dir, f'grokking_separate_p{args.p}.pdf') if args.save else None
+        save_path = os.path.join(plot_dir, f'grokking_separate_p{p}.pdf') if args.save else None
         plot_separate_curves(results, save_path=save_path, show=show)
         # Check if we should overlay memorisation
         if args.show_mem:
             print(f"Plotting separate curves with memorisation for {len(files)} results...")
-            save_path = os.path.join(plot_dir, f'grokking_separate_mem_p{args.p}.pdf') if args.save else None
+            save_path = os.path.join(plot_dir, f'grokking_separate_mem_p{p}.pdf') if args.save else None
             plot_separate_curves_with_memorization(results, save_path=save_path, show=show)
-    
+
     if args.combined:
         print(f"Plotting combined curves for {len(files)} results...")
-        save_path = os.path.join(plot_dir, f'grokking_combined_p{args.p}.pdf') if args.save else None
+        save_path = os.path.join(plot_dir, f'grokking_combined_p{p}.pdf') if args.save else None
         plot_combined_curves(results, save_path=save_path, show=show)
-    
+
     if args.delay:
         # Standard delay plot
 
-        save_path = os.path.join(plot_dir, f'grokking_delay_p{args.p}.pdf') if args.save else None
+        save_path = os.path.join(plot_dir, f'grokking_delay_p{p}.pdf') if args.save else None
         plot_grokking_delay(files, threshold_train=args.threshold_train, threshold_val=args.threshold_val,
                             save_path=save_path, show=show, threshold_params=threshold_params)
         # Check if we should also plot delay vs memorisation
         if args.show_mem:
             # Plot delay vs memorisation
-            save_path = os.path.join(plot_dir, f'delay_vs_memorisation_p{args.p}.pdf') if args.save else None
+            save_path = os.path.join(plot_dir, f'delay_vs_memorisation_p{p}.pdf') if args.save else None
             plot_delay_vs_memorization(results, threshold_train=args.threshold_train, threshold_val=args.threshold_val,
                                       save_path=save_path, show=show)
             # Plot delay and memorisation vs parameter count on same graph
-            save_path = os.path.join(plot_dir, f'delay_and_mem_vs_params_p{args.p}.pdf') if args.save else None
+            save_path = os.path.join(plot_dir, f'delay_and_mem_vs_params_p{p}.pdf') if args.save else None
             plot_delay_and_memorization_vs_params(results, threshold_train=args.threshold_train, threshold_val=args.threshold_val,
                                                  save_path=save_path, show=show)
-    
+
     if args.critical:
-        save_path = os.path.join(plot_dir, f'critical_capacity_p{args.p}.pdf') if args.save else None
-        critical_params = plot_grokking_critical_capacity(results, threshold_train=args.threshold_train, 
+        save_path = os.path.join(plot_dir, f'critical_capacity_p{p}.pdf') if args.save else None
+        critical_params = plot_grokking_critical_capacity(results, threshold_train=args.threshold_train,
                                                           threshold_val=args.threshold_val,
                                                           delay_threshold=args.delay_threshold,
                                                           save_path=save_path, show=show)
@@ -395,24 +406,28 @@ def groks(args):
             print(f"\n{'='*80}")
             print(f"CRITICAL CAPACITY: {critical_params:,.0f} parameters")
             print(f"{'='*80}")
-    
+
     if args.time:
-        save_path = os.path.join(plot_dir, f'grokking_time_p{args.p}.pdf') if args.save else None
+        save_path = os.path.join(plot_dir, f'grokking_time_p{p}.pdf') if args.save else None
         plot_grokking_time(files, threshold_val=args.threshold_val, save_path=save_path, show=show)
     
     if args.speed:
-        # Load speed data, prioritizing matching seed but allowing fallback
+        # Calculate dataset size
+        n, size = compute_dataset_size_bits(p, args.op, args.training_fraction)
+        threshold_params = size / consts.C
+
+        # Load speed data
         speed_data = []
-        speed_signature = f'p{args.p}_seed{args.training_seed}'
+        speed_signature = f'p{p}_seed{args.training_seed}'
         speed_dir = os.path.join('data/speed', speed_signature)
 
-        print(f"Expecting speed data with {n} samples for p={args.p}, training fraction={args.training_fraction}.")
+        print(f"Expecting speed data with {n} samples for p={p}, training fraction={args.training_fraction}.")
 
         # First try to load with matching seed
         if os.path.exists(speed_dir):
-            speed_files = glob(os.path.join(speed_dir, 'speed_dim*.npz'))
-            if speed_files:
-                for sf in speed_files:
+            speed_files_list = glob(os.path.join(speed_dir, 'speed_dim*.npz'))
+            if speed_files_list:
+                for sf in speed_files_list:
                     data = np.load(sf)
                     if int(data['n_samples']) in (int(n), int(n) - 1, int(n) + 1):  # allow rounding errors
                         # Only include saturated results
@@ -431,19 +446,18 @@ def groks(args):
         if not speed_data:
             speed_base_dir = os.path.join('data/speed')
             if os.path.exists(speed_base_dir):
-                # Find all directories matching p{args.p}_seed*
-                import re
-                pattern = re.compile(rf'^p{args.p}_seed\d+$')
+                # Find all directories matching p{p}_seed*
+                pattern_re = re.compile(rf'^p{p}_seed\d+$')
                 available_dirs = [d for d in os.listdir(speed_base_dir)
-                                 if pattern.match(d) and os.path.isdir(os.path.join(speed_base_dir, d))]
+                                 if pattern_re.match(d) and os.path.isdir(os.path.join(speed_base_dir, d))]
 
                 if available_dirs:
                     # Sort to get consistent behavior (prefer lower seed numbers as fallback)
                     available_dirs = sorted(available_dirs, key=lambda x: int(re.search(r'seed(\d+)', x).group(1)))
                     fallback_dir = os.path.join(speed_base_dir, available_dirs[0])
 
-                    speed_files = glob(os.path.join(fallback_dir, 'speed_dim*.npz'))
-                    for sf in speed_files:
+                    speed_files_list = glob(os.path.join(fallback_dir, 'speed_dim*.npz'))
+                    for sf in speed_files_list:
                         data = np.load(sf)
                         if int(data['n_samples']) in (int(n), int(n) - 1, int(n) + 1):  # allow rounding errors
                             # Only include saturated results
@@ -458,11 +472,12 @@ def groks(args):
                                 })
                     print(f"Loaded {len(speed_data)} saturated speed experiments from {fallback_dir} (fallback seed)")
                 else:
-                    print(f"Warning: No speed data found for p={args.p} with any seed for size {n}")
+                    print(f"Warning: No speed data found for p={p} with any seed for size {n}")
             else:
                 print(f"Warning: Speed data directory not found at {speed_base_dir}")
-        
-        save_path = os.path.join(plot_dir, f'delay_with_speed_p{args.p}.pdf') if args.save else None
+
+        # Plot the speed-grok intersect graph
+        save_path = os.path.join(plot_dir, f'delay_with_speed_p{p}.pdf') if args.save else None
         plot_grokking_delay_with_speed(
             results,
             speed_data,
@@ -1211,6 +1226,412 @@ def speed(args):
             print("="*70)
 
 
+# =============================================================================
+# Primes Experiment Visualization Functions
+# =============================================================================
+
+def primes(args):
+    """Handle primes subcommand for multi-prime analysis."""
+    # Ensure args.p is a list
+    primes_list = args.p if isinstance(args.p, list) else [args.p]
+
+    if len(primes_list) < 2:
+        print("Warning: primes command works best with multiple primes (--p p1 p2 p3 ...)")
+
+    show = not args.no_show
+
+    # Create plot directory
+    plot_dir = args.plot_dir
+    os.makedirs(plot_dir, exist_ok=True)
+
+    # Process based on flags
+    if args.critical:
+        print("\n" + "="*80)
+        print("EMPIRICAL CRITICAL PARAMETER COUNT VS PRIME")
+        print("="*80)
+
+        critical_data = []
+
+        for p_prime in primes_list:
+            print(f"\nProcessing prime p={p_prime}")
+
+            # Load grokking data for this prime
+            prime_signature = f'p{p_prime}_seed{args.training_seed}_split{args.split_type}'
+            prime_data_dir = os.path.join(args.data_dir, prime_signature)
+
+            # Load grokking files for this prime
+            if args.pattern:
+                pattern = os.path.join(prime_data_dir, args.pattern)
+                prime_files = sorted(glob(pattern), key=extract_dim)
+            elif args.dims:
+                prime_files = [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
+                              for d in args.dims]
+            elif args.dims_start and args.dims_end:
+                dims = list(range(args.dims_start, args.dims_end + 1, args.dims_step))
+                prime_files = [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
+                              for d in dims]
+            else:
+                # Default: load all files
+                pattern = os.path.join(prime_data_dir, f'grokking_dim*_depth{args.depth}_heads{args.heads}.npz')
+                prime_files = sorted(glob(pattern), key=extract_dim)
+
+            # Load grokking results for this prime
+            prime_results = []
+            for fname in prime_files:
+                if not os.path.exists(fname):
+                    continue
+                data = np.load(fname)
+                prime_results.append({
+                    'train_acc': data['train_acc'],
+                    'val_acc': data['val_acc'],
+                    'dim': int(data['dim']),
+                    'param_count': int(data['param_count'])
+                })
+
+            if not prime_results:
+                print(f"Warning: No grokking results found for p={p_prime}")
+                continue
+
+            # Compute empirical critical params (first param size after which everything has non-zero delay)
+            empirical_critical_params = None
+            delay_data = []
+            for result in prime_results:
+                train_acc = result['train_acc']
+                val_acc = result['val_acc']
+                param_count = result['param_count']
+
+                train_epoch, val_epoch, delay = calculate_grokking_delay(
+                    train_acc, val_acc, args.threshold_train, args.threshold_val
+                )
+
+                if delay is not None:
+                    delay_data.append({
+                        'param_count': param_count,
+                        'delay': delay
+                    })
+
+            # Sort by parameter count and find first param size after which everything has non-zero delay
+            delay_data.sort(key=lambda x: x['param_count'])
+            if delay_data:
+                # Start from the end (largest params) and go backwards
+                last_zero_idx = -1
+                for i in range(len(delay_data) - 1, -1, -1):
+                    if delay_data[i]['delay'] == 0:
+                        last_zero_idx = i
+                        break
+
+                # If we found a zero delay, empirical point is the next one
+                if last_zero_idx >= 0 and last_zero_idx + 1 < len(delay_data):
+                    empirical_critical_params = delay_data[last_zero_idx + 1]['param_count']
+                # If no zero delay found, all have non-zero delay, so take the first
+                elif last_zero_idx == -1 and delay_data[0]['delay'] > 0:
+                    empirical_critical_params = delay_data[0]['param_count']
+
+            if empirical_critical_params is not None:
+                critical_data.append({
+                    'p': p_prime,
+                    'critical_params': empirical_critical_params
+                })
+                print(f"  Empirical critical params (first delay > 0): {empirical_critical_params:,.0f}")
+            else:
+                print(f"  Warning: Could not find empirical critical params for p={p_prime}")
+
+        if critical_data:
+            print("\n" + "="*80)
+            print("Plotting empirical critical parameter count vs prime")
+            print("="*80)
+
+            save_path = os.path.join(plot_dir, 'empirical_critical_params_vs_prime.pdf') if args.save else None
+            plot_critical_params_vs_prime(
+                critical_data,
+                title='Empirical Critical Parameter Count vs Prime',
+                save_path=save_path,
+                show=show
+            )
+        else:
+            print("\nWarning: No valid critical parameter data found for any prime")
+
+    elif args.groks:
+        print("\n" + "="*80)
+        print("SPEED-BASED PREDICTED VS EMPIRICAL GROKKING POINTS")
+        print("="*80)
+
+        all_grokking_points = []
+
+        # Process each prime
+        for prime_idx, p_prime in enumerate(primes_list):
+            print(f"\n{'='*80}")
+            print(f"Processing prime p={p_prime} ({prime_idx + 1}/{len(primes_list)})")
+            print(f"{'='*80}")
+
+            # Load grokking data for this prime
+            prime_signature = f'p{p_prime}_seed{args.training_seed}_split{args.split_type}'
+            prime_data_dir = os.path.join(args.data_dir, prime_signature)
+            prime_plot_dir = os.path.join(args.plot_dir, prime_signature)
+
+            # Calculate dataset size for this prime
+            n_prime, size_prime = compute_dataset_size_bits(p_prime, args.op, args.training_fraction)
+            threshold_params_prime = size_prime / consts.C
+
+            # Load grokking files for this prime
+            if args.pattern:
+                pattern = os.path.join(prime_data_dir, args.pattern)
+                prime_files = sorted(glob(pattern), key=extract_dim)
+            elif args.dims:
+                prime_files = [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
+                              for d in args.dims]
+            elif args.dims_start and args.dims_end:
+                dims = list(range(args.dims_start, args.dims_end + 1, args.dims_step))
+                prime_files = [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
+                              for d in dims]
+            else:
+                pattern = os.path.join(prime_data_dir, f'grokking_dim*_depth{args.depth}_heads{args.heads}.npz')
+                prime_files = sorted(glob(pattern), key=extract_dim)
+
+            # Load grokking results for this prime
+            prime_results = []
+            for fname in prime_files:
+                if not os.path.exists(fname):
+                    continue
+                data = np.load(fname)
+                prime_results.append({
+                    'train_acc': data['train_acc'],
+                    'val_acc': data['val_acc'],
+                    'dim': int(data['dim']),
+                    'param_count': int(data['param_count'])
+                })
+
+            if not prime_results:
+                print(f"Warning: No grokking results found for p={p_prime}")
+                continue
+
+            # Load speed data for this prime
+            speed_data = []
+            speed_signature = f'p{p_prime}_seed{args.training_seed}'
+            speed_dir = os.path.join('data/speed', speed_signature)
+
+            print(f"Expecting speed data with {n_prime} samples for p={p_prime}, training fraction={args.training_fraction}.")
+
+            # First try to load with matching seed
+            if os.path.exists(speed_dir):
+                speed_files_list = glob(os.path.join(speed_dir, 'speed_dim*.npz'))
+                if speed_files_list:
+                    for sf in speed_files_list:
+                        data = np.load(sf)
+                        if int(data['n_samples']) in (int(n_prime), int(n_prime) - 1, int(n_prime) + 1):  # allow rounding errors
+                            # Only include saturated results
+                            saturated = bool(data.get('saturated', True))
+                            if saturated:
+                                speed_data.append({
+                                    'dim': int(data['dim']),
+                                    'param_count': int(data['param_count']),
+                                    'saturation_step': int(data['saturation_step']),
+                                    'n_samples': int(data['n_samples']),
+                                    'saturated': saturated
+                                })
+                    print(f"Loaded {len(speed_data)} saturated speed experiments from {speed_dir} (matching seed)")
+
+            # If no matching seed found, search for any available seed with same p
+            if not speed_data:
+                speed_base_dir = os.path.join('data/speed')
+                if os.path.exists(speed_base_dir):
+                    # Find all directories matching p{p_prime}_seed*
+                    pattern_re = re.compile(rf'^p{p_prime}_seed\d+$')
+                    available_dirs = [d for d in os.listdir(speed_base_dir)
+                                     if pattern_re.match(d) and os.path.isdir(os.path.join(speed_base_dir, d))]
+
+                    if available_dirs:
+                        # Sort to get consistent behavior (prefer lower seed numbers as fallback)
+                        available_dirs = sorted(available_dirs, key=lambda x: int(re.search(r'seed(\d+)', x).group(1)))
+                        fallback_dir = os.path.join(speed_base_dir, available_dirs[0])
+
+                        speed_files_list = glob(os.path.join(fallback_dir, 'speed_dim*.npz'))
+                        for sf in speed_files_list:
+                            data = np.load(sf)
+                            if int(data['n_samples']) in (int(n_prime), int(n_prime) - 1, int(n_prime) + 1):  # allow rounding errors
+                                # Only include saturated results
+                                saturated = bool(data.get('saturated', True))
+                                if saturated:
+                                    speed_data.append({
+                                        'dim': int(data['dim']),
+                                        'param_count': int(data['param_count']),
+                                        'saturation_step': int(data['saturation_step']),
+                                        'n_samples': int(data['n_samples']),
+                                        'saturated': saturated
+                                    })
+                        print(f"Loaded {len(speed_data)} saturated speed experiments from {fallback_dir} (fallback seed)")
+                    else:
+                        print(f"Warning: No speed data found for p={p_prime} with any seed for size {n_prime}")
+                else:
+                    print(f"Warning: Speed data directory not found at {speed_base_dir}")
+
+            # Plot the speed-grok intersect graph for this prime
+            os.makedirs(prime_plot_dir, exist_ok=True)
+            save_path = os.path.join(prime_plot_dir, f'delay_with_speed_p{p_prime}.pdf') if args.save else None
+            plot_grokking_delay_with_speed(
+                prime_results,
+                speed_data,
+                threshold_train=args.threshold_train,
+                threshold_val=args.threshold_val,
+                threshold_params=threshold_params_prime,
+                batch_size=args.batch_size,
+                n_train_samples=n_prime,
+                save_path=save_path,
+                show=show
+            )
+
+            # Compute predicted grokking point (from speed intersection)
+            predicted_critical_params = compute_critical_params_from_speed(
+                prime_results,
+                speed_data,
+                threshold_train=args.threshold_train,
+                threshold_val=args.threshold_val
+            )
+
+            # Compute empirical grokking point (first param size after which everything has non-zero delay)
+            empirical_critical_params = None
+            # Calculate delays for all results
+            delay_data = []
+            for result in prime_results:
+                train_acc = result['train_acc']
+                val_acc = result['val_acc']
+                param_count = result['param_count']
+
+                train_epoch, val_epoch, delay = calculate_grokking_delay(
+                    train_acc, val_acc, args.threshold_train, args.threshold_val
+                )
+
+                if delay is not None:
+                    delay_data.append({
+                        'param_count': param_count,
+                        'delay': delay
+                    })
+
+            # Sort by parameter count and find first param size after which everything has non-zero delay
+            # Start from the end and find the last point with delay == 0, then take the next one
+            delay_data.sort(key=lambda x: x['param_count'])
+            if delay_data:
+                # Start from the end (largest params) and go backwards
+                last_zero_idx = -1
+                for i in range(len(delay_data) - 1, -1, -1):
+                    if delay_data[i]['delay'] == 0:
+                        last_zero_idx = i
+                        break
+
+                # If we found a zero delay, empirical point is the next one
+                if last_zero_idx >= 0 and last_zero_idx + 1 < len(delay_data):
+                    empirical_critical_params = delay_data[last_zero_idx + 1]['param_count']
+                # If no zero delay found, all have non-zero delay, so take the first
+                elif last_zero_idx == -1 and delay_data[0]['delay'] > 0:
+                    empirical_critical_params = delay_data[0]['param_count']
+
+            if predicted_critical_params is not None and empirical_critical_params is not None:
+                all_grokking_points.append({
+                    'p': p_prime,
+                    'predicted': predicted_critical_params,
+                    'empirical': empirical_critical_params
+                })
+                print(f"\nGrokking points for p={p_prime}:")
+                print(f"  Predicted (speed intersection): {predicted_critical_params:,.0f} params")
+                print(f"  Empirical (first delay > 0):    {empirical_critical_params:,.0f} params")
+            elif predicted_critical_params is not None:
+                print(f"\nWarning: Could not find empirical grokking point for p={p_prime} (no delay > 0)")
+                print(f"  Predicted (speed intersection): {predicted_critical_params:,.0f} params")
+            elif empirical_critical_params is not None:
+                print(f"\nWarning: Could not compute predicted grokking point for p={p_prime}")
+                print(f"  Empirical (first delay > 0):    {empirical_critical_params:,.0f} params")
+            else:
+                print(f"\nWarning: Could not compute grokking points for p={p_prime}")
+
+        # Plot predicted vs empirical grokking points if we have multiple primes
+        if len(all_grokking_points) > 1:
+            print(f"\n{'='*80}")
+            print("Plotting predicted vs empirical grokking points")
+            print(f"{'='*80}")
+
+            save_path = os.path.join(plot_dir, 'predicted_vs_empirical_grokking.pdf') if args.save else None
+            plot_predicted_vs_empirical_grokking(all_grokking_points, save_path=save_path, show=show)
+        elif len(all_grokking_points) == 1:
+            print("\nOnly one prime processed. Skipping predicted vs empirical comparison plot (requires multiple primes).")
+        else:
+            print("\nWarning: No valid grokking points found for any prime")
+
+    elif args.speed:
+        print("\nPlotting saturation time vs capacity fraction (separate line for each prime)...")
+
+        # Collect data from all primes, keyed by (p, dim)
+        combined_results = {}
+        for p in primes_list:
+            signature = f'p{p}_seed{args.training_seed}'
+            speed_data_dir = os.path.join('data/speed', signature)
+
+            if not os.path.exists(speed_data_dir):
+                print(f"Warning: No speed data found for p={p}")
+                continue
+
+            # Collect speed files for this prime
+            speed_files = glob(os.path.join(speed_data_dir, 'speed_dim*.npz'))
+            if not speed_files:
+                print(f"Warning: No speed files found for p={p}")
+                continue
+
+            print(f"\nLoading data for p={p}: {len(speed_files)} files")
+
+            # Load results for this prime
+            for fname in speed_files:
+                if not os.path.exists(fname):
+                    continue
+                data = np.load(fname)
+                dim = int(data['dim'])
+                result = {
+                    'n_samples': int(data['n_samples']),
+                    'dim': dim,
+                    'depth': int(data['depth']),
+                    'heads': int(data['heads']),
+                    'param_count': int(data['param_count']),
+                    'p': p,
+                    'saturation_step': int(data['saturation_step']),
+                    'final_acc': float(data['final_acc']),
+                    'dataset_bits': float(data['dataset_bits']),
+                    'saturated': bool(data.get('saturated', True))
+                }
+
+                # Key by (p, dim) - each prime gets its own color/line in the plot
+                key = (p, dim)
+                if key not in combined_results:
+                    combined_results[key] = []
+                combined_results[key].append(result)
+
+        if not combined_results:
+            print("No data found for any prime")
+            return
+
+        # Plot all data together
+        os.makedirs(plot_dir, exist_ok=True)
+        save_path = os.path.join(plot_dir, 'saturation_time_vs_capacity_fraction_all_primes.pdf') if args.save else None
+        exponent, coefficient, r_squared = plot_saturation_time_vs_capacity_fraction(
+            combined_results,
+            C=consts.C,
+            save_path=save_path,
+            show=show
+        )
+
+        print("\n" + "="*60)
+        print("CAPACITY FRACTION ANALYSIS (ALL PRIMES)")
+        print("="*60)
+        print(f"Power law fit: steps = {coefficient:.1f} × f^{exponent:.2f}")
+        print(f"Exponent: {exponent:.2f}")
+        print(f"R²: {r_squared:.3f}")
+        print(f"Capacity constant C = {consts.C:.2f} bits/param")
+        print("="*60)
+
+    else:
+        print("Error: Please specify one of --critical, --speed, or --groks")
+        print("  --critical: Plot empirical critical parameter count vs prime")
+        print("  --speed:    Plot saturation time vs capacity fraction for multiple primes")
+        print("  --groks:    Plot critical capacity (from groks line-fitting) vs prime")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='View saved experiment results',
@@ -1244,7 +1665,8 @@ Examples:
     grok_subparser.add_argument('--training-fraction', type=float, default=0.5, help='training fraction')
     grok_subparser.add_argument('--op', type=str, default='/', help='operation', choices=['*', '/', '+', '-'])
     grok_subparser.add_argument('--split-type', type=str, default='random', help='split type', choices=['random', 'sequential', 'alternating'])
-    grok_subparser.add_argument('--p', type=int, default=97, help='prime number')
+    grok_subparser.add_argument('--p', nargs='+', type=int, default=[97],
+                       help='Prime number. Only the first prime is used. For multi-prime analysis, use the "primes" command.')
     grok_subparser.add_argument('--data-dir', type=str, default='data/groks', help='data directory')
     grok_subparser.add_argument('--plot-dir', type=str, default='media/groks', help='plot directory')
 
@@ -1278,7 +1700,8 @@ Examples:
     grok_subparser.add_argument('--time', action='store_true',
                        help='Plot absolute grokking time (epochs to reach threshold) vs parameter count')
     grok_subparser.add_argument('--speed', action='store_true',
-                       help='Plot grokking delay with overlaid steps axis, showing steps to grok and steps to learn (from speed data)')
+                       help='Plot grokking delay with overlaid steps axis, showing steps to grok and steps to learn (from speed data) for a single prime. '
+                            'For multi-prime speed analysis, use "primes --speed".')
     grok_subparser.add_argument('--batch-size', type=int, default=512,
                        help='Batch size used in grokking experiments (default: 512)')
     grok_subparser.add_argument('--show-mem', action='store_true',
@@ -1504,6 +1927,89 @@ Examples:
                                  help='Save plots to plot-dir')
     speed_subparser.add_argument('--no-show', action='store_true',
                                  help='Do not display plots (only save)')
+
+    # =========================================================================
+    # Primes subparser
+    # =========================================================================
+    primes_subparser = subparsers.add_parser(
+        'primes',
+        help='Multi-prime analysis visualizations',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Plot empirical critical parameter count vs prime
+  python visualise.py primes --p 97 113 127 --critical
+
+  # Plot saturation time vs capacity fraction for multiple primes
+  python visualise.py primes --p 97 113 127 --speed
+
+  # Plot critical capacity from groks vs prime
+  python visualise.py primes --p 97 113 127 --groks
+
+  # Save plots
+  python visualise.py primes --p 97 113 127 --critical --save
+"""
+    )
+    primes_subparser.set_defaults(func=primes)
+
+    # Directory configuration
+    primes_subparser.add_argument('--data-dir', type=str, default='data/groks',
+                                   help='Data directory (default: data/groks)')
+    primes_subparser.add_argument('--plot-dir', type=str, default='media/primes',
+                                   help='Plot output directory (default: media/primes)')
+    primes_subparser.add_argument('--p', nargs='+', type=int, required=True,
+                                   help='Prime numbers (required, e.g., --p 97 113 127)')
+    primes_subparser.add_argument('--training-seed', type=int, default=42,
+                                   help='Training seed (default: 42)')
+    primes_subparser.add_argument('--training-fraction', type=float, default=0.5,
+                                   help='Training fraction (default: 0.5)')
+    primes_subparser.add_argument('--op', type=str, default='/',
+                                   help='Operation (default: /)', choices=['*', '/', '+', '-'])
+    primes_subparser.add_argument('--split-type', type=str, default='random',
+                                   help='Split type (default: random)', choices=['random', 'sequential', 'alternating'])
+
+    # File selection
+    primes_subparser.add_argument('--pattern', type=str,
+                                   help='Glob pattern to match result files')
+    primes_subparser.add_argument('--dims', nargs='+', type=int, metavar='DIM',
+                                   help='Filter by model dimensions (e.g., --dims 20 40 80)')
+    primes_subparser.add_argument('--dims-start', type=int, default=None,
+                                   help='Starting dimension for dimension comparison')
+    primes_subparser.add_argument('--dims-end', type=int, default=None,
+                                   help='Ending dimension for dimension comparison')
+    primes_subparser.add_argument('--dims-step', type=int, default=None,
+                                   help='Step size for dimension comparison')
+
+    # Model architecture
+    primes_subparser.add_argument('--depth', type=int, default=2,
+                                   help='Model depth (default: 2)')
+    primes_subparser.add_argument('--heads', type=int, default=1,
+                                   help='Number of attention heads (default: 1)')
+
+    # Analysis modes (mutually exclusive)
+    analysis_group = primes_subparser.add_mutually_exclusive_group(required=True)
+    analysis_group.add_argument('--critical', action='store_true',
+                                help='Plot empirical critical parameter count vs prime (first param size after which everything has delay > 0)')
+    analysis_group.add_argument('--speed', action='store_true',
+                                help='Plot saturation time vs capacity fraction for multiple primes')
+    analysis_group.add_argument('--groks', action='store_true',
+                                help='Plot critical capacity from groks (line-fitting method) vs prime')
+
+    # Threshold parameters
+    primes_subparser.add_argument('--threshold-train', type=float, default=99.0,
+                                   help='Accuracy threshold for training (default: 99.0)')
+    primes_subparser.add_argument('--threshold-val', type=float, default=99.0,
+                                   help='Accuracy threshold for validation (default: 99.0)')
+    primes_subparser.add_argument('--delay-threshold', type=float, default=0.5,
+                                   help='Minimum delay to include in critical capacity fit (default: 0.5)')
+    primes_subparser.add_argument('--batch-size', type=int, default=512,
+                                   help='Batch size used in grokking experiments (default: 512, only used for --speed)')
+
+    # Output options
+    primes_subparser.add_argument('--save', action='store_true',
+                                   help='Save plots to plot-dir')
+    primes_subparser.add_argument('--no-show', action='store_true',
+                                   help='Do not display plots (only save)')
 
     # Run the appropriate function based on the subparser
     args = parser.parse_args()

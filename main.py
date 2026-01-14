@@ -262,7 +262,7 @@ def run_experiment(commands, max_workers=None):
     return 0
 
 
-def generate_commands(p_start, p_end, train_fraction=0.5, seed=42, operation='/', split_type='random'):
+def generate_commands(p_start, p_end, seeds, train_fraction=0.5, operation='/', split_type='random'):
     """Generate commands for the experiment"""
     primes = primes_in_range(p_start, p_end)
     p_mid = primes[len(primes) // 2]
@@ -274,23 +274,26 @@ def generate_commands(p_start, p_end, train_fraction=0.5, seed=42, operation='/'
 
     # Collect all commands to run
     commands = []
-
+    default_seed = seeds[0]
+    
     # Capacity experiment (single run)
-    commands.append(f"python capacity.py --p {p_mid} --no-show --seed {seed}")
+    commands.append(f"python capacity.py --p {p_mid} --no-show --seed {default_seed}")
 
     # Speed and grokking experiments for each prime
     for p in primes:
-        for gs, ge, gt in zip(grok_starts, grok_ends, grok_steps):
-            commands.append(
-                f"python groks.py --p {p} --no-show --dim-start {gs} --dim-end {ge} --dim-step {gt} "
-                f"--train-fraction {train_fraction} --seed {seed} --epochs 5000 --split-type {split_type} "
-                f"--op {operation} --ignore-memorisation"
-            )
+        for seed in seeds:
+            for gs, ge, gt in zip(grok_starts, grok_ends, grok_steps):
+                commands.append(
+                    f"python groks.py --p {p} --dim-start {gs} --dim-end {ge} --dim-step {gt} "
+                    f"--train-fraction {train_fraction} --seed {seed} --split-type {split_type} "
+                    f"--op {operation} --ignore-memorisation --epochs 5000 --no-show"
+                )
         
         n, size = compute_dataset_size_bits(p, operation, train_fraction)
         commands.append(
-            f"python speed.py --p {p} --no-show --dims {' '.join(map(str, speed_dims))} "
-            f"--samples-start {n} --samples-end {n} --samples-steps 1 --seed {seed}"
+            f"python speed.py --p {p} --dims {' '.join(map(str, speed_dims))} "
+            f"--samples-start {n} --samples-end {n} --samples-steps 1 --seed {default_seed} "
+            f"--epochs 5000 --no-show"
         )
 
     return commands
@@ -314,8 +317,8 @@ def main():
     # Experiment parameters
     parser.add_argument('--train-fraction', type=float, default=0.5,
                        help='Fraction of data to use for training')
-    parser.add_argument('--seed', type=int, default=42,
-                       help='Random seed for reproducibility')
+    parser.add_argument('--seeds', type=int, nargs='+', default=list(range(42, 42 + 10)),
+                       help='Random seeds for reproducibility')
     parser.add_argument('--operation', type=str, default='/',
                        choices=['*', '/', '+', '-'],
                        help='Arithmetic operation to use')
@@ -334,7 +337,7 @@ def main():
         p_start=args.p_start,
         p_end=args.p_end,
         train_fraction=args.train_fraction,
-        seed=args.seed,
+        seeds=args.seeds,
         operation=args.operation,
         split_type=args.split_type
     )

@@ -2549,7 +2549,11 @@ def plot_saturation_time_vs_capacity_fraction(
     if is_multi_prime:
         # Color by prime for multi-prime plots
         unique_primes = sorted(set(primes))
-        colors = sns.color_palette("Set2", n_colors=len(unique_primes))
+        # Use tab20 for up to 20 colors, or husl for more
+        if len(unique_primes) <= 20:
+            colors = sns.color_palette("tab20", n_colors=len(unique_primes))
+        else:
+            colors = sns.color_palette("husl", n_colors=len(unique_primes))
         prime_to_color = {p: colors[i] for i, p in enumerate(unique_primes)}
 
         # Plot data points colored by prime
@@ -2857,3 +2861,119 @@ def plot_rate_vs_dataset_size(
         plt.close()
 
     return rate_data
+
+
+def plot_predicted_vs_empirical_grokking(
+    grokking_points: List[Dict],
+    save_path: Optional[str] = None,
+    show: bool = True
+):
+    """
+    Plot predicted vs empirical grokking points for multiple primes.
+
+    Args:
+        grokking_points: List of dicts with keys 'p', 'predicted', 'empirical'
+        save_path: Path to save the plot (optional)
+        show: Whether to show the plot
+    """
+    if not grokking_points:
+        print("No grokking points to plot")
+        return
+
+    fig, ax = plt.subplots(figsize=(10, 8))
+
+    predicted = [item['predicted'] for item in grokking_points]
+    empirical = [item['empirical'] for item in grokking_points]
+    p_values = [item['p'] for item in grokking_points]
+
+    # Plot points
+    ax.scatter(predicted, empirical, s=100, alpha=0.7, c='#1b9e77', edgecolors='black', linewidth=1.5, zorder=3)
+
+    # Annotate with prime values
+    for i, p_val in enumerate(p_values):
+        ax.annotate(f'p={p_val}', (predicted[i], empirical[i]),
+                   xytext=(5, 5), textcoords='offset points', fontsize=10)
+
+    # Plot y=x line
+    all_params = predicted + empirical
+    min_param = min(all_params)
+    max_param = max(all_params)
+    margin = (max_param - min_param) * 0.1
+    ax.plot([min_param - margin, max_param + margin], [min_param - margin, max_param + margin],
+           'k--', alpha=0.5, linewidth=1.5, label='y=x', zorder=1)
+
+    ax.set_xlabel('Predicted Grokking Point (params)', fontsize=14)
+    ax.set_ylabel('Empirical Grokking Point (params)', fontsize=14)
+    ax.set_title('Predicted vs Empirical Grokking Points\n(Multiple Primes)', fontsize=16, pad=20)
+    ax.legend(fontsize=12)
+    ax.grid(True, alpha=0.3)
+    ax.tick_params(axis='both', which='major', labelsize=12)
+
+    plt.tight_layout()
+
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight', dpi=300)
+        print(f"Saved predicted vs empirical grokking plot: {save_path}")
+
+    if show:
+        plt.show()
+    else:
+        plt.close()
+
+
+def plot_critical_params_vs_prime(
+    critical_data: List[Dict],
+    title: str = 'Critical Parameter Count vs Prime',
+    save_path: Optional[str] = None,
+    show: bool = True
+):
+    """
+    Plot critical parameter count vs prime for multiple primes.
+
+    Args:
+        critical_data: List of dicts with keys 'p' and 'critical_params'
+        title: Plot title
+        save_path: Path to save the plot (optional)
+        show: Whether to show the plot
+    """
+    if not critical_data:
+        print("No critical data to plot")
+        return
+
+    fig, ax = plt.subplots(figsize=(10, 8))
+
+    p_values = [item['p'] for item in critical_data]
+    critical_params = [item['critical_params'] for item in critical_data]
+
+    # Plot points
+    ax.scatter(p_values, critical_params, s=100, alpha=0.7, c='#d95f02',
+               edgecolors='black', linewidth=1.5, zorder=3)
+
+    # Connect points with lines
+    ax.plot(p_values, critical_params, 'o-', color='#d95f02', alpha=0.5,
+            linewidth=2, markersize=8, zorder=2)
+
+    # Annotate with prime values
+    for i, (p_val, params) in enumerate(zip(p_values, critical_params)):
+        ax.annotate(f'p={p_val}', (p_val, params),
+                   xytext=(5, 5), textcoords='offset points', fontsize=10)
+
+    ax.set_xlabel('Prime (p)', fontsize=14)
+    ax.set_ylabel('Critical Parameter Count', fontsize=14)
+    ax.set_title(title, fontsize=16, pad=20)
+    ax.grid(True, alpha=0.3)
+    ax.tick_params(axis='both', which='major', labelsize=12)
+
+    # Format y-axis with commas for thousands
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{int(x):,}'))
+
+    plt.tight_layout()
+
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight', dpi=300)
+        print(f"Saved critical params vs prime plot: {save_path}")
+
+    if show:
+        plt.show()
+    else:
+        plt.close()
