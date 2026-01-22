@@ -15,19 +15,19 @@ def calculate_grokking_delay(train_acc, val_acc, threshold_train=99.0, threshold
     """
     train_epoch = None
     val_epoch = None
-    
+
     # Find when training reaches threshold
     for epoch, acc in enumerate(train_acc):
         if acc >= threshold_train:
             train_epoch = epoch
             break
-    
+
     # Find when validation reaches threshold
     for epoch, acc in enumerate(val_acc):
         if acc >= threshold_val:
             val_epoch = epoch
             break
-    
+
     if train_epoch is not None and val_epoch is not None:
         delay = val_epoch - train_epoch
         return train_epoch, val_epoch, max(0, delay)
@@ -35,6 +35,42 @@ def calculate_grokking_delay(train_acc, val_acc, threshold_train=99.0, threshold
         return None, val_epoch, 0
     else:
         return None, None, None
+
+
+def calculate_grokking_integral(train_acc, val_acc, threshold_train=99.0, threshold_val=99.0):
+    """
+    Calculate grokking integral: sum of min(train_acc - val_acc, 0) over all epochs
+    after train_acc reaches threshold_train and while val_acc < threshold_val.
+
+    Returns (train_epoch, val_epoch, integral) or (None, None, None) if train doesn't reach threshold.
+    """
+    train_epoch = None
+    val_epoch = None
+
+    # Find when training reaches threshold
+    for epoch, acc in enumerate(train_acc):
+        if acc >= threshold_train:
+            train_epoch = epoch
+            break
+
+    if train_epoch is None:
+        return None, None, None
+
+    # Find when validation reaches threshold
+    for epoch, acc in enumerate(val_acc):
+        if acc >= threshold_val:
+            val_epoch = epoch
+            break
+
+    # Calculate integral: sum of min(train_acc - val_acc, 0) after train_epoch
+    integral = 0.0
+    end_epoch = val_epoch if val_epoch is not None else len(train_acc)
+
+    for epoch in range(train_epoch, end_epoch):
+        diff = train_acc[epoch] - val_acc[epoch]
+        integral += max(diff, 0)
+
+    return train_epoch, val_epoch, integral
 
 
 def plot_combined_curves(results, title='Training (solid) vs Validation (dashed) Curves', 
@@ -497,11 +533,129 @@ def plot_grokking_delay(results, threshold_train=99.0, threshold_val=99.0, thres
     return delay_data
 
 
+def plot_grokking_integral(results, threshold_train=99.0, threshold_val=99.0, threshold_params=None, save_path=None, show=True):
+    """
+    Plot grokking integral vs parameter count.
+
+    The integral is the sum of min(train_acc - val_acc, 0) over all epochs
+    after train_acc reaches threshold_train and while val_acc < threshold_val.
+
+    Args:
+        results: List of dicts with keys 'train_acc', 'val_acc', 'dim', 'param_count'
+        threshold_train: Accuracy threshold for training
+        threshold_val: Accuracy threshold for validation
+        threshold_params: Threshold for parameter count
+        save_path: Path to save the plot (optional)
+        show: Whether to show the plot
+    """
+    if not results:
+        print("No results to plot")
+        return
+
+    # Calculate integrals for all results
+    integral_data = []
+    for result in results:
+        train_acc = result['train_acc']
+        val_acc = result['val_acc']
+        dim = result['dim']
+        param_count = result['param_count']
+
+        train_epoch, val_epoch, integral = calculate_grokking_integral(train_acc, val_acc, threshold_train, threshold_val)
+
+        if integral is not None:
+            integral_data.append({
+                'dim': dim,
+                'param_count': param_count,
+                'train_epoch': train_epoch,
+                'val_epoch': val_epoch,
+                'integral': integral
+            })
+        else:
+            print(f"Warning: dim={dim} train did not reach {threshold_train}% accuracy")
+
+    if not integral_data:
+        print(f"No results reached train={threshold_train}% accuracy threshold")
+        return
+
+    # Sort by parameter count
+    integral_data.sort(key=lambda x: x['param_count'])
+
+    # Extract data for plotting
+    dims = [item['dim'] for item in integral_data]
+    param_counts = [item['param_count'] for item in integral_data]
+    integrals = [item['integral'] for item in integral_data]
+
+    # Create plot
+    fig, ax = plt.subplots(figsize=(9, 6))
+
+    # Scatter plot with color-coded dimensions
+    crest_cmap = sns.color_palette('crest', as_cmap=True)
+    scatter = ax.scatter(param_counts, integrals, c=dims, cmap=crest_cmap,
+                        s=80, alpha=0.7, edgecolors='none')
+
+    # Add labels for each point
+    for pc, integral, dim in zip(param_counts, integrals, dims):
+        ax.annotate(f'{dim}', (pc, integral), xytext=(5, 5),
+                   textcoords='offset points', fontsize=8)
+
+    ax.set_xlabel('Parameter Count', fontsize=14)
+    ax.set_ylabel(f'Grokking Integral (sum of accuracy gap)', fontsize=14)
+    ax.set_xscale('log')
+
+    ax.grid(True, alpha=0.3)
+    ax.tick_params(axis='both', which='major', labelsize=12)
+
+    # Add colorbar
+    cbar = plt.colorbar(scatter, ax=ax, label='Dimension')
+    cbar.ax.tick_params(labelsize=12)
+
+    # Add horizontal line at y=0 for reference
+    ax.axhline(y=0, color='gray', linestyle='--', alpha=0.5, linewidth=1)
+
+    # Add dotted vertical line at threshold_params, if provided
+    if threshold_params is not None:
+        ax.axvline(x=threshold_params, color='black', linestyle=':', linewidth=2, alpha=0.7)
+        # Annotate its value (with thousands separator)
+        # Place annotation slightly above the largest integral (or most negative)
+        y_annot = min(integrals) if len(integrals) > 0 else 0
+        ax.annotate(f"{int(threshold_params):,}",
+                    xy=(threshold_params, y_annot),
+                    xycoords='data',
+                    xytext=(10, -25), textcoords='offset points',
+                    fontsize=16, color='black',
+                    va='bottom', ha='left')
+
+    plt.tight_layout()
+
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight')
+        print(f"Integral plot saved to {save_path}")
+
+    if show:
+        plt.show()
+    else:
+        plt.close()
+
+    # Print summary
+    print(f"\n{'='*80}")
+    print(f"GROKKING INTEGRAL SUMMARY (train={threshold_train}%, val={threshold_val}%)")
+    print(f"{'='*80}")
+    for item in integral_data:
+        train_str = f"{item['train_epoch']:3d}" if item['train_epoch'] is not None else "N/A"
+        val_str = f"{item['val_epoch']:3d}" if item['val_epoch'] is not None else "N/A"
+        print(f"dim={item['dim']:3d}: {item['param_count']:8,} params, "
+              f"train@{train_str}, val@{val_str}, integral={item['integral']:8.2f}")
+    print(f"{'='*80}")
+
+    return integral_data
+
+
 def plot_grokking_delay_with_speed(
     results: List[Dict],
     speed_data: List[Dict],
     threshold_train: float = 99.0,
     threshold_val: float = 99.0,
+    saturation_threshold: float = 99.0,
     threshold_params: Optional[float] = None,
     batch_size: int = 512,
     n_train_samples: int = 4656,
@@ -510,13 +664,14 @@ def plot_grokking_delay_with_speed(
     show: bool = True
 ):
     """
-    Plot grokking delay vs parameter count with an overlaid steps axis.
+    Plot grokking delay vs parameter count with an overlaid epochs axis.
 
     Args:
         results: List of dicts with keys 'train_acc', 'val_acc', 'dim', 'param_count'
-        speed_data: List of dicts with keys 'param_count', 'dim', 'saturation_step'
-        threshold_train: Accuracy threshold for training
-        threshold_val: Accuracy threshold for validation
+        speed_data: List of dicts with keys 'param_count', 'dim', 'saturation_epoch'
+        threshold_train: Accuracy threshold for training (used for delay calculation)
+        threshold_val: Accuracy threshold for validation (used for delay calculation)
+        saturation_threshold: Accuracy threshold for both grokking speed and memorization speed curves
         threshold_params: Threshold for parameter count (vertical line)
         batch_size: Batch size used in grokking experiments
         n_train_samples: Number of training samples
@@ -534,25 +689,53 @@ def plot_grokking_delay_with_speed(
     # Calculate delays and grokking epochs for all results
     delay_data = []
     for result in results:
-        train_acc = result['train_acc']
-        val_acc = result['val_acc']
         dim = result['dim']
         param_count = result['param_count']
 
-        train_epoch, val_epoch, delay = calculate_grokking_delay(train_acc, val_acc, threshold_train, threshold_val)
+        # Check if delay is already computed (from aggregation)
+        if 'delay' in result and 'val_epoch' in result:
+            delay = result['delay']
+            train_epoch = result.get('train_epoch')
+            val_epoch = result['val_epoch']
+            # Use pre-computed epochs_to_grok if available (from aggregation with saturation_threshold)
+            if 'epochs_to_grok' in result and result['epochs_to_grok'] is not None:
+                epochs_to_grok = result['epochs_to_grok']
+            elif 'val_acc' in result:
+                # Recompute using saturation_threshold if we have val_acc
+                val_acc = result['val_acc']
+                epochs_to_grok = None
+                for epoch, acc in enumerate(val_acc):
+                    if acc >= saturation_threshold:
+                        epochs_to_grok = epoch
+                        break
+            else:
+                # Fall back to val_epoch if val_acc not available
+                epochs_to_grok = val_epoch
+        else:
+            # Compute delay from accuracy curves using threshold_train and threshold_val
+            train_acc = result['train_acc']
+            val_acc = result['val_acc']
+            train_epoch, val_epoch, delay = calculate_grokking_delay(train_acc, val_acc, threshold_train, threshold_val)
+            
+            # Compute epochs_to_grok using saturation_threshold (for the intersection curve)
+            epochs_to_grok = None
+            for epoch, acc in enumerate(val_acc):
+                if acc >= saturation_threshold:
+                    epochs_to_grok = epoch
+                    break
 
-        if delay is not None and val_epoch is not None:
+        if delay is not None and epochs_to_grok is not None:
             delay_data.append({
                 'dim': dim,
                 'param_count': param_count,
                 'train_epoch': train_epoch,
                 'val_epoch': val_epoch,
                 'delay': delay,
-                'steps_to_grok': val_epoch * steps_per_epoch
+                'epochs_to_grok': epochs_to_grok
             })
 
     if not delay_data:
-        print(f"No results reached val={threshold_val}% accuracy threshold")
+        print(f"No results reached val={saturation_threshold}% saturation threshold")
         return
 
     # Sort by parameter count
@@ -562,7 +745,7 @@ def plot_grokking_delay_with_speed(
     dims = [item['dim'] for item in delay_data]
     param_counts = np.array([item['param_count'] for item in delay_data])
     delays = np.array([item['delay'] for item in delay_data])
-    steps_to_grok = np.array([item['steps_to_grok'] for item in delay_data])
+    epochs_to_grok = np.array([item['epochs_to_grok'] for item in delay_data])
 
     # Remove anomalies: points with positive delay but both neighbors have non-positive delay
     is_grokking = delays > 0
@@ -577,24 +760,24 @@ def plot_grokking_delay_with_speed(
     dims = [d for d, keep in zip(dims, anomaly_mask) if keep]
     param_counts = param_counts[anomaly_mask]
     delays = delays[anomaly_mask]
-    steps_to_grok = steps_to_grok[anomaly_mask]
+    epochs_to_grok = epochs_to_grok[anomaly_mask]
 
-    # Process speed data - create lookup by param_count
+    # Process speed data - create lookup by param_count (use epochs)
     speed_by_params = {}
     for sd in speed_data:
         pc = sd['param_count']
         if pc not in speed_by_params:
-            speed_by_params[pc] = sd['saturation_step']
+            speed_by_params[pc] = sd['saturation_epoch']
 
     # Match speed data to grokking param counts
-    speed_steps = []
+    speed_epochs = []
     speed_params = []
     for pc in param_counts:
         if pc in speed_by_params:
-            speed_steps.append(speed_by_params[pc])
+            speed_epochs.append(speed_by_params[pc])
             speed_params.append(pc)
 
-    speed_steps = np.array(speed_steps)
+    speed_epochs = np.array(speed_epochs)
     speed_params = np.array(speed_params)
 
     # Create plot with dual y-axes
@@ -619,33 +802,33 @@ def plot_grokking_delay_with_speed(
     cbar = plt.colorbar(scatter, ax=ax1, label='Dimension', pad=0.12)
     cbar.ax.tick_params(labelsize=10)
 
-    # Right y-axis: Steps with logarithmic scale
+    # Right y-axis: Epochs with logarithmic scale
     ax2 = ax1.twinx()
 
-    # Plot steps to grok
-    line1, = ax2.plot(param_counts, steps_to_grok, '-', color='#d95f02', linewidth=2,
-             markersize=6, alpha=0.8, label='Steps to grok')
+    # Plot epochs to grok (val_acc reaching saturation_threshold)
+    line1, = ax2.plot(param_counts, epochs_to_grok, '-', color='#d95f02', linewidth=2,
+             markersize=6, alpha=0.8, label=f'Epochs to grok (val≥{saturation_threshold:.0f}%)')
 
-    # Plot speed data (steps to memorise) if available
+    # Plot speed data (epochs to memorise, train_acc reaching saturation_threshold) if available
     line2 = None
-    if len(speed_steps) > 0:
-        line2, = ax2.plot(speed_params, speed_steps, '-', color='#7570b3', linewidth=2,
-                 markersize=6, alpha=0.8, label='Steps to memorise')
+    if len(speed_epochs) > 0:
+        line2, = ax2.plot(speed_params, speed_epochs, '-', color='#7570b3', linewidth=2,
+                 markersize=6, alpha=0.8, label=f'Epochs to memorise (train≥{saturation_threshold:.0f}%)')
 
-    ax2.set_ylabel('Steps', fontsize=14, color='#d95f02')
+    ax2.set_ylabel('Epochs', fontsize=14, color='#d95f02')
     ax2.set_yscale('log')
     ax2.tick_params(axis='y', labelcolor='#d95f02')
     ax2.tick_params(axis='both', which='major', labelsize=12)
 
     # Find intersection of the two curves if both exist
     intersection_point = None
-    if line2 is not None and len(speed_steps) > 0 and len(steps_to_grok) > 0:
+    if line2 is not None and len(speed_epochs) > 0 and len(epochs_to_grok) > 0:
         # Interpolate both curves to find intersection
         from scipy.interpolate import interp1d
 
         # Create interpolation functions for both curves
-        f_grok = interp1d(param_counts, steps_to_grok, kind='linear', fill_value='extrapolate')
-        f_speed = interp1d(speed_params, speed_steps, kind='linear', fill_value='extrapolate')
+        f_grok = interp1d(param_counts, epochs_to_grok, kind='linear', fill_value='extrapolate')
+        f_speed = interp1d(speed_params, speed_epochs, kind='linear', fill_value='extrapolate')
 
         # Find the intersection by looking for where they're closest
         # Use the common x range
@@ -686,7 +869,7 @@ def plot_grokking_delay_with_speed(
             # Print intersection info
             print(f"\nIntersection of curves found:")
             print(f"  Parameter count: {intersection_x:,.0f}")
-            print(f"  Steps: {intersection_y:,.0f}")
+            print(f"  Epochs: {intersection_y:,.1f}")
 
     # Add vertical line at threshold_params if provided
     if threshold_params is not None:
@@ -1947,12 +2130,12 @@ def compute_critical_params_from_speed(
     """
     Compute the critical parameter count using empirical intersection of curves.
 
-    Finds where the "steps to grok" curve intersects with the "steps to memorise" curve
+    Finds where the "epochs to grok" curve intersects with the "epochs to memorise" curve
     by matching grokking results with speed data.
 
     Args:
         results: List of dicts with keys 'train_acc', 'val_acc', 'dim', 'param_count'
-        speed_data: List of dicts with keys 'param_count', 'dim', 'saturation_step', 'n_samples'
+        speed_data: List of dicts with keys 'param_count', 'dim', 'saturation_epoch', 'n_samples'
         threshold_train: Accuracy threshold for training
         threshold_val: Accuracy threshold for validation
 
@@ -1965,11 +2148,17 @@ def compute_critical_params_from_speed(
     # Calculate delays and grokking epochs for all results
     delay_data = []
     for result in results:
-        train_acc = result['train_acc']
-        val_acc = result['val_acc']
         param_count = result['param_count']
 
-        train_epoch, val_epoch, delay = calculate_grokking_delay(train_acc, val_acc, threshold_train, threshold_val)
+        # Check if delay is already computed (from aggregation)
+        if 'delay' in result and 'val_epoch' in result:
+            delay = result['delay']
+            val_epoch = result['val_epoch']
+        else:
+            # Compute delay from accuracy curves
+            train_acc = result['train_acc']
+            val_acc = result['val_acc']
+            _, val_epoch, delay = calculate_grokking_delay(train_acc, val_acc, threshold_train, threshold_val)
 
         if delay is not None and val_epoch is not None:
             delay_data.append({
@@ -1988,32 +2177,32 @@ def compute_critical_params_from_speed(
     param_counts = np.array([item['param_count'] for item in delay_data])
     epochs_to_grok = np.array([item['epochs_to_grok'] for item in delay_data])
 
-    # Process speed data - create lookup by param_count
+    # Process speed data - create lookup by param_count (use epochs)
     speed_by_params = {}
     for sd in speed_data:
         pc = sd['param_count']
         if pc not in speed_by_params:
-            speed_by_params[pc] = sd['saturation_step']
+            speed_by_params[pc] = sd['saturation_epoch']
 
     # Match speed data to grokking param counts
-    speed_steps = []
+    speed_epochs = []
     speed_params = []
     for pc in param_counts:
         if pc in speed_by_params:
-            speed_steps.append(speed_by_params[pc])
+            speed_epochs.append(speed_by_params[pc])
             speed_params.append(pc)
 
-    speed_steps = np.array(speed_steps)
+    speed_epochs = np.array(speed_epochs)
     speed_params = np.array(speed_params)
 
     # Find intersection of the two curves if both exist
-    if len(speed_steps) > 0 and len(epochs_to_grok) > 0:
+    if len(speed_epochs) > 0 and len(epochs_to_grok) > 0:
         # Interpolate both curves to find intersection
         from scipy.interpolate import interp1d
 
         # Create interpolation functions for both curves
         f_grok = interp1d(param_counts, epochs_to_grok, kind='linear', fill_value='extrapolate')
-        f_speed = interp1d(speed_params, speed_steps, kind='linear', fill_value='extrapolate')
+        f_speed = interp1d(speed_params, speed_epochs, kind='linear', fill_value='extrapolate')
 
         # Find the intersection by looking for where they're closest
         # Use the common x range
@@ -2130,7 +2319,7 @@ def plot_learning_speed_curves(
     show: bool = True
 ) -> Dict[int, Tuple[float, float, int]]:
     """
-    Plot saturation steps vs dataset size (in bits) for different model sizes.
+    Plot saturation epochs vs dataset size (in bits) for different model sizes.
 
     Args:
         all_results: Dict mapping dimension to list of result dicts
@@ -2164,7 +2353,7 @@ def plot_learning_speed_curves(
         saturated_results = sorted(saturated_results, key=lambda x: x['n_samples'])
 
         dataset_bits = [r['dataset_bits'] for r in saturated_results]
-        saturation_steps = [r['saturation_step'] for r in saturated_results]
+        saturation_epochs = [r['saturation_epoch'] for r in saturated_results]
         param_count = saturated_results[0]['param_count']
 
         # Format parameter count for legend
@@ -2177,7 +2366,7 @@ def plot_learning_speed_curves(
 
         ax.plot(
             dataset_bits,
-            saturation_steps,
+            saturation_epochs,
             marker='o',
             markersize=8,
             linewidth=2,
@@ -2187,12 +2376,12 @@ def plot_learning_speed_curves(
 
         # Fit linear model for speed estimate
         if len(dataset_bits) >= 2:
-            slope, intercept = np.polyfit(dataset_bits, saturation_steps, 1)
+            slope, intercept = np.polyfit(dataset_bits, saturation_epochs, 1)
             speed_estimates[param_count] = (slope, intercept, dim)
 
     ax.set_xlabel('Dataset Size (bits)', fontsize=14)
-    ax.set_ylabel('Steps to Saturation', fontsize=14)
-    ax.set_title('Learning Speed: Steps to Memorize Random Data', fontsize=16, pad=20)
+    ax.set_ylabel('Epochs to Saturation', fontsize=14)
+    ax.set_title('Learning Speed: Epochs to Memorize Random Data', fontsize=16, pad=20)
     ax.tick_params(axis='both', which='major', labelsize=12)
 
     # Log scale for both axes
@@ -2228,7 +2417,7 @@ def plot_speed_vs_model_size(
     show: bool = True
 ) -> Tuple[float, float, float]:
     """
-    Plot learning speed (steps per bit) vs model parameter count.
+    Plot learning speed (epochs per bit) vs model parameter count.
 
     Args:
         speed_estimates: Dict mapping param_count to (slope, intercept, dim)
@@ -2247,7 +2436,7 @@ def plot_speed_vs_model_size(
     # Sort by parameter count
     sorted_items = sorted(speed_estimates.items())
     param_counts = np.array([p for p, _ in sorted_items])
-    slopes = np.array([s[0] for _, s in sorted_items])  # steps per bit
+    slopes = np.array([s[0] for _, s in sorted_items])  # epochs per bit
     dims = [s[2] for _, s in sorted_items]
 
     # Use crest colormap
@@ -2285,7 +2474,7 @@ def plot_speed_vs_model_size(
             label=f'Fit: speed = {a:.2e} × params^{b:.2f}')
 
     ax.set_xlabel('Model Parameters', fontsize=14)
-    ax.set_ylabel('Learning Speed (steps per bit)', fontsize=14)
+    ax.set_ylabel('Learning Speed (epochs per bit)', fontsize=14)
     ax.set_title('Learning Speed vs Model Size', fontsize=16, pad=20)
     ax.tick_params(axis='both', which='major', labelsize=12)
 
@@ -2348,7 +2537,7 @@ def plot_combined_speed_analysis(
 
     speed_estimates = {}
 
-    # Left plot: Steps to saturation vs dataset bits
+    # Left plot: Epochs to saturation vs dataset bits
     for idx, dim in enumerate(dims):
         results = all_results[dim]
 
@@ -2360,7 +2549,7 @@ def plot_combined_speed_analysis(
         saturated_results = sorted(saturated_results, key=lambda x: x['n_samples'])
 
         dataset_bits = [r['dataset_bits'] for r in saturated_results]
-        saturation_steps = [r['saturation_step'] for r in saturated_results]
+        saturation_epochs = [r['saturation_epoch'] for r in saturated_results]
         param_count = saturated_results[0]['param_count']
 
         if param_count >= 1e6:
@@ -2372,7 +2561,7 @@ def plot_combined_speed_analysis(
 
         ax1.plot(
             dataset_bits,
-            saturation_steps,
+            saturation_epochs,
             marker='o',
             markersize=8,
             linewidth=2,
@@ -2382,11 +2571,11 @@ def plot_combined_speed_analysis(
 
         # Fit linear model for speed estimate
         if len(dataset_bits) >= 2:
-            slope, intercept = np.polyfit(dataset_bits, saturation_steps, 1)
+            slope, intercept = np.polyfit(dataset_bits, saturation_epochs, 1)
             speed_estimates[param_count] = (slope, intercept, dim)
 
     ax1.set_xlabel('Dataset Size (bits)', fontsize=14)
-    ax1.set_ylabel('Steps to Saturation', fontsize=14)
+    ax1.set_ylabel('Epochs to Saturation', fontsize=14)
     ax1.set_title('Learning Speed Curves', fontsize=16, pad=10)
     ax1.set_xscale('log')
     ax1.set_yscale('log')
@@ -2431,7 +2620,7 @@ def plot_combined_speed_analysis(
                 label=f'speed ∝ params^{b:.2f}')
 
         ax2.set_xlabel('Model Parameters', fontsize=14)
-        ax2.set_ylabel('Learning Speed (steps/bit)', fontsize=14)
+        ax2.set_ylabel('Learning Speed (epochs/bit)', fontsize=14)
         ax2.set_title('Speed vs Model Size', fontsize=16, pad=10)
         ax2.set_xscale('log')
         ax2.set_yscale('log')
@@ -2487,7 +2676,7 @@ def plot_saturation_time_vs_capacity_fraction(
 
     # Collect all data points across all dimensions and dataset sizes
     f_values = []
-    saturation_steps_values = []
+    saturation_epochs_values = []
     dims = []
     primes = []
     param_counts = []
@@ -2506,7 +2695,7 @@ def plot_saturation_time_vs_capacity_fraction(
 
             P = result['param_count']
             S = result['dataset_bits']
-            saturation_step = result['saturation_step']
+            saturation_epoch = result['saturation_epoch']
 
             # Get prime from result if not from key
             if p is None:
@@ -2516,7 +2705,7 @@ def plot_saturation_time_vs_capacity_fraction(
             f = S / (C * P)
 
             f_values.append(f)
-            saturation_steps_values.append(saturation_step)
+            saturation_epochs_values.append(saturation_epoch)
             dims.append(dim)
             primes.append(p)
             param_counts.append(P)
@@ -2526,25 +2715,29 @@ def plot_saturation_time_vs_capacity_fraction(
         return 0.0, 0.0, 0.0
 
     f_values = np.array(f_values)
-    saturation_steps_values = np.array(saturation_steps_values)
+    saturation_epochs_values = np.array(saturation_epochs_values)
     dims = np.array(dims)
     primes = np.array(primes)
 
-    # Fit exponential in semi-log space: log(steps) = b * f + log(a)
-    # This gives us: steps = a * exp(b * f)
-    log_steps = np.log(saturation_steps_values)
+    # Fit exponential in semi-log space: log(epochs) = b * f + log(a)
+    # This gives us: epochs = a * exp(b * f)
+    # NOTE: This overall fit uses ALL data points across all primes/dimensions
+    log_epochs = np.log(saturation_epochs_values)
 
-    b, log_a = np.polyfit(f_values, log_steps, 1)
+    b, log_a = np.polyfit(f_values, log_epochs, 1)
     a = np.exp(log_a)
 
-    # Calculate R² in log space
+    # Calculate R² in log space for overall fit
     y_pred_log = b * f_values + log_a
-    ss_res = np.sum((log_steps - y_pred_log) ** 2)
-    ss_tot = np.sum((log_steps - np.mean(log_steps)) ** 2)
+    ss_res = np.sum((log_epochs - y_pred_log) ** 2)
+    ss_tot = np.sum((log_epochs - np.mean(log_epochs)) ** 2)
     r_squared = 1 - (ss_res / ss_tot) if ss_tot > 0 else 0.0
 
     # Create plot
     fig, ax = plt.subplots(figsize=(12, 8))
+
+    # Store individual prime fit statistics
+    prime_fit_stats = {}
 
     if is_multi_prime:
         # Color by prime for multi-prime plots
@@ -2556,32 +2749,58 @@ def plot_saturation_time_vs_capacity_fraction(
             colors = sns.color_palette("husl", n_colors=len(unique_primes))
         prime_to_color = {p: colors[i] for i, p in enumerate(unique_primes)}
 
-        # Plot data points colored by prime
+        # First pass: Calculate R² for each prime
         for p in unique_primes:
             mask = primes == p
+            if np.sum(mask) >= 2:
+                f_prime = f_values[mask]
+                epochs_prime = saturation_epochs_values[mask]
+                log_epochs_prime = np.log(epochs_prime)
+
+                b_prime, log_a_prime = np.polyfit(f_prime, log_epochs_prime, 1)
+                a_prime = np.exp(log_a_prime)
+
+                # Calculate R² for this prime's fit
+                y_pred_log_prime = b_prime * f_prime + log_a_prime
+                ss_res_prime = np.sum((log_epochs_prime - y_pred_log_prime) ** 2)
+                ss_tot_prime = np.sum((log_epochs_prime - np.mean(log_epochs_prime)) ** 2)
+                r_squared_prime = 1 - (ss_res_prime / ss_tot_prime) if ss_tot_prime > 0 else 0.0
+
+                # Store fit statistics
+                prime_fit_stats[p] = {
+                    'exponent': b_prime,
+                    'coefficient': a_prime,
+                    'r_squared': r_squared_prime,
+                    'n_points': np.sum(mask)
+                }
+
+        # Second pass: Plot data points with R² in legend
+        for p in unique_primes:
+            mask = primes == p
+
+            # Create label with R² if available
+            if p in prime_fit_stats:
+                label = f'p={p} (R²={prime_fit_stats[p]["r_squared"]:.3f})'
+            else:
+                label = f'p={p}'
+
             ax.scatter(
                 f_values[mask],
-                saturation_steps_values[mask],
+                saturation_epochs_values[mask],
                 c=[prime_to_color[p]],
                 s=100,
                 alpha=0.7,
                 edgecolors='black',
                 linewidths=1,
-                label=f'p={p}'
+                label=label
             )
 
-            # Fit and plot separate curve for this prime
-            if np.sum(mask) >= 2:
+            # Plot fitted curve for this prime
+            if p in prime_fit_stats:
                 f_prime = f_values[mask]
-                steps_prime = saturation_steps_values[mask]
-                log_steps_prime = np.log(steps_prime)
-
-                b_prime, log_a_prime = np.polyfit(f_prime, log_steps_prime, 1)
-                a_prime = np.exp(log_a_prime)
-
-                # Plot fitted curve for this prime
+                stats = prime_fit_stats[p]
                 x_fit_prime = np.linspace(f_prime.min() * 0.95, f_prime.max() * 1.05, 100)
-                y_fit_prime = a_prime * np.exp(b_prime * x_fit_prime)
+                y_fit_prime = stats['coefficient'] * np.exp(stats['exponent'] * x_fit_prime)
                 ax.plot(x_fit_prime, y_fit_prime, '--', color=prime_to_color[p],
                        linewidth=2, alpha=0.8)
     else:
@@ -2594,7 +2813,7 @@ def plot_saturation_time_vs_capacity_fraction(
             mask = dims == dim
             ax.scatter(
                 f_values[mask],
-                saturation_steps_values[mask],
+                saturation_epochs_values[mask],
                 c=[dim_to_color[dim]],
                 s=100,
                 alpha=0.7,
@@ -2607,10 +2826,10 @@ def plot_saturation_time_vs_capacity_fraction(
         x_fit = np.linspace(f_values.min() * 0.95, f_values.max() * 1.05, 100)
         y_fit = a * np.exp(b * x_fit)
         ax.plot(x_fit, y_fit, '--', color='red', linewidth=2, alpha=0.7,
-                label=f'Fit: steps = {a:.1f} × exp({b:.2f} × f)')
+                label=f'Fit: epochs = {a:.1f} × exp({b:.2f} × f)')
 
     ax.set_xlabel('f = S/(CP) (Capacity Fraction)', fontsize=14)
-    ax.set_ylabel('Steps to Saturation', fontsize=14)
+    ax.set_ylabel('Epochs to Saturation', fontsize=14)
 
     if is_multi_prime:
         ax.set_title(f'Saturation Time vs Capacity Fraction - Multiple Primes (C={C:.2f} bits/param)',
@@ -2629,12 +2848,12 @@ def plot_saturation_time_vs_capacity_fraction(
 
     # Add text box with stats
     if is_multi_prime:
-        textstr = f'Overall fit: steps = {a:.1f} × exp({b:.2f} × f)\n'
+        textstr = f'Overall fit: epochs = {a:.1f} × exp({b:.2f} × f)\n'
         textstr += f'Exponent: {b:.2f}\n'
         textstr += f'R²: {r_squared:.3f}\n'
         textstr += f'C = {C:.2f} bits/param'
     else:
-        textstr = f'Exponential: steps = {a:.1f} × exp({b:.2f} × f)\n'
+        textstr = f'Exponential: epochs = {a:.1f} × exp({b:.2f} × f)\n'
         textstr += f'Exponent: {b:.2f}\n'
         textstr += f'R²: {r_squared:.3f}\n'
         textstr += f'C = {C:.2f} bits/param'
@@ -2652,31 +2871,349 @@ def plot_saturation_time_vs_capacity_fraction(
     else:
         plt.close()
 
+    # Print individual prime fit statistics if multi-prime
+    if is_multi_prime and prime_fit_stats:
+        print("\n" + "="*70)
+        print("INDIVIDUAL PRIME FIT STATISTICS")
+        print("="*70)
+        print(f"Overall fit (ALL points): epochs = {a:.1f} × exp({b:.2f} × f), R² = {r_squared:.3f}")
+        print("-"*70)
+        for p in sorted(prime_fit_stats.keys()):
+            stats = prime_fit_stats[p]
+            print(f"p={p:3d}: epochs = {stats['coefficient']:5.1f} × exp({stats['exponent']:5.2f} × f), "
+                  f"R² = {stats['r_squared']:.3f}, n={stats['n_points']:3d} points")
+        print("="*70 + "\n")
+
     return b, a, r_squared
 
 
-def plot_saturation_steps_vs_params(
+def plot_saturation_epochs_vs_params(
     all_results: Dict[int, List[Dict]],
     save_path: Optional[str] = None,
     show: bool = True
 ) -> None:
     """
-    Plot steps to saturation vs model parameter count for different dataset sizes.
+    Plot epochs to saturation vs model parameter count.
 
     Args:
-        all_results: Dict mapping dimension to list of result dicts
+        all_results: Dict mapping dimension to list of result dicts, OR
+                     Dict mapping (prime, dimension) tuples to list of result dicts (for multi-prime plots)
         save_path: Path to save the plot (optional)
         show: Whether to show the plot
     """
+    # Detect if we have multi-prime data (keys are tuples) or single-prime (keys are ints)
+    first_key = next(iter(all_results.keys()))
+    is_multi_prime = isinstance(first_key, tuple)
+
     fig, ax = plt.subplots(figsize=(12, 8))
 
-    # Collect all unique dataset sizes across all dimensions
-    all_dataset_sizes = set()
-    for results in all_results.values():
+    if is_multi_prime:
+        # Multi-prime plot: color by prime
+        # Collect all data points
+        all_primes = set()
+        for key, results in all_results.items():
+            p, dim = key
+            for result in results:
+                if result.get('saturated', True):
+                    all_primes.add(p)
+
+        sorted_primes = sorted(all_primes)
+
+        # Use tab20 for up to 20 colors, or husl for more
+        if len(sorted_primes) <= 20:
+            colors = sns.color_palette("tab20", n_colors=len(sorted_primes))
+        else:
+            colors = sns.color_palette("husl", n_colors=len(sorted_primes))
+        prime_to_color = {p: colors[i] for i, p in enumerate(sorted_primes)}
+
+        # Group by prime
+        prime_groups = {}
+        for key, results in all_results.items():
+            p, dim = key
+            if p not in prime_groups:
+                prime_groups[p] = []
+            for result in results:
+                if result.get('saturated', True):
+                    prime_groups[p].append(result)
+
+        # Plot each prime as a separate series
+        for p in sorted_primes:
+            if p not in prime_groups:
+                continue
+
+            results = prime_groups[p]
+            # Sort by parameter count
+            results = sorted(results, key=lambda x: x['param_count'])
+
+            param_counts = [r['param_count'] for r in results]
+            saturation_epochs = [r['saturation_epoch'] for r in results]
+
+            ax.plot(
+                param_counts,
+                saturation_epochs,
+                marker='o',
+                markersize=8,
+                linewidth=2,
+                color=prime_to_color[p],
+                label=f'p={p}'
+            )
+
+        legend_title = 'Prime'
+
+    else:
+        # Single-prime plot: color by dataset size
+        # Collect all unique dataset sizes across all dimensions
+        all_dataset_sizes = set()
+        for results in all_results.values():
+            for result in results:
+                # Only include saturated results
+                if result.get('saturated', True):
+                    all_dataset_sizes.add(result['n_samples'])
+
+        # Sort dataset sizes for consistent ordering
+        sorted_dataset_sizes = sorted(all_dataset_sizes)
+
+        # Get colors from seaborn crest colormap
+        colors = sns.color_palette("crest", n_colors=len(sorted_dataset_sizes))
+        dataset_size_to_color = {size: colors[i] for i, size in enumerate(sorted_dataset_sizes)}
+
+        # Group by dataset size
+        dataset_size_groups = {}
+        for dim, results in all_results.items():
+            for result in results:
+                # Skip non-saturated results
+                if not result.get('saturated', True):
+                    continue
+
+                n_samples = result['n_samples']
+                if n_samples not in dataset_size_groups:
+                    dataset_size_groups[n_samples] = []
+                dataset_size_groups[n_samples].append(result)
+
+        # Plot each dataset size as a separate series
+        for n_samples in sorted_dataset_sizes:
+            if n_samples not in dataset_size_groups:
+                continue
+
+            results = dataset_size_groups[n_samples]
+            # Sort by parameter count
+            results = sorted(results, key=lambda x: x['param_count'])
+
+            param_counts = [r['param_count'] for r in results]
+            saturation_epochs = [r['saturation_epoch'] for r in results]
+
+            ax.plot(
+                param_counts,
+                saturation_epochs,
+                marker='o',
+                markersize=8,
+                linewidth=2,
+                color=dataset_size_to_color[n_samples],
+                label=f'{n_samples} samples'
+            )
+
+        legend_title = 'Dataset Size'
+
+    ax.set_xlabel('Model Parameters', fontsize=14)
+    ax.set_ylabel('Saturation Epochs', fontsize=14)
+    ax.set_title('Saturation Epochs vs Model Size', fontsize=16, pad=20)
+    ax.tick_params(axis='both', which='major', labelsize=12)
+
+    # Use log scale for both axes
+    ax.set_xscale('log')
+    ax.set_yscale('log')
+
+    # Legend
+    ax.legend(
+        title=legend_title,
+        loc='best',
+        fontsize=10,
+        title_fontsize=11
+    )
+
+    ax.grid(True, alpha=0.3, which='both')
+
+    plt.tight_layout()
+
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight', dpi=150)
+        print(f"Saved saturation epochs vs params plot: {save_path}")
+
+    if show:
+        plt.show()
+    else:
+        plt.close()
+
+
+def plot_saturation_epochs_vs_dataset_bits(
+    all_results: Dict[int, List[Dict]],
+    save_path: Optional[str] = None,
+    show: bool = True
+) -> None:
+    """
+    Plot saturation epochs vs dataset size (in bits) with model sizes color coded.
+    Supports both single-prime and multi-prime data.
+
+    Args:
+        all_results: Dict mapping dimension to list of result dicts, OR
+                     Dict mapping (prime, dimension) tuples to list of result dicts (for multi-prime plots)
+        save_path: Path to save the plot (optional)
+        show: Whether to show the plot
+    """
+    # Detect if we have multi-prime data (keys are tuples) or single-prime (keys are ints)
+    first_key = next(iter(all_results.keys()))
+    is_multi_prime = isinstance(first_key, tuple)
+
+    fig, ax = plt.subplots(figsize=(12, 8))
+
+    # Collect all data points and group by model size (param_count)
+    param_count_groups = {}
+    all_param_counts = set()
+
+    for key, results in all_results.items():
+        if is_multi_prime:
+            p, dim = key
+        else:
+            dim = key
+
         for result in results:
-            # Only include saturated results
-            if result.get('saturated', True):
-                all_dataset_sizes.add(result['n_samples'])
+            # Skip non-saturated results
+            if not result.get('saturated', True):
+                continue
+
+            param_count = result['param_count']
+            all_param_counts.add(param_count)
+
+            if param_count not in param_count_groups:
+                param_count_groups[param_count] = []
+            param_count_groups[param_count].append(result)
+
+    # Sort param counts for consistent ordering
+    sorted_param_counts = sorted(all_param_counts)
+
+    # Get colors from seaborn crest colormap
+    colors = sns.color_palette("crest", n_colors=len(sorted_param_counts))
+    param_count_to_color = {pc: colors[i] for i, pc in enumerate(sorted_param_counts)}
+
+    # Plot each model size as a separate series
+    for param_count in sorted_param_counts:
+        if param_count not in param_count_groups:
+            continue
+
+        results = param_count_groups[param_count]
+        # Sort by dataset size
+        results = sorted(results, key=lambda x: x['dataset_bits'])
+
+        dataset_bits = [r['dataset_bits'] for r in results]
+        saturation_epochs = [r['saturation_epoch'] for r in results]
+
+        # Format parameter count for legend
+        if param_count >= 1e6:
+            param_str = f'{param_count/1e6:.1f}M'
+        elif param_count >= 1e3:
+            param_str = f'{param_count/1e3:.0f}K'
+        else:
+            param_str = str(param_count)
+
+        ax.plot(
+            dataset_bits,
+            saturation_epochs,
+            marker='o',
+            markersize=8,
+            linewidth=2,
+            color=param_count_to_color[param_count],
+            label=f'{param_str} params'
+        )
+
+    ax.set_xlabel('Dataset Size (bits)', fontsize=14)
+    ax.set_ylabel('Saturation Epochs', fontsize=14)
+
+    if is_multi_prime:
+        ax.set_title('Saturation Epochs vs Dataset Size (Multiple Primes)', fontsize=16, pad=20)
+    else:
+        ax.set_title('Saturation Epochs vs Dataset Size', fontsize=16, pad=20)
+
+    ax.tick_params(axis='both', which='major', labelsize=12)
+
+    # Use log scale for y-axis
+    ax.set_yscale('log')
+
+    # Legend
+    ax.legend(
+        title='Model Size',
+        loc='best',
+        fontsize=10,
+        title_fontsize=11
+    )
+
+    ax.grid(True, alpha=0.3, which='both')
+
+    plt.tight_layout()
+
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight', dpi=150)
+        print(f"Saved saturation epochs vs dataset bits plot: {save_path}")
+
+    if show:
+        plt.show()
+    else:
+        plt.close()
+
+
+def plot_saturation_epochs_vs_inverse_capacity(
+    all_results: Dict[int, List[Dict]],
+    C: float,
+    save_path: Optional[str] = None,
+    show: bool = True
+) -> None:
+    """
+    Plot saturation epochs vs 1/(model capacity) where capacity = C * P.
+    Supports both single-prime and multi-prime data.
+
+    Args:
+        all_results: Dict mapping dimension to list of result dicts, OR
+                     Dict mapping (prime, dimension) tuples to list of result dicts (for multi-prime plots)
+        C: Capacity constant (bits per parameter)
+        save_path: Path to save the plot (optional)
+        show: Whether to show the plot
+    """
+    # Detect if we have multi-prime data (keys are tuples) or single-prime (keys are ints)
+    first_key = next(iter(all_results.keys()))
+    is_multi_prime = isinstance(first_key, tuple)
+
+    fig, ax = plt.subplots(figsize=(12, 8))
+
+    # Collect all data points and group by dataset size
+    dataset_size_groups = {}
+    all_dataset_sizes = set()
+    dataset_size_to_primes = {}
+
+    for key, results in all_results.items():
+        if is_multi_prime:
+            p, dim = key
+        else:
+            dim = key
+            p = None
+
+        for result in results:
+            # Skip non-saturated results
+            if not result.get('saturated', True):
+                continue
+
+            n_samples = result['n_samples']
+            all_dataset_sizes.add(n_samples)
+
+            # Track primes for each dataset size
+            if n_samples not in dataset_size_to_primes:
+                dataset_size_to_primes[n_samples] = set()
+            if is_multi_prime:
+                dataset_size_to_primes[n_samples].add(p)
+            elif 'p' in result:
+                dataset_size_to_primes[n_samples].add(result['p'])
+
+            if n_samples not in dataset_size_groups:
+                dataset_size_groups[n_samples] = []
+            dataset_size_groups[n_samples].append(result)
 
     # Sort dataset sizes for consistent ordering
     sorted_dataset_sizes = sorted(all_dataset_sizes)
@@ -2685,48 +3222,46 @@ def plot_saturation_steps_vs_params(
     colors = sns.color_palette("crest", n_colors=len(sorted_dataset_sizes))
     dataset_size_to_color = {size: colors[i] for i, size in enumerate(sorted_dataset_sizes)}
 
-    # Group by dataset size
-    dataset_size_groups = {}
-    for dim, results in all_results.items():
-        for result in results:
-            # Skip non-saturated results
-            if not result.get('saturated', True):
-                continue
-
-            n_samples = result['n_samples']
-            if n_samples not in dataset_size_groups:
-                dataset_size_groups[n_samples] = []
-            dataset_size_groups[n_samples].append(result)
-
     # Plot each dataset size as a separate series
     for n_samples in sorted_dataset_sizes:
         if n_samples not in dataset_size_groups:
             continue
 
         results = dataset_size_groups[n_samples]
-        # Sort by parameter count
-        results = sorted(results, key=lambda x: x['param_count'])
+        # Sort by inverse capacity (which is inversely sorted by param_count)
+        results = sorted(results, key=lambda x: 1.0 / (C * x['param_count']))
 
-        param_counts = [r['param_count'] for r in results]
-        saturation_steps = [r['saturation_step'] for r in results]
+        inverse_capacities = [1.0 / (C * r['param_count']) for r in results]
+        saturation_epochs = [r['saturation_epoch'] for r in results]
+
+        # Create label with primes if multi-prime
+        if is_multi_prime and n_samples in dataset_size_to_primes:
+            primes_str = ', '.join(map(str, sorted(dataset_size_to_primes[n_samples])))
+            label = f'{n_samples} samples (p={primes_str})'
+        else:
+            label = f'{n_samples} samples'
 
         ax.plot(
-            param_counts,
-            saturation_steps,
+            inverse_capacities,
+            saturation_epochs,
             marker='o',
             markersize=8,
             linewidth=2,
             color=dataset_size_to_color[n_samples],
-            label=f'{n_samples} samples'
+            label=label
         )
 
-    ax.set_xlabel('Model Parameters', fontsize=14)
-    ax.set_ylabel('Steps to Saturation', fontsize=14)
-    ax.set_title('Steps to Saturation vs Model Size', fontsize=16, pad=20)
+    ax.set_xlabel('1 / (Model Capacity) [1/bits]', fontsize=14)
+    ax.set_ylabel('Saturation Epochs', fontsize=14)
+
+    if is_multi_prime:
+        ax.set_title('Saturation Epochs vs Inverse Capacity (Multiple Primes)', fontsize=16, pad=20)
+    else:
+        ax.set_title('Saturation Epochs vs Inverse Capacity', fontsize=16, pad=20)
+
     ax.tick_params(axis='both', which='major', labelsize=12)
 
-    # Use log scale for both axes
-    ax.set_xscale('log')
+    # Use log scale for y-axis only
     ax.set_yscale('log')
 
     # Legend
@@ -2743,7 +3278,7 @@ def plot_saturation_steps_vs_params(
 
     if save_path:
         plt.savefig(save_path, bbox_inches='tight', dpi=150)
-        print(f"Saved saturation steps vs params plot: {save_path}")
+        print(f"Saved saturation epochs vs inverse capacity plot: {save_path}")
 
     if show:
         plt.show()
@@ -2762,11 +3297,11 @@ def plot_rate_vs_dataset_size(
 
     For each dimension, finds pairs of data points (n, n+k) and computes:
         dT/dS = (T(n+k) - T(n)) / (S(n+k) - S(n))
-    where S is the dataset size in bits.
+    where S is the dataset size in bits and T is measured in epochs.
 
     Args:
         all_results: Dict mapping dimension to list of result dicts.
-                     Each result dict should have 'n_samples', 'saturation_step',
+                     Each result dict should have 'n_samples', 'saturation_epoch',
                      and 'dataset_bits'.
         k: Delta in number of samples for rate estimation (default: 10)
         save_path: Path to save the plot (optional)
@@ -2794,16 +3329,16 @@ def plot_rate_vs_dataset_size(
         if not saturated_results:
             continue
 
-        # Build mappings from n_samples to saturation_step and dataset_bits
-        samples_to_step = {r['n_samples']: r['saturation_step'] for r in saturated_results}
+        # Build mappings from n_samples to saturation_epoch and dataset_bits
+        samples_to_epoch = {r['n_samples']: r['saturation_epoch'] for r in saturated_results}
         samples_to_bits = {r['n_samples']: r['dataset_bits'] for r in saturated_results}
 
         # Find all pairs (n, n+k) and compute dT/dS
         rates = []
-        for n_samples in sorted(samples_to_step.keys()):
-            if (n_samples + k) in samples_to_step:
-                T_n = samples_to_step[n_samples]
-                T_n_k = samples_to_step[n_samples + k]
+        for n_samples in sorted(samples_to_epoch.keys()):
+            if (n_samples + k) in samples_to_epoch:
+                T_n = samples_to_epoch[n_samples]
+                T_n_k = samples_to_epoch[n_samples + k]
                 S_n = samples_to_bits[n_samples]
                 S_n_k = samples_to_bits[n_samples + k]
                 delta_S = S_n_k - S_n
@@ -2832,7 +3367,7 @@ def plot_rate_vs_dataset_size(
         )
 
     ax.set_xlabel('Dataset Size S (bits)', fontsize=14)
-    ax.set_ylabel('dT/dS (steps per bit)', fontsize=14)
+    ax.set_ylabel('dT/dS (epochs per bit)', fontsize=14)
     ax.set_title(f'Rate of Change of Saturation Time (k={k} samples)', fontsize=16, pad=20)
     ax.tick_params(axis='both', which='major', labelsize=12)
 
@@ -2863,6 +3398,75 @@ def plot_rate_vs_dataset_size(
     return rate_data
 
 
+def plot_delay_vs_capacity_fraction(
+    delay_data: List[Dict],
+    C: float,
+    save_path: Optional[str] = None,
+    show: bool = True
+):
+    """
+    Plot grokking delay vs capacity fraction f = S/(C*P) for multiple primes.
+
+    Args:
+        delay_data: List of dicts with keys 'p', 'param_count', 'delay', 'dataset_bits'
+        C: Capacity constant (bits per parameter)
+        save_path: Path to save the plot (optional)
+        show: Whether to show the plot
+    """
+    if not delay_data:
+        print("No delay data to plot")
+        return
+
+    fig, ax = plt.subplots(figsize=(12, 8))
+
+    # Group by prime for different colors
+    primes = sorted(set(item['p'] for item in delay_data))
+    crest_cmap = sns.color_palette('crest', n_colors=len(primes))
+    prime_to_color = {p: crest_cmap[i] for i, p in enumerate(primes)}
+
+    for p in primes:
+        p_data = [item for item in delay_data if item['p'] == p]
+        
+        f_values = []
+        delays = []
+        for item in p_data:
+            P = item['param_count']
+            S = item['dataset_bits']
+            f = S / (C * P)
+            f_values.append(f)
+            delays.append(item['delay'])
+        
+        # Sort by f for line plotting
+        sorted_pairs = sorted(zip(f_values, delays))
+        f_values = [x[0] for x in sorted_pairs]
+        delays = [x[1] for x in sorted_pairs]
+        
+        color = prime_to_color[p]
+        ax.plot(f_values, delays, 'o-', color=color, label=f'p={p}',
+                markersize=6, alpha=0.7, linewidth=1.5)
+
+    ax.set_xlabel('Capacity Fraction f = S/(CP)', fontsize=14)
+    ax.set_ylabel('Grokking Delay (epochs)', fontsize=14)
+    ax.set_title(f'Grokking Delay vs Capacity Fraction (C={C:.2f} bits/param)', fontsize=16, pad=20)
+    ax.legend(fontsize=10, loc='upper left')
+    ax.grid(True, alpha=0.3)
+    ax.tick_params(axis='both', which='major', labelsize=12)
+
+    # Add horizontal line at y=0
+    ax.axhline(y=0, color='gray', linestyle='--', alpha=0.5, linewidth=1)
+
+    plt.tight_layout()
+
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight', dpi=300)
+        print(f"Saved delay vs capacity fraction plot: {save_path}")
+
+    if show:
+        plt.show()
+    else:
+        plt.close()
+
+
 def plot_predicted_vs_empirical_grokking(
     grokking_points: List[Dict],
     save_path: Optional[str] = None,
@@ -2882,8 +3486,8 @@ def plot_predicted_vs_empirical_grokking(
 
     fig, ax = plt.subplots(figsize=(10, 8))
 
-    predicted = [item['predicted'] for item in grokking_points]
-    empirical = [item['empirical'] for item in grokking_points]
+    predicted = np.array([item['predicted'] for item in grokking_points])
+    empirical = np.array([item['empirical'] for item in grokking_points])
     p_values = [item['p'] for item in grokking_points]
 
     # Plot points
@@ -2894,13 +3498,31 @@ def plot_predicted_vs_empirical_grokking(
         ax.annotate(f'p={p_val}', (predicted[i], empirical[i]),
                    xytext=(5, 5), textcoords='offset points', fontsize=10)
 
-    # Plot y=x line
-    all_params = predicted + empirical
-    min_param = min(all_params)
-    max_param = max(all_params)
-    margin = (max_param - min_param) * 0.1
-    ax.plot([min_param - margin, max_param + margin], [min_param - margin, max_param + margin],
-           'k--', alpha=0.5, linewidth=1.5, label='y=x', zorder=1)
+    # Fit line of best fit: empirical = m * predicted + c
+    if len(predicted) >= 2:
+        m, c = np.polyfit(predicted, empirical, 1)
+        
+        # Calculate R²
+        y_pred = m * predicted + c
+        ss_res = np.sum((empirical - y_pred) ** 2)
+        ss_tot = np.sum((empirical - np.mean(empirical)) ** 2)
+        r_squared = 1 - ss_res / ss_tot if ss_tot > 0 else 0
+        
+        # Plot line of best fit
+        all_params = list(predicted) + list(empirical)
+        min_param = min(all_params)
+        max_param = max(all_params)
+        margin = (max_param - min_param) * 0.1
+        x_fit = np.linspace(min_param - margin, max_param + margin, 100)
+        y_fit = m * x_fit + c
+        
+        # Format equation
+        sign = '+' if c >= 0 else '−'
+        label = f'y = {m:.2f}x {sign} {abs(c):.0f} (R²={r_squared:.3f})'
+        ax.plot(x_fit, y_fit, 'r-', alpha=0.7, linewidth=2, label=label, zorder=2)
+        
+        print(f"Line of best fit: empirical = {m:.3f} × predicted {sign} {abs(c):.0f}")
+        print(f"R² = {r_squared:.3f}")
 
     ax.set_xlabel('Predicted Grokking Point (params)', fontsize=14)
     ax.set_ylabel('Empirical Grokking Point (params)', fontsize=14)
@@ -2942,16 +3564,37 @@ def plot_critical_params_vs_prime(
 
     fig, ax = plt.subplots(figsize=(10, 8))
 
-    p_values = [item['p'] for item in critical_data]
-    critical_params = [item['critical_params'] for item in critical_data]
+    p_values = np.array([item['p'] for item in critical_data])
+    critical_params = np.array([item['critical_params'] for item in critical_data])
 
     # Plot points
     ax.scatter(p_values, critical_params, s=100, alpha=0.7, c='#d95f02',
                edgecolors='black', linewidth=1.5, zorder=3)
 
-    # Connect points with lines
-    ax.plot(p_values, critical_params, 'o-', color='#d95f02', alpha=0.5,
-            linewidth=2, markersize=8, zorder=2)
+    # Fit line of best fit: critical_params = m * p + c
+    if len(p_values) >= 2:
+        m, c = np.polyfit(p_values, critical_params, 1)
+        
+        # Calculate R²
+        y_pred = m * p_values + c
+        ss_res = np.sum((critical_params - y_pred) ** 2)
+        ss_tot = np.sum((critical_params - np.mean(critical_params)) ** 2)
+        r_squared = 1 - ss_res / ss_tot if ss_tot > 0 else 0
+        
+        # Plot line of best fit
+        min_p = min(p_values)
+        max_p = max(p_values)
+        margin = (max_p - min_p) * 0.1
+        x_fit = np.linspace(min_p - margin, max_p + margin, 100)
+        y_fit = m * x_fit + c
+        
+        # Format equation
+        sign = '+' if c >= 0 else '−'
+        label = f'y = {m:.1f}x {sign} {abs(c):.0f} (R²={r_squared:.3f})'
+        ax.plot(x_fit, y_fit, 'r-', alpha=0.7, linewidth=2, label=label, zorder=2)
+        
+        print(f"Line of best fit: critical_params = {m:.2f} × p {sign} {abs(c):.0f}")
+        print(f"R² = {r_squared:.3f}")
 
     # Annotate with prime values
     for i, (p_val, params) in enumerate(zip(p_values, critical_params)):
@@ -2961,6 +3604,7 @@ def plot_critical_params_vs_prime(
     ax.set_xlabel('Prime (p)', fontsize=14)
     ax.set_ylabel('Critical Parameter Count', fontsize=14)
     ax.set_title(title, fontsize=16, pad=20)
+    ax.legend(fontsize=12)
     ax.grid(True, alpha=0.3)
     ax.tick_params(axis='both', which='major', labelsize=12)
 
@@ -2977,3 +3621,92 @@ def plot_critical_params_vs_prime(
         plt.show()
     else:
         plt.close()
+
+
+def plot_critical_params_vs_dataset_size(
+    critical_data: List[Dict],
+    title: str = 'Critical Parameter Count vs Dataset Size',
+    save_path: Optional[str] = None,
+    show: bool = True
+):
+    """
+    Plot critical parameter count vs dataset size (bits) for multiple primes.
+
+    Args:
+        critical_data: List of dicts with keys 'p', 'critical_params', and 'dataset_bits'
+        title: Plot title
+        save_path: Path to save the plot (optional)
+        show: Whether to show the plot
+    
+    Returns:
+        Tuple of (slope, intercept, r_squared) from linear fit
+    """
+    if not critical_data:
+        print("No critical data to plot")
+        return 0.0, 0.0, 0.0
+
+    fig, ax = plt.subplots(figsize=(10, 8))
+
+    p_values = [item['p'] for item in critical_data]
+    critical_params = np.array([item['critical_params'] for item in critical_data])
+    dataset_bits = np.array([item['dataset_bits'] for item in critical_data])
+
+    # Plot points
+    ax.scatter(dataset_bits, critical_params, s=100, alpha=0.7, c='#1b9e77',
+               edgecolors='black', linewidth=1.5, zorder=3)
+
+    # Fit line of best fit: critical_params = m * dataset_bits + c
+    m, c, r_squared = 0.0, 0.0, 0.0
+    if len(dataset_bits) >= 2:
+        m, c = np.polyfit(dataset_bits, critical_params, 1)
+        
+        # Calculate R²
+        y_pred = m * dataset_bits + c
+        ss_res = np.sum((critical_params - y_pred) ** 2)
+        ss_tot = np.sum((critical_params - np.mean(critical_params)) ** 2)
+        r_squared = 1 - ss_res / ss_tot if ss_tot > 0 else 0
+        
+        # Plot line of best fit
+        min_s = min(dataset_bits)
+        max_s = max(dataset_bits)
+        margin = (max_s - min_s) * 0.1
+        x_fit = np.linspace(min_s - margin, max_s + margin, 100)
+        y_fit = m * x_fit + c
+        
+        # Format equation
+        sign = '+' if c >= 0 else '−'
+        label = f'P = {m:.3f}S {sign} {abs(c):.0f} (R²={r_squared:.3f})'
+        ax.plot(x_fit, y_fit, 'r-', alpha=0.7, linewidth=2, label=label, zorder=2)
+        
+        print(f"Line of best fit: critical_params = {m:.4f} × dataset_bits {sign} {abs(c):.0f}")
+        print(f"R² = {r_squared:.3f}")
+        print(f"Interpretation: 1 bit of data requires ~{m:.3f} additional parameters")
+
+    # Annotate with prime values
+    for i, (p_val, params, bits) in enumerate(zip(p_values, critical_params, dataset_bits)):
+        ax.annotate(f'p={p_val}', (bits, params),
+                   xytext=(5, 5), textcoords='offset points', fontsize=10)
+
+    ax.set_xlabel('Dataset Size (bits)', fontsize=14)
+    ax.set_ylabel('Critical Parameter Count', fontsize=14)
+    ax.set_title(title, fontsize=16, pad=20)
+    ax.legend(fontsize=12)
+    ax.grid(True, alpha=0.3)
+    ax.tick_params(axis='both', which='major', labelsize=12)
+
+    # Format axes with commas for thousands
+    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{int(x):,}'))
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{int(x):,}'))
+
+    plt.tight_layout()
+
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight', dpi=300)
+        print(f"Saved critical params vs dataset size plot: {save_path}")
+
+    if show:
+        plt.show()
+    else:
+        plt.close()
+
+    return m, c, r_squared

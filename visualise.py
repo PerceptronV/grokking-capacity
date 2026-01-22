@@ -19,6 +19,7 @@ from plotting import (
     plot_separate_curves,
     plot_separate_curves_with_memorization,
     plot_grokking_delay as plot_delay_util,
+    plot_grokking_integral,
     plot_grokking_time as plot_time_util,
     plot_delay_vs_memorization,
     plot_delay_and_memorization_vs_params,
@@ -38,10 +39,14 @@ from plotting import (
     plot_speed_vs_model_size,
     plot_combined_speed_analysis,
     plot_saturation_time_vs_capacity_fraction,
-    plot_saturation_steps_vs_params,
+    plot_saturation_epochs_vs_params,
+    plot_saturation_epochs_vs_dataset_bits,
+    plot_saturation_epochs_vs_inverse_capacity,
     plot_rate_vs_dataset_size,
+    plot_delay_vs_capacity_fraction,
     plot_predicted_vs_empirical_grokking,
     plot_critical_params_vs_prime,
+    plot_critical_params_vs_dataset_size,
     calculate_grokking_delay
 )
 from utils import compute_dataset_size_bits
@@ -210,6 +215,43 @@ def extract_samples(fname):
     return int(match.group(1)) if match else 0
 
 
+def compute_saturation_epoch_from_trace(
+    acc_trace: np.ndarray,
+    threshold: float,
+    steps_per_epoch: int,
+    steps_trace: Optional[np.ndarray] = None
+) -> Optional[float]:
+    """
+    Compute saturation epoch from accuracy trace.
+
+    Args:
+        acc_trace: Array of accuracy values (0-100 scale or 0-1 scale)
+        threshold: Accuracy threshold (0-100 scale)
+        steps_per_epoch: Number of steps per epoch
+        steps_trace: Optional array of step numbers corresponding to acc_trace.
+                     If None, assumes acc_trace is indexed by step number directly.
+
+    Returns:
+        Saturation epoch (float) or None if threshold never reached
+    """
+    # Handle both 0-1 and 0-100 scales
+    if len(acc_trace) > 0 and acc_trace.max() <= 1.0:
+        acc_trace = acc_trace * 100
+
+    if steps_trace is not None:
+        # acc_trace and steps_trace are parallel arrays
+        for step, acc in zip(steps_trace, acc_trace):
+            if acc >= threshold:
+                return step / steps_per_epoch
+    else:
+        # acc_trace is indexed by step number directly
+        for step, acc in enumerate(acc_trace):
+            if acc >= threshold:
+                return step / steps_per_epoch
+
+    return None  # Never reached threshold
+
+
 def groks(args):
     # Ensure args.p is a list and use only the first prime
     primes = args.p if isinstance(args.p, list) else [args.p]
@@ -219,7 +261,7 @@ def groks(args):
         print("Warning: groks command only uses the first prime. For multi-prime analysis, use 'primes' command.")
 
     # Set data and plot directories
-    signature = f'p{p}_seed{args.training_seed}_split{args.split_type}'
+    signature = f'p{p}_seed{args.seed}_split{args.split_type}'
     data_dir = os.path.join(args.data_dir, signature)
     plot_dir = os.path.join(args.plot_dir, signature)
 
@@ -396,6 +438,12 @@ def groks(args):
             plot_delay_and_memorization_vs_params(results, threshold_train=args.threshold_train, threshold_val=args.threshold_val,
                                                  save_path=save_path, show=show)
 
+    if args.integral:
+        # Integral plot
+        save_path = os.path.join(plot_dir, f'grokking_integral_p{p}.pdf') if args.save else None
+        plot_grokking_integral(results, threshold_train=args.threshold_train, threshold_val=args.threshold_val,
+                              save_path=save_path, show=show, threshold_params=threshold_params)
+
     if args.critical:
         save_path = os.path.join(plot_dir, f'critical_capacity_p{p}.pdf') if args.save else None
         critical_params = plot_grokking_critical_capacity(results, threshold_train=args.threshold_train,
@@ -418,7 +466,7 @@ def groks(args):
 
         # Load speed data
         speed_data = []
-        speed_signature = f'p{p}_seed{args.training_seed}'
+        speed_signature = f'p{p}_seed{args.seed}'
         speed_dir = os.path.join('data/speed', speed_signature)
 
         print(f"Expecting speed data with {n} samples for p={p}, training fraction={args.training_fraction}.")
@@ -430,15 +478,25 @@ def groks(args):
                 for sf in speed_files_list:
                     data = np.load(sf)
                     if int(data['n_samples']) in (int(n), int(n) - 1, int(n) + 1):  # allow rounding errors
-                        # Only include saturated results
-                        saturated = bool(data.get('saturated', True))
-                        if saturated:
+                        n_samples_speed = int(data['n_samples'])
+                        steps_per_epoch = (n_samples_speed + args.batch_size - 1) // args.batch_size
+
+                        # Compute saturation epoch dynamically from train accuracy trace
+                        saturation_epoch = None
+                        if 'train_acc_trace' in data:
+                            acc_trace = data['train_acc_trace']
+                            steps_trace = data['steps_trace'] if 'steps_trace' in data else None
+                            saturation_epoch = compute_saturation_epoch_from_trace(
+                                acc_trace, args.saturation_threshold, steps_per_epoch, steps_trace
+                            )
+
+                        if saturation_epoch is not None:
                             speed_data.append({
                                 'dim': int(data['dim']),
                                 'param_count': int(data['param_count']),
-                                'saturation_step': int(data['saturation_step']),
-                                'n_samples': int(data['n_samples']),
-                                'saturated': saturated
+                                'saturation_epoch': saturation_epoch,
+                                'n_samples': n_samples_speed,
+                                'saturated': True
                             })
                 print(f"Loaded {len(speed_data)} saturated speed experiments from {speed_dir} (matching seed)")
 
@@ -460,15 +518,25 @@ def groks(args):
                     for sf in speed_files_list:
                         data = np.load(sf)
                         if int(data['n_samples']) in (int(n), int(n) - 1, int(n) + 1):  # allow rounding errors
-                            # Only include saturated results
-                            saturated = bool(data.get('saturated', True))
-                            if saturated:
+                            n_samples_speed = int(data['n_samples'])
+                            steps_per_epoch = (n_samples_speed + args.batch_size - 1) // args.batch_size
+
+                            # Compute saturation epoch dynamically from train accuracy trace
+                            saturation_epoch = None
+                            if 'train_acc_trace' in data:
+                                acc_trace = data['train_acc_trace']
+                                steps_trace = data['steps_trace'] if 'steps_trace' in data else None
+                                saturation_epoch = compute_saturation_epoch_from_trace(
+                                    acc_trace, args.saturation_threshold, steps_per_epoch, steps_trace
+                                )
+
+                            if saturation_epoch is not None:
                                 speed_data.append({
                                     'dim': int(data['dim']),
                                     'param_count': int(data['param_count']),
-                                    'saturation_step': int(data['saturation_step']),
-                                    'n_samples': int(data['n_samples']),
-                                    'saturated': saturated
+                                    'saturation_epoch': saturation_epoch,
+                                    'n_samples': n_samples_speed,
+                                    'saturated': True
                                 })
                     print(f"Loaded {len(speed_data)} saturated speed experiments from {fallback_dir} (fallback seed)")
                 else:
@@ -483,6 +551,7 @@ def groks(args):
             speed_data,
             threshold_train=args.threshold_train,
             threshold_val=args.threshold_val,
+            saturation_threshold=args.saturation_threshold,
             threshold_params=threshold_params,
             batch_size=args.batch_size,
             n_train_samples=n,
@@ -599,7 +668,7 @@ def capacity(args):
         '*': 'mul',
         '/': 'div'
     }
-    signature = f'p{args.p}_seed{args.training_seed}_ds{symb_map[args.dataset_type]}'
+    signature = f'p{args.p}_seed{args.seed}_ds{symb_map[args.dataset_type]}'
     data_dir = os.path.join(args.data_dir, signature)
     plot_dir = os.path.join(args.plot_dir, signature)
     
@@ -835,11 +904,16 @@ def cross_exp(args):
                     # Only include saturated results
                     saturated = bool(data.get('saturated', True))
                     if saturated:
+                        n_samples_speed = int(data['n_samples'])
+                        saturation_step = int(data['saturation_step'])
+                        steps_per_epoch = (n_samples_speed + args.batch_size - 1) // args.batch_size
+                        saturation_epoch = saturation_step / steps_per_epoch
                         speed_data.append({
                             'dim': int(data['dim']),
                             'param_count': int(data['param_count']),
-                            'saturation_step': int(data['saturation_step']),
-                            'n_samples': int(data['n_samples']),
+                            'saturation_step': saturation_step,
+                            'saturation_epoch': saturation_epoch,
+                            'n_samples': n_samples_speed,
                             'saturated': saturated
                         })
 
@@ -863,11 +937,16 @@ def cross_exp(args):
                         # Only include saturated results
                         saturated = bool(data.get('saturated', True))
                         if saturated:
+                            n_samples_speed = int(data['n_samples'])
+                            saturation_step = int(data['saturation_step'])
+                            steps_per_epoch = (n_samples_speed + args.batch_size - 1) // args.batch_size
+                            saturation_epoch = saturation_step / steps_per_epoch
                             speed_data.append({
                                 'dim': int(data['dim']),
                                 'param_count': int(data['param_count']),
-                                'saturation_step': int(data['saturation_step']),
-                                'n_samples': int(data['n_samples']),
+                                'saturation_step': saturation_step,
+                                'saturation_epoch': saturation_epoch,
+                                'n_samples': n_samples_speed,
                                 'saturated': saturated
                             })
 
@@ -990,8 +1069,18 @@ def collect_speed_files(data_dir: str, args) -> List[str]:
     return sorted(files, key=lambda f: (extract_dim(f), extract_samples(f)))
 
 
-def load_speed_results(files: List[str], p: int) -> Dict[int, List[Dict]]:
-    """Load speed experiment results from files and group by dimension."""
+def load_speed_results(files: List[str], p: int, batch_size: int = 512, saturation_threshold: float = 99.0) -> Dict[int, List[Dict]]:
+    """Load speed experiment results from files and group by dimension.
+    
+    Args:
+        files: List of .npz file paths to load
+        p: Prime number
+        batch_size: Batch size used in experiments (for converting steps to epochs)
+        saturation_threshold: Accuracy threshold (0-100) to define saturation
+    
+    Returns:
+        Dictionary mapping dimension to list of result dictionaries
+    """
     all_results = {}
     for fname in files:
         if not os.path.exists(fname):
@@ -1000,17 +1089,29 @@ def load_speed_results(files: List[str], p: int) -> Dict[int, List[Dict]]:
         data = np.load(fname)
 
         dim = int(data['dim'])
+        n_samples = int(data['n_samples'])
+        steps_per_epoch = (n_samples + batch_size - 1) // batch_size
+
+        # Compute saturation epoch dynamically from train accuracy trace
+        saturation_epoch = None
+        if 'train_acc_trace' in data:
+            acc_trace = data['train_acc_trace']
+            steps_trace = data['steps_trace'] if 'steps_trace' in data else None
+            saturation_epoch = compute_saturation_epoch_from_trace(
+                acc_trace, saturation_threshold, steps_per_epoch, steps_trace
+            )
+
         result = {
-            'n_samples': int(data['n_samples']),
+            'n_samples': n_samples,
             'dim': dim,
             'depth': int(data['depth']),
             'heads': int(data['heads']),
             'param_count': int(data['param_count']),
             'p': p,
-            'saturation_step': int(data['saturation_step']),
+            'saturation_epoch': saturation_epoch,
             'final_acc': float(data['final_acc']),
             'dataset_bits': float(data['dataset_bits']),
-            'saturated': bool(data.get('saturated', True))
+            'saturated': saturation_epoch is not None
         }
 
         if dim not in all_results:
@@ -1061,17 +1162,33 @@ def speed(args):
                     continue
                 data = np.load(fname)
                 dim = int(data['dim'])
+                n_samples = int(data['n_samples'])
+                steps_per_epoch = (n_samples + args.batch_size - 1) // args.batch_size
+
+                # Compute saturation epoch dynamically from train accuracy trace
+                saturation_epoch = None
+                if 'train_acc_trace' in data:
+                    acc_trace = data['train_acc_trace']
+                    steps_trace = data['steps_trace'] if 'steps_trace' in data else None
+                    saturation_epoch = compute_saturation_epoch_from_trace(
+                        acc_trace, args.saturation_threshold, steps_per_epoch, steps_trace
+                    )
+
+                # Skip if saturation threshold was never reached
+                if saturation_epoch is None:
+                    continue
+
                 result = {
-                    'n_samples': int(data['n_samples']),
+                    'n_samples': n_samples,
                     'dim': dim,
                     'depth': int(data['depth']),
                     'heads': int(data['heads']),
                     'param_count': int(data['param_count']),
                     'p': p,
-                    'saturation_step': int(data['saturation_step']),
+                    'saturation_epoch': saturation_epoch,
                     'final_acc': float(data['final_acc']),
                     'dataset_bits': float(data['dataset_bits']),
-                    'saturated': bool(data.get('saturated', True))
+                    'saturated': saturation_epoch is not None
                 }
 
                 # Key by (p, dim) - each prime gets its own color/line in the plot
@@ -1098,7 +1215,7 @@ def speed(args):
         print("\n" + "="*60)
         print("CAPACITY FRACTION ANALYSIS (ALL PRIMES)")
         print("="*60)
-        print(f"Power law fit: steps = {coefficient:.1f} × f^{exponent:.2f}")
+        print(f"Power law fit: epochs = {coefficient:.1f} × f^{exponent:.2f}")
         print(f"Exponent: {exponent:.2f}")
         print(f"R²: {r_squared:.3f}")
         print(f"Capacity constant C = {consts.C:.2f} bits/param")
@@ -1129,7 +1246,7 @@ def speed(args):
             print(f"  - {os.path.basename(f)}")
 
         # Load all results and group by dimension
-        all_results = load_speed_results(files, p)
+        all_results = load_speed_results(files, p, args.batch_size, args.saturation_threshold)
 
         # Generate requested plots
         os.makedirs(plot_dir, exist_ok=True)
@@ -1144,10 +1261,10 @@ def speed(args):
                 show=show
             )
 
-            # Plot steps to saturation vs model parameters
-            print(f"\nPlotting steps to saturation vs model parameters for p={p}...")
-            save_path = os.path.join(plot_dir, f'saturation_steps_vs_params_p{p}.pdf') if args.save else None
-            plot_saturation_steps_vs_params(
+            # Plot epochs to saturation vs model parameters
+            print(f"\nPlotting epochs to saturation vs model parameters for p={p}...")
+            save_path = os.path.join(plot_dir, f'saturation_epochs_vs_params_p{p}.pdf') if args.save else None
+            plot_saturation_epochs_vs_params(
                 all_results,
                 save_path=save_path,
                 show=show
@@ -1169,9 +1286,9 @@ def speed(args):
                 print(f"Power law exponent: {b:.3f}")
                 print(f"R²: {r_squared:.3f}")
                 if b < 0:
-                    print(f"Larger models learn FASTER (fewer steps per bit)")
+                    print(f"Larger models learn FASTER (fewer epochs per bit)")
                 else:
-                    print(f"Larger models learn SLOWER (more steps per bit)")
+                    print(f"Larger models learn SLOWER (more epochs per bit)")
 
         if args.combined:
             print(f"\nPlotting combined speed analysis for p={p}...")
@@ -1201,7 +1318,7 @@ def speed(args):
                     rates = rate_data[dim]
                     if rates:
                         avg_rate = np.mean([r[1] for r in rates])
-                        print(f"dim={dim:3d}: avg dT/dS = {avg_rate:.2f} steps/bit")
+                        print(f"dim={dim:3d}: avg dT/dS = {avg_rate:.2f} epochs/bit")
                 print("="*60)
             else:
                 print("No paired data points found. Run speed.py with --rate to generate paired data.")
@@ -1215,13 +1332,13 @@ def speed(args):
                 results = all_results[dim]
                 param_count = results[0]['param_count']
 
-                # Average steps per bit across dataset sizes
+                # Average epochs per bit across dataset sizes
                 saturated = [r for r in results if r.get('saturated', True)]
                 if saturated:
-                    avg_speed = np.mean([r['saturation_step'] / r['dataset_bits']
+                    avg_speed = np.mean([r['saturation_epoch'] / r['dataset_bits']
                                         for r in saturated if r['dataset_bits'] > 0])
                     print(f"dim={dim:3d}: {param_count:8,} params, "
-                          f"avg speed: {avg_speed:.2f} steps/bit")
+                          f"avg speed: {avg_speed:.2f} epochs/bit")
 
             print("="*70)
 
@@ -1229,6 +1346,229 @@ def speed(args):
 # =============================================================================
 # Primes Experiment Visualization Functions
 # =============================================================================
+
+def find_all_seeds_for_prime(p_prime, data_dir, split_type):
+    """
+    Find all available seeds for a given prime in the data directory.
+
+    Returns:
+        List of seed numbers found
+    """
+    pattern_re = re.compile(rf'^p{p_prime}_seed(\d+)_split{split_type}$')
+    if not os.path.exists(data_dir):
+        return []
+
+    available_dirs = [d for d in os.listdir(data_dir)
+                     if pattern_re.match(d) and os.path.isdir(os.path.join(data_dir, d))]
+
+    # Extract seed numbers and sort
+    seeds = sorted([int(re.search(r'seed(\d+)', d).group(1)) for d in available_dirs])
+    return seeds
+
+
+def aggregate_grokking_results_across_seeds(p_prime, data_dir, split_type, file_pattern_func, threshold_train=99.0, threshold_val=99.0, saturation_threshold=99.0, use_min_delay=False):
+    """
+    Load and aggregate grokking results across all available seeds for a given prime.
+
+    Args:
+        p_prime: Prime number
+        data_dir: Base data directory
+        split_type: Split type (random, sequential, alternating)
+        file_pattern_func: Function that takes (prime_data_dir) and returns list of files to load
+        threshold_train: Training accuracy threshold (for delay calculation)
+        threshold_val: Validation accuracy threshold (for delay calculation)
+        saturation_threshold: Accuracy threshold for grokking speed curve (epochs_to_grok)
+        use_min_delay: If True, use minimum delay; if False, use average delay (default)
+
+    Returns:
+        List of aggregated results, one per dim/config. Each result contains:
+            - delay: aggregated grokking delay (min or avg depending on use_min_delay)
+            - train_epoch, val_epoch: epochs from the corresponding seed
+            - epochs_to_grok: averaged epochs for val_acc to reach saturation_threshold
+            - dim: dimension
+            - param_count: parameter count
+            - n_seeds: number of seeds with valid delays
+    """
+    seeds = find_all_seeds_for_prime(p_prime, data_dir, split_type)
+
+    if not seeds:
+        return []
+
+    print(f"  Found {len(seeds)} seed(s) for p={p_prime}: {seeds}")
+
+    # Collect delays and epoch info by (dim, param_count) key
+    delays_by_config = {}
+
+    for seed in seeds:
+        prime_signature = f'p{p_prime}_seed{seed}_split{split_type}'
+        prime_data_dir = os.path.join(data_dir, prime_signature)
+
+        # Get files for this seed
+        prime_files = file_pattern_func(prime_data_dir)
+
+        # Load results for this seed
+        for fname in prime_files:
+            if not os.path.exists(fname):
+                continue
+            data = np.load(fname)
+            dim = int(data['dim'])
+            param_count = int(data['param_count'])
+            key = (dim, param_count)
+
+            # Calculate delay for this seed (using threshold_train and threshold_val)
+            train_epoch, val_epoch, delay = calculate_grokking_delay(
+                data['train_acc'], data['val_acc'], threshold_train, threshold_val
+            )
+
+            # Calculate epochs_to_grok using saturation_threshold (for the speed curve)
+            epochs_to_grok = None
+            val_acc = data['val_acc']
+            for epoch, acc in enumerate(val_acc):
+                if acc >= saturation_threshold:
+                    epochs_to_grok = epoch
+                    break
+
+            if key not in delays_by_config:
+                delays_by_config[key] = {
+                    'results': [],
+                    'dim': dim,
+                    'param_count': param_count
+                }
+
+            if delay is not None:
+                delays_by_config[key]['results'].append({
+                    'delay': delay,
+                    'train_epoch': train_epoch,
+                    'val_epoch': val_epoch,
+                    'epochs_to_grok': epochs_to_grok
+                })
+
+    # Aggregate delays across seeds
+    aggregated_results = []
+    for key, data in delays_by_config.items():
+        if data['results']:  # Only include configs where at least one seed had valid delay
+            delays = [r['delay'] for r in data['results']]
+
+            if use_min_delay:
+                # Use minimum delay (best case)
+                aggregated_delay = min(delays)
+                # Find the seed with minimum delay
+                best_idx = delays.index(aggregated_delay)
+                selected_result = data['results'][best_idx]
+            else:
+                # Use average delay (typical case)
+                aggregated_delay = np.mean(delays)
+                # Find the seed with delay closest to the mean (most representative)
+                closest_idx = np.argmin([abs(d - aggregated_delay) for d in delays])
+                selected_result = data['results'][closest_idx]
+
+            # Average epochs_to_grok across seeds (only include seeds where it was computed)
+            epochs_to_grok_values = [r['epochs_to_grok'] for r in data['results'] if r['epochs_to_grok'] is not None]
+            avg_epochs_to_grok = float(np.mean(epochs_to_grok_values)) if epochs_to_grok_values else None
+
+            aggregated_results.append({
+                'delay': aggregated_delay,
+                'train_epoch': selected_result['train_epoch'],
+                'val_epoch': selected_result['val_epoch'],
+                'epochs_to_grok': avg_epochs_to_grok,
+                'dim': data['dim'],
+                'param_count': data['param_count'],
+                'n_seeds': len(data['results'])
+            })
+
+    return aggregated_results
+
+
+def aggregate_speed_results_across_seeds(p_prime, n_prime, batch_size: int = 512, saturation_threshold: float = 99.0):
+    """
+    Load and aggregate speed results across all available seeds for a given prime.
+
+    Args:
+        p_prime: Prime number
+        n_prime: Expected number of samples
+        batch_size: Batch size used in experiments (for converting steps to epochs)
+        saturation_threshold: Accuracy threshold (0-100) to define saturation
+
+    Returns:
+        List of aggregated speed results
+    """
+    speed_base_dir = 'data/speed'
+    if not os.path.exists(speed_base_dir):
+        return []
+
+    # Find all directories matching p{p_prime}_seed*
+    pattern_re = re.compile(rf'^p{p_prime}_seed(\d+)$')
+    available_dirs = [d for d in os.listdir(speed_base_dir)
+                     if pattern_re.match(d) and os.path.isdir(os.path.join(speed_base_dir, d))]
+
+    if not available_dirs:
+        return []
+
+    # Sort to get consistent behavior
+    available_dirs = sorted(available_dirs, key=lambda x: int(re.search(r'seed(\d+)', x).group(1)))
+    seeds = [int(re.search(r'seed(\d+)', d).group(1)) for d in available_dirs]
+
+    print(f"  Found {len(seeds)} seed(s) for speed data p={p_prime}: {seeds}")
+
+    # Collect results by (dim, param_count) key
+    results_by_config = {}
+
+    for seed_dir in available_dirs:
+        speed_dir = os.path.join(speed_base_dir, seed_dir)
+        speed_files_list = glob(os.path.join(speed_dir, 'speed_dim*.npz'))
+
+        for sf in speed_files_list:
+            data = np.load(sf)
+            # Only include if n_samples matches (with tolerance for rounding)
+            if int(data['n_samples']) not in (int(n_prime), int(n_prime) - 1, int(n_prime) + 1):
+                continue
+
+            dim = int(data['dim'])
+            param_count = int(data['param_count'])
+            n_samples = int(data['n_samples'])
+            steps_per_epoch = (n_samples + batch_size - 1) // batch_size
+
+            # Compute saturation epoch dynamically from train accuracy trace
+            saturation_epoch = None
+            if 'train_acc_trace' in data:
+                acc_trace = data['train_acc_trace']
+                steps_trace = data['steps_trace'] if 'steps_trace' in data else None
+                saturation_epoch = compute_saturation_epoch_from_trace(
+                    acc_trace, saturation_threshold, steps_per_epoch, steps_trace
+                )
+
+            # Skip if saturation threshold never reached
+            if saturation_epoch is None:
+                continue
+
+            key = (dim, param_count)
+
+            if key not in results_by_config:
+                results_by_config[key] = {
+                    'saturation_epochs': [],
+                    'dim': dim,
+                    'param_count': param_count,
+                    'n_samples': n_samples
+                }
+
+            results_by_config[key]['saturation_epochs'].append(saturation_epoch)
+
+    # Average saturation epochs across seeds
+    aggregated_results = []
+    for key, data in results_by_config.items():
+        saturation_epoch = float(np.mean(data['saturation_epochs']))
+
+        aggregated_results.append({
+            'dim': data['dim'],
+            'param_count': data['param_count'],
+            'saturation_epoch': saturation_epoch,
+            'n_samples': data['n_samples'],
+            'saturated': True,
+            'n_seeds': len(data['saturation_epochs'])
+        })
+
+    return aggregated_results
+
 
 def primes(args):
     """Handle primes subcommand for multi-prime analysis."""
@@ -1255,84 +1595,73 @@ def primes(args):
         for p_prime in primes_list:
             print(f"\nProcessing prime p={p_prime}")
 
-            # Load grokking data for this prime
-            prime_signature = f'p{p_prime}_seed{args.training_seed}_split{args.split_type}'
-            prime_data_dir = os.path.join(args.data_dir, prime_signature)
+            # Calculate dataset size for this prime
+            n_prime, size_prime = compute_dataset_size_bits(p_prime, args.op, args.training_fraction)
 
-            # Load grokking files for this prime
-            if args.pattern:
-                pattern = os.path.join(prime_data_dir, args.pattern)
-                prime_files = sorted(glob(pattern), key=extract_dim)
-            elif args.dims:
-                prime_files = [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
-                              for d in args.dims]
-            elif args.dims_start and args.dims_end:
-                dims = list(range(args.dims_start, args.dims_end + 1, args.dims_step))
-                prime_files = [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
-                              for d in dims]
-            else:
-                # Default: load all files
-                pattern = os.path.join(prime_data_dir, f'grokking_dim*_depth{args.depth}_heads{args.heads}.npz')
-                prime_files = sorted(glob(pattern), key=extract_dim)
+            # Define file pattern function for aggregation
+            def get_files_for_prime(prime_data_dir):
+                if args.pattern:
+                    pattern = os.path.join(prime_data_dir, args.pattern)
+                    return sorted(glob(pattern), key=extract_dim)
+                elif args.dims:
+                    return [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
+                           for d in args.dims]
+                elif args.dims_start and args.dims_end:
+                    dims = list(range(args.dims_start, args.dims_end + 1, args.dims_step))
+                    return [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
+                           for d in dims]
+                else:
+                    # Default: load all files
+                    pattern = os.path.join(prime_data_dir, f'grokking_dim*_depth{args.depth}_heads{args.heads}.npz')
+                    return sorted(glob(pattern), key=extract_dim)
 
-            # Load grokking results for this prime
-            prime_results = []
-            for fname in prime_files:
-                if not os.path.exists(fname):
-                    continue
-                data = np.load(fname)
-                prime_results.append({
-                    'train_acc': data['train_acc'],
-                    'val_acc': data['val_acc'],
-                    'dim': int(data['dim']),
-                    'param_count': int(data['param_count'])
-                })
+            # Aggregate grokking results across all seeds (computes minimum delay per config)
+            prime_results = aggregate_grokking_results_across_seeds(
+                p_prime, args.data_dir, args.split_type, get_files_for_prime,
+                args.threshold_train, args.threshold_val, args.saturation_threshold, use_min_delay=True
+            )
 
             if not prime_results:
                 print(f"Warning: No grokking results found for p={p_prime}")
                 continue
 
-            # Compute empirical critical params (first param size after which everything has non-zero delay)
+            # Compute empirical critical params (first param size where minimum delay across seeds is non-zero)
             empirical_critical_params = None
             delay_data = []
             for result in prime_results:
-                train_acc = result['train_acc']
-                val_acc = result['val_acc']
-                param_count = result['param_count']
+                delay_data.append({
+                    'param_count': result['param_count'],
+                    'delay': result['delay']
+                })
 
-                train_epoch, val_epoch, delay = calculate_grokking_delay(
-                    train_acc, val_acc, args.threshold_train, args.threshold_val
-                )
-
-                if delay is not None:
-                    delay_data.append({
-                        'param_count': param_count,
-                        'delay': delay
-                    })
-
-            # Sort by parameter count and find first param size after which everything has non-zero delay
+            # Sort by parameter count and find first param size where min_delay > 0
+            # AND all subsequent param sizes also have min_delay > 0
             delay_data.sort(key=lambda x: x['param_count'])
             if delay_data:
-                # Start from the end (largest params) and go backwards
+                # Start from the end (largest params) and go backwards to find the LAST zero delay
+                # This ensures all subsequent points have delay > 0
                 last_zero_idx = -1
                 for i in range(len(delay_data) - 1, -1, -1):
                     if delay_data[i]['delay'] == 0:
                         last_zero_idx = i
                         break
 
-                # If we found a zero delay, empirical point is the next one
+                # Critical point is the first param count after the last zero delay
+                # (guarantees all subsequent points have delay > 0)
                 if last_zero_idx >= 0 and last_zero_idx + 1 < len(delay_data):
                     empirical_critical_params = delay_data[last_zero_idx + 1]['param_count']
-                # If no zero delay found, all have non-zero delay, so take the first
+                # If no zero delay found, all points have delay > 0, so take the first
                 elif last_zero_idx == -1 and delay_data[0]['delay'] > 0:
                     empirical_critical_params = delay_data[0]['param_count']
 
             if empirical_critical_params is not None:
                 critical_data.append({
                     'p': p_prime,
-                    'critical_params': empirical_critical_params
+                    'critical_params': empirical_critical_params,
+                    'dataset_bits': size_prime
                 })
-                print(f"  Empirical critical params (first delay > 0): {empirical_critical_params:,.0f}")
+                print(f"  Empirical critical params (first min delay > 0): {empirical_critical_params:,.0f}")
+                print(f"  Dataset size: {size_prime:,.0f} bits")
             else:
                 print(f"  Warning: Could not find empirical critical params for p={p_prime}")
 
@@ -1348,6 +1677,21 @@ def primes(args):
                 save_path=save_path,
                 show=show
             )
+
+            print("\n" + "="*80)
+            print("Plotting empirical critical parameter count vs dataset size")
+            print("="*80)
+
+            save_path = os.path.join(plot_dir, 'empirical_critical_params_vs_dataset_size.pdf') if args.save else None
+            slope, intercept, r_squared = plot_critical_params_vs_dataset_size(
+                critical_data,
+                title='Empirical Critical Parameter Count vs Dataset Size',
+                save_path=save_path,
+                show=show
+            )
+
+            if slope > 0:
+                print(f"\nCapacity interpretation: C ≈ {1/slope:.2f} bits/parameter")
         else:
             print("\nWarning: No valid critical parameter data found for any prime")
 
@@ -1355,6 +1699,72 @@ def primes(args):
         print("\n" + "="*80)
         print("SPEED-BASED PREDICTED VS EMPIRICAL GROKKING POINTS")
         print("="*80)
+
+        # If --predicted-speed, first compute the overall exponential fit from all speed data
+        speed_fit_params = None  # (a, b) for epochs = a * exp(b * f)
+        if args.predicted_speed:
+            print("\nComputing overall exponential fit from all speed data...")
+            
+            # Collect all speed data across all primes
+            all_speed_f = []
+            all_speed_epochs = []
+            
+            for p in primes_list:
+                speed_base_dir = 'data/speed'
+                if not os.path.exists(speed_base_dir):
+                    continue
+                
+                pattern_re = re.compile(rf'^p{p}_seed(\d+)$')
+                available_dirs = [d for d in os.listdir(speed_base_dir)
+                                 if pattern_re.match(d) and os.path.isdir(os.path.join(speed_base_dir, d))]
+                
+                for seed_dir in available_dirs:
+                    speed_dir = os.path.join(speed_base_dir, seed_dir)
+                    speed_files = glob(os.path.join(speed_dir, 'speed_dim*.npz'))
+                    
+                    for fname in speed_files:
+                        data = np.load(fname)
+                        n_samples = int(data['n_samples'])
+                        param_count = int(data['param_count'])
+                        steps_per_epoch = (n_samples + args.batch_size - 1) // args.batch_size
+                        
+                        # Compute saturation epoch dynamically
+                        saturation_epoch = None
+                        if 'train_acc_trace' in data:
+                            acc_trace = data['train_acc_trace']
+                            steps_trace = data['steps_trace'] if 'steps_trace' in data else None
+                            saturation_epoch = compute_saturation_epoch_from_trace(
+                                acc_trace, args.saturation_threshold, steps_per_epoch, steps_trace
+                            )
+                        
+                        if saturation_epoch is not None:
+                            S = float(data['dataset_bits'])
+                            P = param_count
+                            f = S / (consts.C * P)
+                            all_speed_f.append(f)
+                            all_speed_epochs.append(saturation_epoch)
+            
+            if len(all_speed_f) >= 2:
+                all_speed_f = np.array(all_speed_f)
+                all_speed_epochs = np.array(all_speed_epochs)
+                
+                # Fit exponential: log(epochs) = b * f + log(a)
+                log_epochs = np.log(all_speed_epochs)
+                b, log_a = np.polyfit(all_speed_f, log_epochs, 1)
+                a = np.exp(log_a)
+                
+                # Calculate R²
+                y_pred_log = b * all_speed_f + log_a
+                ss_res = np.sum((log_epochs - y_pred_log) ** 2)
+                ss_tot = np.sum((log_epochs - np.mean(log_epochs)) ** 2)
+                r_squared = 1 - ss_res / ss_tot if ss_tot > 0 else 0
+                
+                speed_fit_params = (a, b)
+                print(f"  Fit: epochs = {a:.1f} × exp({b:.2f} × f)")
+                print(f"  R² = {r_squared:.3f}")
+                print(f"  Based on {len(all_speed_f)} data points across all primes")
+            else:
+                print("  Warning: Not enough speed data to compute fit. Falling back to per-model data.")
 
         all_grokking_points = []
 
@@ -1364,106 +1774,66 @@ def primes(args):
             print(f"Processing prime p={p_prime} ({prime_idx + 1}/{len(primes_list)})")
             print(f"{'='*80}")
 
-            # Load grokking data for this prime
-            prime_signature = f'p{p_prime}_seed{args.training_seed}_split{args.split_type}'
-            prime_data_dir = os.path.join(args.data_dir, prime_signature)
-            prime_plot_dir = os.path.join(args.plot_dir, prime_signature)
+            # Plot directory for this prime (aggregated across seeds)
+            prime_plot_dir = os.path.join(args.plot_dir, f'p{p_prime}_aggregated')
 
             # Calculate dataset size for this prime
             n_prime, size_prime = compute_dataset_size_bits(p_prime, args.op, args.training_fraction)
             threshold_params_prime = size_prime / consts.C
 
-            # Load grokking files for this prime
-            if args.pattern:
-                pattern = os.path.join(prime_data_dir, args.pattern)
-                prime_files = sorted(glob(pattern), key=extract_dim)
-            elif args.dims:
-                prime_files = [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
-                              for d in args.dims]
-            elif args.dims_start and args.dims_end:
-                dims = list(range(args.dims_start, args.dims_end + 1, args.dims_step))
-                prime_files = [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
-                              for d in dims]
-            else:
-                pattern = os.path.join(prime_data_dir, f'grokking_dim*_depth{args.depth}_heads{args.heads}.npz')
-                prime_files = sorted(glob(pattern), key=extract_dim)
+            # Define file pattern function for aggregation
+            def get_files_for_prime(prime_data_dir):
+                if args.pattern:
+                    pattern = os.path.join(prime_data_dir, args.pattern)
+                    return sorted(glob(pattern), key=extract_dim)
+                elif args.dims:
+                    return [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
+                           for d in args.dims]
+                elif args.dims_start and args.dims_end:
+                    dims = list(range(args.dims_start, args.dims_end + 1, args.dims_step))
+                    return [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
+                           for d in dims]
+                else:
+                    pattern = os.path.join(prime_data_dir, f'grokking_dim*_depth{args.depth}_heads{args.heads}.npz')
+                    return sorted(glob(pattern), key=extract_dim)
 
-            # Load grokking results for this prime
-            prime_results = []
-            for fname in prime_files:
-                if not os.path.exists(fname):
-                    continue
-                data = np.load(fname)
-                prime_results.append({
-                    'train_acc': data['train_acc'],
-                    'val_acc': data['val_acc'],
-                    'dim': int(data['dim']),
-                    'param_count': int(data['param_count'])
-                })
+            # Aggregate grokking results across all seeds (computes minimum delay per config)
+            # Using minimum ensures critical param is where ALL seeds grok for that param count and above
+            prime_results = aggregate_grokking_results_across_seeds(
+                p_prime, args.data_dir, args.split_type, get_files_for_prime,
+                args.threshold_train, args.threshold_val, args.saturation_threshold, use_min_delay=True
+            )
 
             if not prime_results:
                 print(f"Warning: No grokking results found for p={p_prime}")
                 continue
 
-            # Load speed data for this prime
-            speed_data = []
-            speed_signature = f'p{p_prime}_seed{args.training_seed}'
-            speed_dir = os.path.join('data/speed', speed_signature)
+            # Get speed data - either from fit or actual per-model data
+            if args.predicted_speed and speed_fit_params is not None:
+                # Generate predicted speed data using the overall fit
+                a, b = speed_fit_params
+                print(f"Using predicted speed curve: epochs = {a:.1f} × exp({b:.2f} × f)")
+                
+                # Get unique param counts from grokking results
+                param_counts = sorted(set(r['param_count'] for r in prime_results))
+                
+                speed_data = []
+                for P in param_counts:
+                    f = size_prime / (consts.C * P)
+                    predicted_epoch = a * np.exp(b * f)
+                    speed_data.append({
+                        'param_count': P,
+                        'saturation_epoch': predicted_epoch,
+                        'n_samples': n_prime,
+                        'saturated': True
+                    })
+            else:
+                # Aggregate actual speed data across all seeds
+                print(f"Expecting speed data with {n_prime} samples for p={p_prime}, training fraction={args.training_fraction}.")
+                speed_data = aggregate_speed_results_across_seeds(p_prime, n_prime, args.batch_size, args.saturation_threshold)
 
-            print(f"Expecting speed data with {n_prime} samples for p={p_prime}, training fraction={args.training_fraction}.")
-
-            # First try to load with matching seed
-            if os.path.exists(speed_dir):
-                speed_files_list = glob(os.path.join(speed_dir, 'speed_dim*.npz'))
-                if speed_files_list:
-                    for sf in speed_files_list:
-                        data = np.load(sf)
-                        if int(data['n_samples']) in (int(n_prime), int(n_prime) - 1, int(n_prime) + 1):  # allow rounding errors
-                            # Only include saturated results
-                            saturated = bool(data.get('saturated', True))
-                            if saturated:
-                                speed_data.append({
-                                    'dim': int(data['dim']),
-                                    'param_count': int(data['param_count']),
-                                    'saturation_step': int(data['saturation_step']),
-                                    'n_samples': int(data['n_samples']),
-                                    'saturated': saturated
-                                })
-                    print(f"Loaded {len(speed_data)} saturated speed experiments from {speed_dir} (matching seed)")
-
-            # If no matching seed found, search for any available seed with same p
             if not speed_data:
-                speed_base_dir = os.path.join('data/speed')
-                if os.path.exists(speed_base_dir):
-                    # Find all directories matching p{p_prime}_seed*
-                    pattern_re = re.compile(rf'^p{p_prime}_seed\d+$')
-                    available_dirs = [d for d in os.listdir(speed_base_dir)
-                                     if pattern_re.match(d) and os.path.isdir(os.path.join(speed_base_dir, d))]
-
-                    if available_dirs:
-                        # Sort to get consistent behavior (prefer lower seed numbers as fallback)
-                        available_dirs = sorted(available_dirs, key=lambda x: int(re.search(r'seed(\d+)', x).group(1)))
-                        fallback_dir = os.path.join(speed_base_dir, available_dirs[0])
-
-                        speed_files_list = glob(os.path.join(fallback_dir, 'speed_dim*.npz'))
-                        for sf in speed_files_list:
-                            data = np.load(sf)
-                            if int(data['n_samples']) in (int(n_prime), int(n_prime) - 1, int(n_prime) + 1):  # allow rounding errors
-                                # Only include saturated results
-                                saturated = bool(data.get('saturated', True))
-                                if saturated:
-                                    speed_data.append({
-                                        'dim': int(data['dim']),
-                                        'param_count': int(data['param_count']),
-                                        'saturation_step': int(data['saturation_step']),
-                                        'n_samples': int(data['n_samples']),
-                                        'saturated': saturated
-                                    })
-                        print(f"Loaded {len(speed_data)} saturated speed experiments from {fallback_dir} (fallback seed)")
-                    else:
-                        print(f"Warning: No speed data found for p={p_prime} with any seed for size {n_prime}")
-                else:
-                    print(f"Warning: Speed data directory not found at {speed_base_dir}")
+                print(f"Warning: No speed data found for p={p_prime}")
 
             # Plot the speed-grok intersect graph for this prime
             os.makedirs(prime_plot_dir, exist_ok=True)
@@ -1473,6 +1843,7 @@ def primes(args):
                 speed_data,
                 threshold_train=args.threshold_train,
                 threshold_val=args.threshold_val,
+                saturation_threshold=args.saturation_threshold,
                 threshold_params=threshold_params_prime,
                 batch_size=args.batch_size,
                 n_train_samples=n_prime,
@@ -1490,22 +1861,13 @@ def primes(args):
 
             # Compute empirical grokking point (first param size after which everything has non-zero delay)
             empirical_critical_params = None
-            # Calculate delays for all results
+            # Use pre-computed delays from aggregation
             delay_data = []
             for result in prime_results:
-                train_acc = result['train_acc']
-                val_acc = result['val_acc']
-                param_count = result['param_count']
-
-                train_epoch, val_epoch, delay = calculate_grokking_delay(
-                    train_acc, val_acc, args.threshold_train, args.threshold_val
-                )
-
-                if delay is not None:
-                    delay_data.append({
-                        'param_count': param_count,
-                        'delay': delay
-                    })
+                delay_data.append({
+                    'param_count': result['param_count'],
+                    'delay': result['delay']
+                })
 
             # Sort by parameter count and find first param size after which everything has non-zero delay
             # Start from the end and find the last point with delay == 0, then take the next one
@@ -1559,48 +1921,100 @@ def primes(args):
     elif args.speed:
         print("\nPlotting saturation time vs capacity fraction (separate line for each prime)...")
 
-        # Collect data from all primes, keyed by (p, dim)
+        # Collect and aggregate data from all primes across all seeds
         combined_results = {}
         for p in primes_list:
-            signature = f'p{p}_seed{args.training_seed}'
-            speed_data_dir = os.path.join('data/speed', signature)
+            print(f"\nLoading speed data for p={p} (aggregating across all seeds)")
 
-            if not os.path.exists(speed_data_dir):
+            # Find all available seeds for this prime
+            speed_base_dir = 'data/speed'
+            if not os.path.exists(speed_base_dir):
+                print(f"Warning: Speed data directory not found at {speed_base_dir}")
+                continue
+
+            pattern_re = re.compile(rf'^p{p}_seed(\d+)$')
+            available_dirs = [d for d in os.listdir(speed_base_dir)
+                             if pattern_re.match(d) and os.path.isdir(os.path.join(speed_base_dir, d))]
+
+            if not available_dirs:
                 print(f"Warning: No speed data found for p={p}")
                 continue
 
-            # Collect speed files for this prime
-            speed_files = glob(os.path.join(speed_data_dir, 'speed_dim*.npz'))
-            if not speed_files:
-                print(f"Warning: No speed files found for p={p}")
-                continue
+            # Sort to get consistent behavior
+            available_dirs = sorted(available_dirs, key=lambda x: int(re.search(r'seed(\d+)', x).group(1)))
+            seeds = [int(re.search(r'seed(\d+)', d).group(1)) for d in available_dirs]
+            print(f"  Found {len(seeds)} seed(s) for p={p}: {seeds}")
 
-            print(f"\nLoading data for p={p}: {len(speed_files)} files")
+            # Collect results by (dim, n_samples, param_count) key for averaging
+            results_by_config = {}
 
-            # Load results for this prime
-            for fname in speed_files:
-                if not os.path.exists(fname):
-                    continue
-                data = np.load(fname)
-                dim = int(data['dim'])
+            for seed_dir in available_dirs:
+                speed_dir = os.path.join(speed_base_dir, seed_dir)
+                speed_files = glob(os.path.join(speed_dir, 'speed_dim*.npz'))
+
+                for fname in speed_files:
+                    if not os.path.exists(fname):
+                        continue
+                    data = np.load(fname)
+
+                    dim = int(data['dim'])
+                    n_samples = int(data['n_samples'])
+                    param_count = int(data['param_count'])
+                    steps_per_epoch = (n_samples + args.batch_size - 1) // args.batch_size
+
+                    # Compute saturation epoch dynamically from train accuracy trace
+                    saturation_epoch = None
+                    if 'train_acc_trace' in data:
+                        acc_trace = data['train_acc_trace']
+                        steps_trace = data['steps_trace'] if 'steps_trace' in data else None
+                        saturation_epoch = compute_saturation_epoch_from_trace(
+                            acc_trace, args.saturation_threshold, steps_per_epoch, steps_trace
+                        )
+
+                    # Skip if saturation threshold never reached
+                    if saturation_epoch is None:
+                        continue
+
+                    key = (dim, n_samples, param_count)
+
+                    if key not in results_by_config:
+                        results_by_config[key] = {
+                            'n_samples': n_samples,
+                            'dim': dim,
+                            'depth': int(data['depth']),
+                            'heads': int(data['heads']),
+                            'param_count': param_count,
+                            'p': p,
+                            'saturation_epochs': [],
+                            'final_accs': [],
+                            'dataset_bits': float(data['dataset_bits'])
+                        }
+
+                    results_by_config[key]['saturation_epochs'].append(saturation_epoch)
+                    results_by_config[key]['final_accs'].append(float(data['final_acc']))
+
+            # Average saturation epochs across seeds and add to combined results
+            for key, data in results_by_config.items():
+                saturation_epoch = float(np.mean(data['saturation_epochs']))
+
                 result = {
-                    'n_samples': int(data['n_samples']),
-                    'dim': dim,
-                    'depth': int(data['depth']),
-                    'heads': int(data['heads']),
-                    'param_count': int(data['param_count']),
-                    'p': p,
-                    'saturation_step': int(data['saturation_step']),
-                    'final_acc': float(data['final_acc']),
-                    'dataset_bits': float(data['dataset_bits']),
-                    'saturated': bool(data.get('saturated', True))
+                    'n_samples': data['n_samples'],
+                    'dim': data['dim'],
+                    'depth': data['depth'],
+                    'heads': data['heads'],
+                    'param_count': data['param_count'],
+                    'p': data['p'],
+                    'saturation_epoch': saturation_epoch,
+                    'final_acc': float(np.mean(data['final_accs'])),
+                    'dataset_bits': data['dataset_bits'],
+                    'saturated': True
                 }
 
                 # Key by (p, dim) - each prime gets its own color/line in the plot
-                key = (p, dim)
-                if key not in combined_results:
-                    combined_results[key] = []
-                combined_results[key].append(result)
+                combined_key = (p, data['dim'])
+                if combined_key not in combined_results:
+                    combined_results[combined_key] = []
+                combined_results[combined_key].append(result)
 
         if not combined_results:
             print("No data found for any prime")
@@ -1615,21 +2029,617 @@ def primes(args):
             save_path=save_path,
             show=show
         )
+        
+        '''
+        # Plot saturation epochs vs model parameters for comparison
+        save_path = os.path.join(plot_dir, 'saturation_epochs_vs_params_all_primes.pdf') if args.save else None
+        plot_saturation_epochs_vs_params(
+            combined_results,
+            save_path=save_path,
+            show=show
+        )
+
+        # Plot saturation epochs vs dataset size (bits) with model sizes color coded
+        save_path = os.path.join(plot_dir, 'saturation_epochs_vs_dataset_bits_all_primes.pdf') if args.save else None
+        plot_saturation_epochs_vs_dataset_bits(
+            combined_results,
+            save_path=save_path,
+            show=show
+        )
+        '''
+
+        # Plot saturation epochs vs inverse capacity
+        save_path = os.path.join(plot_dir, 'saturation_epochs_vs_inverse_capacity_all_primes.pdf') if args.save else None
+        plot_saturation_epochs_vs_inverse_capacity(
+            combined_results,
+            C=consts.C,
+            save_path=save_path,
+            show=show
+        )
 
         print("\n" + "="*60)
         print("CAPACITY FRACTION ANALYSIS (ALL PRIMES)")
         print("="*60)
-        print(f"Power law fit: steps = {coefficient:.1f} × f^{exponent:.2f}")
+        print(f"Power law fit: epochs = {coefficient:.1f} × f^{exponent:.2f}")
         print(f"Exponent: {exponent:.2f}")
         print(f"R²: {r_squared:.3f}")
         print(f"Capacity constant C = {consts.C:.2f} bits/param")
         print("="*60)
 
+    elif args.delay:
+        print("\n" + "="*80)
+        print("GROKKING DELAY VS CAPACITY FRACTION")
+        print("="*80)
+
+        all_delay_data = []
+
+        for p_prime in primes_list:
+            print(f"\nProcessing prime p={p_prime}")
+
+            # Calculate dataset size for this prime
+            n_prime, size_prime = compute_dataset_size_bits(p_prime, args.op, args.training_fraction)
+
+            # Define file pattern function for aggregation
+            def get_files_for_prime(prime_data_dir):
+                if args.pattern:
+                    pattern = os.path.join(prime_data_dir, args.pattern)
+                    return sorted(glob(pattern), key=extract_dim)
+                elif args.dims:
+                    return [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
+                           for d in args.dims]
+                elif args.dims_start and args.dims_end:
+                    dims = list(range(args.dims_start, args.dims_end + 1, args.dims_step))
+                    return [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
+                           for d in dims]
+                else:
+                    pattern = os.path.join(prime_data_dir, f'grokking_dim*_depth{args.depth}_heads{args.heads}.npz')
+                    return sorted(glob(pattern), key=extract_dim)
+
+            # Aggregate grokking results across all seeds (computes minimum delay per config)
+            prime_results = aggregate_grokking_results_across_seeds(
+                p_prime, args.data_dir, args.split_type, get_files_for_prime,
+                args.threshold_train, args.threshold_val, args.saturation_threshold, use_min_delay=True
+            )
+
+            if not prime_results:
+                print(f"Warning: No grokking results found for p={p_prime}")
+                continue
+
+            # Add delay data with dataset_bits
+            for result in prime_results:
+                all_delay_data.append({
+                    'p': p_prime,
+                    'param_count': result['param_count'],
+                    'delay': result['delay'],
+                    'dataset_bits': size_prime,
+                    'dim': result['dim']
+                })
+
+        if not all_delay_data:
+            print("No delay data found for any prime")
+            return
+
+        # Plot delay vs capacity fraction
+        os.makedirs(plot_dir, exist_ok=True)
+        save_path = os.path.join(plot_dir, 'delay_vs_capacity_fraction_all_primes.pdf') if args.save else None
+        plot_delay_vs_capacity_fraction(
+            all_delay_data,
+            C=consts.C,
+            save_path=save_path,
+            show=show
+        )
+
+    elif args.correlation:
+        print("\n" + "="*80)
+        print("CORRELATION ANALYSIS: WHAT DETERMINES CRITICAL PARAMETER COUNT?")
+        print("="*80)
+
+        from scipy import stats
+        from scipy.interpolate import interp1d
+        import pandas as pd
+
+        correlation_data = []
+
+        # First, compute GLOBAL exponential fit from all primes' speed data
+        print("\n" + "-"*60)
+        print("Computing global exponential fit from all primes' speed data...")
+        print("-"*60)
+        
+        all_f_values = []
+        all_speed_epochs = []
+        
+        for p_prime in primes_list:
+            n_prime, size_prime = compute_dataset_size_bits(p_prime, args.op, args.training_fraction)
+            speed_data_temp = aggregate_speed_results_across_seeds(p_prime, n_prime, args.batch_size, args.saturation_threshold)
+            
+            for sp in speed_data_temp:
+                if sp.get('saturation_epoch') is not None and sp['saturation_epoch'] > 0:
+                    P = sp['param_count']
+                    f = size_prime / (consts.C * P)
+                    all_f_values.append(f)
+                    all_speed_epochs.append(sp['saturation_epoch'])
+        
+        global_a, global_b = None, None
+        if len(all_f_values) >= 2:
+            all_f_values = np.array(all_f_values)
+            all_speed_epochs = np.array(all_speed_epochs)
+            
+            # Fit: log(epochs) = log(a) + b * f  =>  epochs = a * exp(b * f)
+            global_b, global_log_a = np.polyfit(all_f_values, np.log(all_speed_epochs), 1)
+            global_a = np.exp(global_log_a)
+            
+            # Calculate R²
+            y_pred_log = global_b * all_f_values + global_log_a
+            ss_res = np.sum((np.log(all_speed_epochs) - y_pred_log) ** 2)
+            ss_tot = np.sum((np.log(all_speed_epochs) - np.mean(np.log(all_speed_epochs))) ** 2)
+            global_r2 = 1 - ss_res / ss_tot if ss_tot > 0 else 0
+            
+            print(f"  Global fit: epochs = {global_a:.2f} × exp({global_b:.2f} × f)")
+            print(f"  R² = {global_r2:.4f}")
+            print(f"  Based on {len(all_f_values)} data points across {len(primes_list)} primes")
+        else:
+            print("  Warning: Not enough speed data for global fit")
+
+        print("\n" + "="*60)
+
+        for p_prime in primes_list:
+            print(f"\nProcessing prime p={p_prime}")
+
+            # Calculate dataset size for this prime
+            n_prime, size_prime = compute_dataset_size_bits(p_prime, args.op, args.training_fraction)
+
+            # Define file pattern function for aggregation
+            def get_files_for_prime(prime_data_dir):
+                if args.pattern:
+                    pattern = os.path.join(prime_data_dir, args.pattern)
+                    return sorted(glob(pattern), key=extract_dim)
+                elif args.dims:
+                    return [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
+                           for d in args.dims]
+                elif args.dims_start and args.dims_end:
+                    dims = list(range(args.dims_start, args.dims_end + 1, args.dims_step))
+                    return [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
+                           for d in dims]
+                else:
+                    pattern = os.path.join(prime_data_dir, f'grokking_dim*_depth{args.depth}_heads{args.heads}.npz')
+                    return sorted(glob(pattern), key=extract_dim)
+
+            # Aggregate grokking results across all seeds
+            prime_results = aggregate_grokking_results_across_seeds(
+                p_prime, args.data_dir, args.split_type, get_files_for_prime,
+                args.threshold_train, args.threshold_val, args.saturation_threshold, use_min_delay=True
+            )
+
+            if not prime_results:
+                print(f"  Warning: No grokking results found for p={p_prime}")
+                continue
+
+            # Get speed data (memorisation speed)
+            speed_data = aggregate_speed_results_across_seeds(p_prime, n_prime, args.batch_size, args.saturation_threshold)
+
+            # Compute empirical critical params (first param size where min delay > 0 for all larger params)
+            delay_data = sorted(prime_results, key=lambda x: x['param_count'])
+            empirical_critical_params = None
+            last_zero_idx = -1
+            for i in range(len(delay_data) - 1, -1, -1):
+                if delay_data[i]['delay'] == 0:
+                    last_zero_idx = i
+                    break
+            if last_zero_idx >= 0 and last_zero_idx + 1 < len(delay_data):
+                empirical_critical_params = delay_data[last_zero_idx + 1]['param_count']
+            elif last_zero_idx == -1 and delay_data[0]['delay'] > 0:
+                empirical_critical_params = delay_data[0]['param_count']
+
+            if empirical_critical_params is None:
+                print(f"  Warning: Could not find empirical critical params for p={p_prime}")
+                continue
+
+            print(f"  Empirical critical params: {empirical_critical_params:,.0f}")
+
+            # Debug: show available param counts in speed data
+            if speed_data:
+                speed_param_counts = sorted(set(sp['param_count'] for sp in speed_data))
+                print(f"  Speed data param counts: {speed_param_counts}")
+            else:
+                print(f"  Speed data: NONE LOADED")
+
+            # Get grokking and memorisation speeds at the critical parameter count
+            grok_speed_at_critical = None
+            mem_speed_at_critical = None
+
+            # Find grokking speed (epochs to val acc >= saturation_threshold) at critical point
+            for result in prime_results:
+                if result['param_count'] == empirical_critical_params:
+                    grok_speed_at_critical = result.get('epochs_to_grok')
+                    break
+
+            # Find memorisation speed at critical point
+            # First try exact match (±1 tolerance)
+            for sp in speed_data:
+                if abs(sp['param_count'] - empirical_critical_params) <= 1:
+                    mem_speed_at_critical = sp.get('saturation_epoch')
+                    break
+            
+            # If no exact match, use nearest param count (with warning)
+            if mem_speed_at_critical is None and speed_data:
+                nearest = min(speed_data, key=lambda sp: abs(sp['param_count'] - empirical_critical_params))
+                diff = abs(nearest['param_count'] - empirical_critical_params)
+                diff_pct = diff / empirical_critical_params * 100
+                
+                # Use nearest if within 50% of critical params
+                if diff_pct <= 50:
+                    mem_speed_at_critical = nearest.get('saturation_epoch')
+                    print(f"  Using nearest mem_speed: param_count={nearest['param_count']:,} (diff: {diff:,}, {diff_pct:.1f}%)")
+                else:
+                    print(f"  WARNING: Nearest speed param_count too far: {nearest['param_count']:,} (diff: {diff:,}, {diff_pct:.1f}%) - skipping")
+
+            # Compute intersection point (predicted critical params from curve intersection)
+            intersection_params = None
+            if len(prime_results) >= 2 and len(speed_data) >= 2:
+                # Get grokking curve data
+                grok_params = []
+                grok_epochs = []
+                for result in sorted(prime_results, key=lambda x: x['param_count']):
+                    etg = result.get('epochs_to_grok')
+                    if etg is not None and etg > 0:
+                        grok_params.append(result['param_count'])
+                        grok_epochs.append(etg)
+
+                # Get speed curve data
+                speed_params = []
+                speed_epochs = []
+                for sp in sorted(speed_data, key=lambda x: x['param_count']):
+                    if sp.get('saturation_epoch') is not None and sp['saturation_epoch'] > 0:
+                        speed_params.append(sp['param_count'])
+                        speed_epochs.append(sp['saturation_epoch'])
+
+                if len(grok_params) >= 2 and len(speed_params) >= 2:
+                    grok_params = np.array(grok_params)
+                    grok_epochs = np.array(grok_epochs)
+                    speed_params = np.array(speed_params)
+                    speed_epochs = np.array(speed_epochs)
+
+                    try:
+                        f_grok = interp1d(grok_params, grok_epochs, kind='linear', fill_value='extrapolate')
+                        f_speed = interp1d(speed_params, speed_epochs, kind='linear', fill_value='extrapolate')
+
+                        x_min = max(grok_params.min(), speed_params.min())
+                        x_max = min(grok_params.max(), speed_params.max())
+
+                        if x_min < x_max:
+                            x_test = np.logspace(np.log10(x_min), np.log10(x_max), 1000)
+                            y_grok_test = f_grok(x_test)
+                            y_speed_test = f_speed(x_test)
+
+                            # Handle potential negative values from extrapolation
+                            valid_mask = (y_grok_test > 0) & (y_speed_test > 0)
+                            if valid_mask.sum() > 0:
+                                diff = np.abs(np.log(np.maximum(y_grok_test, 1e-6)) - np.log(np.maximum(y_speed_test, 1e-6)))
+                                diff[~valid_mask] = np.inf
+                                idx_closest = np.argmin(diff)
+                                intersection_params = x_test[idx_closest]
+                    except Exception as e:
+                        print(f"  Warning: Could not compute intersection: {e}")
+
+            # Compute intersection using exponential model for speed
+            intersection_params_exp = None
+            if len(grok_params) >= 2 and len(speed_params) >= 2:
+                try:
+                    # Fit exponential model to speed data: epochs = a * exp(b * f)
+                    # where f = S / (C * P) is capacity fraction
+                    speed_f = size_prime / (consts.C * speed_params)
+                    log_speed_epochs = np.log(speed_epochs)
+                    
+                    # Linear fit in log space: log(epochs) = log(a) + b * f
+                    b_fit, log_a_fit = np.polyfit(speed_f, log_speed_epochs, 1)
+                    a_fit = np.exp(log_a_fit)
+                    
+                    # Function to get predicted speed epochs from param count
+                    def speed_exp_model(P):
+                        f = size_prime / (consts.C * P)
+                        return a_fit * np.exp(b_fit * f)
+                    
+                    # Find intersection with grok curve
+                    f_grok = interp1d(grok_params, grok_epochs, kind='linear', fill_value='extrapolate')
+                    
+                    x_min = grok_params.min()
+                    x_max = grok_params.max()
+                    x_test = np.logspace(np.log10(x_min), np.log10(x_max), 1000)
+                    
+                    y_grok_test = f_grok(x_test)
+                    y_speed_exp_test = speed_exp_model(x_test)
+                    
+                    valid_mask = (y_grok_test > 0) & (y_speed_exp_test > 0)
+                    if valid_mask.sum() > 0:
+                        diff = np.abs(np.log(np.maximum(y_grok_test, 1e-6)) - np.log(np.maximum(y_speed_exp_test, 1e-6)))
+                        diff[~valid_mask] = np.inf
+                        idx_closest = np.argmin(diff)
+                        intersection_params_exp = x_test[idx_closest]
+                        
+                except Exception as e:
+                    print(f"  Warning: Could not compute exponential intersection: {e}")
+
+            # Compute intersection using GLOBAL exponential model
+            intersection_params_global = None
+            if global_a is not None and global_b is not None and len(grok_params) >= 2:
+                try:
+                    # Use global fit: epochs = global_a * exp(global_b * f)
+                    def speed_global_model(P):
+                        f = size_prime / (consts.C * P)
+                        return global_a * np.exp(global_b * f)
+                    
+                    # Find intersection with grok curve
+                    f_grok = interp1d(grok_params, grok_epochs, kind='linear', fill_value='extrapolate')
+                    
+                    x_min = grok_params.min()
+                    x_max = grok_params.max()
+                    x_test = np.logspace(np.log10(x_min), np.log10(x_max), 1000)
+                    
+                    y_grok_test = f_grok(x_test)
+                    y_speed_global_test = speed_global_model(x_test)
+                    
+                    valid_mask = (y_grok_test > 0) & (y_speed_global_test > 0)
+                    if valid_mask.sum() > 0:
+                        diff = np.abs(np.log(np.maximum(y_grok_test, 1e-6)) - np.log(np.maximum(y_speed_global_test, 1e-6)))
+                        diff[~valid_mask] = np.inf
+                        idx_closest = np.argmin(diff)
+                        intersection_params_global = x_test[idx_closest]
+                        
+                except Exception as e:
+                    print(f"  Warning: Could not compute global intersection: {e}")
+
+            # Store data
+            entry = {
+                'p': p_prime,
+                'dataset_bits': size_prime,
+                'critical_params': empirical_critical_params,
+                'grok_speed': grok_speed_at_critical,
+                'mem_speed': mem_speed_at_critical,
+                'intersection_params': intersection_params,
+                'intersection_params_exp': intersection_params_exp,
+                'intersection_params_global': intersection_params_global
+            }
+            correlation_data.append(entry)
+
+            print(f"  Dataset size: {size_prime:,.0f} bits")
+            print(f"  Grok speed at critical: {grok_speed_at_critical if grok_speed_at_critical else 'N/A'} epochs")
+            print(f"  Mem speed at critical: {mem_speed_at_critical if mem_speed_at_critical else 'N/A'} epochs")
+            print(f"  Intersection params (linear interp): {intersection_params:,.0f}" if intersection_params else "  Intersection params (linear): N/A")
+            print(f"  Intersection params (per-prime exp): {intersection_params_exp:,.0f}" if intersection_params_exp else "  Intersection params (per-prime exp): N/A")
+            print(f"  Intersection params (global exp): {intersection_params_global:,.0f}" if intersection_params_global else "  Intersection params (global exp): N/A")
+
+        if len(correlation_data) < 3:
+            print("\nError: Need at least 3 primes for meaningful correlation analysis")
+            return
+
+        # Create DataFrame for analysis
+        df = pd.DataFrame(correlation_data)
+        print("\n" + "="*80)
+        print("DATA SUMMARY")
+        print("="*80)
+        print(df.to_string(index=False))
+
+        # Compute correlations
+        print("\n" + "="*80)
+        print("CORRELATION ANALYSIS")
+        print("="*80)
+
+        variables = ['p', 'dataset_bits', 'grok_speed', 'mem_speed', 'intersection_params', 'intersection_params_exp', 'intersection_params_global']
+        var_names = {
+            'p': 'Prime (p)',
+            'dataset_bits': 'Dataset size (bits)',
+            'grok_speed': 'Grok speed at critical',
+            'mem_speed': 'Mem speed at critical',
+            'intersection_params': 'Intersection (linear)',
+            'intersection_params_exp': 'Intersection (per-prime exp)',
+            'intersection_params_global': 'Intersection (global exp)'
+        }
+
+        print("\nPearson correlations with Critical Params:")
+        print("-" * 60)
+
+        correlations = []
+        for var in variables:
+            valid_mask = df['critical_params'].notna() & df[var].notna()
+            if valid_mask.sum() >= 3:
+                x = df.loc[valid_mask, var].values
+                y = df.loc[valid_mask, 'critical_params'].values
+                r, p_val = stats.pearsonr(x, y)
+                correlations.append((var, r, p_val, valid_mask.sum()))
+                sig = "***" if p_val < 0.001 else "**" if p_val < 0.01 else "*" if p_val < 0.05 else ""
+                print(f"  {var_names[var]:30s}: r = {r:+.4f}, p = {p_val:.4f} {sig}  (n={valid_mask.sum()})")
+            else:
+                print(f"  {var_names[var]:30s}: Insufficient data")
+
+        # Sort by absolute correlation
+        print("\n" + "-"*60)
+        print("Ranked by |r|:")
+        correlations_sorted = sorted(correlations, key=lambda x: abs(x[1]), reverse=True)
+        for i, (var, r, p_val, n) in enumerate(correlations_sorted):
+            print(f"  {i+1}. {var_names[var]:30s}: |r| = {abs(r):.4f}")
+
+        # Spearman (rank) correlations for robustness
+        print("\n" + "="*80)
+        print("SPEARMAN (RANK) CORRELATIONS with Critical Params:")
+        print("-" * 60)
+
+        for var in variables:
+            valid_mask = df['critical_params'].notna() & df[var].notna()
+            if valid_mask.sum() >= 3:
+                x = df.loc[valid_mask, var].values
+                y = df.loc[valid_mask, 'critical_params'].values
+                rho, p_val = stats.spearmanr(x, y)
+                sig = "***" if p_val < 0.001 else "**" if p_val < 0.01 else "*" if p_val < 0.05 else ""
+                print(f"  {var_names[var]:30s}: ρ = {rho:+.4f}, p = {p_val:.4f} {sig}")
+
+        # Test coefficient of variation for capacity hypothesis
+        print("\n" + "="*80)
+        print("CAPACITY HYPOTHESIS TEST")
+        print("="*80)
+        print("If critical params = S/C (where C is bits/param), then S/P* should be constant.")
+        
+        valid = df['dataset_bits'].notna() & df['critical_params'].notna()
+        if valid.sum() >= 2:
+            ratios = df.loc[valid, 'dataset_bits'] / df.loc[valid, 'critical_params']
+            cv = ratios.std() / ratios.mean()
+            print(f"\n  S/P* (implied C): mean = {ratios.mean():.2f}, std = {ratios.std():.2f}")
+            print(f"  Coefficient of variation: {cv:.3f}")
+            if cv < 0.1:
+                print("  → LOW variation: Strong support for capacity hypothesis (P* ∝ S)")
+            elif cv < 0.2:
+                print("  → MODERATE variation: Some support for capacity hypothesis")
+            else:
+                print("  → HIGH variation: Capacity alone may not explain critical params")
+
+        # Test if speed at critical point is constant
+        print("\n" + "="*80)
+        print("SPEED CONSTANCY TEST")
+        print("="*80)
+        print("If critical point is where speed = constant, then speed at P* should be similar.")
+
+        for var, name in [('grok_speed', 'Grok speed'), ('mem_speed', 'Mem speed')]:
+            valid = df[var].notna()
+            if valid.sum() >= 2:
+                speeds = df.loc[valid, var]
+                cv = speeds.std() / speeds.mean()
+                print(f"\n  {name} at critical: mean = {speeds.mean():.1f}, std = {speeds.std():.1f}")
+                print(f"  Coefficient of variation: {cv:.3f}")
+                if cv < 0.2:
+                    print(f"  → LOW variation: {name} is roughly constant at critical point")
+                elif cv < 0.4:
+                    print(f"  → MODERATE variation")
+                else:
+                    print(f"  → HIGH variation: {name} is NOT constant at critical point")
+
+        # Multiple regression to see which predictors matter
+        print("\n" + "="*80)
+        print("MULTIPLE REGRESSION: Critical Params ~ Predictors")
+        print("="*80)
+
+        try:
+            from sklearn.linear_model import LinearRegression
+            from sklearn.preprocessing import StandardScaler
+
+            # Prepare data - only use rows with all variables
+            pred_vars = ['p', 'dataset_bits', 'grok_speed', 'mem_speed', 'intersection_params', 'intersection_params_exp', 'intersection_params_global']
+            valid = df['critical_params'].notna()
+            for v in pred_vars:
+                valid = valid & df[v].notna()
+
+            if valid.sum() >= 4:
+                X = df.loc[valid, pred_vars].values
+                y = df.loc[valid, 'critical_params'].values
+
+                # Standardize for comparable coefficients
+                scaler = StandardScaler()
+                X_scaled = scaler.fit_transform(X)
+
+                reg = LinearRegression()
+                reg.fit(X_scaled, y)
+                r2 = reg.score(X_scaled, y)
+
+                print(f"\nR² (all predictors): {r2:.4f}")
+                print("\nStandardized coefficients (higher |β| = more important):")
+                coefs = list(zip(pred_vars, reg.coef_))
+                coefs_sorted = sorted(coefs, key=lambda x: abs(x[1]), reverse=True)
+                for var, beta in coefs_sorted:
+                    print(f"  {var_names[var]:30s}: β = {beta:+.2f}")
+
+                # Single-predictor R² values (using all available data for each variable)
+                print("\nSingle-predictor R² values (all available data per variable):")
+                for var in pred_vars:
+                    var_valid = df['critical_params'].notna() & df[var].notna()
+                    if var_valid.sum() >= 2:
+                        X_single = df.loc[var_valid, [var]].values
+                        y_single = df.loc[var_valid, 'critical_params'].values
+                        X_single_scaled = StandardScaler().fit_transform(X_single)
+                        reg_single = LinearRegression()
+                        reg_single.fit(X_single_scaled, y_single)
+                        r2_single = reg_single.score(X_single_scaled, y_single)
+                        print(f"  {var_names[var]:30s}: R² = {r2_single:.4f}  (n={var_valid.sum()})")
+                    else:
+                        print(f"  {var_names[var]:30s}: Insufficient data")
+            else:
+                print("Insufficient data for multiple regression (need at least 4 complete rows)")
+
+        except ImportError:
+            print("sklearn not available for multiple regression analysis")
+
+        # Plot correlation matrix
+        os.makedirs(plot_dir, exist_ok=True)
+        save_path_corr = os.path.join(plot_dir, 'correlation_matrix.pdf') if args.save else None
+
+        import matplotlib.pyplot as plt
+
+        # Create correlation matrix for available data
+        plot_vars = ['critical_params', 'p', 'dataset_bits', 'grok_speed', 'mem_speed', 'intersection_params', 'intersection_params_exp', 'intersection_params_global']
+        plot_labels = ['Critical P*', 'Prime', 'Dataset Size', 'Grok speed', 'Mem speed', 'Intersect (lin)', 'Intersect (per-prime exp)', 'Intersect (global exp)']
+
+        # Only include variables with enough data
+        valid_vars = []
+        valid_labels = []
+        for v, l in zip(plot_vars, plot_labels):
+            if df[v].notna().sum() >= 3:
+                valid_vars.append(v)
+                valid_labels.append(l)
+
+        if len(valid_vars) >= 2:
+            corr_matrix = df[valid_vars].corr()
+
+            fig, ax = plt.subplots(figsize=(10, 8))
+            im = ax.imshow(corr_matrix.values, cmap='RdBu_r', vmin=-1, vmax=1)
+
+            ax.set_xticks(range(len(valid_labels)))
+            ax.set_yticks(range(len(valid_labels)))
+            ax.set_xticklabels(valid_labels, rotation=45, ha='right', fontsize=11)
+            ax.set_yticklabels(valid_labels, fontsize=11)
+
+            # Add correlation values
+            for i in range(len(valid_labels)):
+                for j in range(len(valid_labels)):
+                    val = corr_matrix.values[i, j]
+                    color = 'white' if abs(val) > 0.5 else 'black'
+                    ax.text(j, i, f'{val:.2f}', ha='center', va='center', color=color, fontsize=10)
+
+            cbar = plt.colorbar(im, ax=ax, shrink=0.8)
+            cbar.set_label('Pearson r', fontsize=12)
+
+            ax.set_title('Correlation Matrix: Critical Params Analysis', fontsize=14, pad=20)
+            plt.tight_layout()
+
+            if save_path_corr:
+                plt.savefig(save_path_corr, bbox_inches='tight', dpi=300)
+                print(f"\nSaved correlation matrix: {save_path_corr}")
+
+            if show:
+                plt.show()
+            else:
+                plt.close()
+
+        print("\n" + "="*80)
+        print("INTERPRETATION GUIDE")
+        print("="*80)
+        print("""
+Significance levels: * p<0.05, ** p<0.01, *** p<0.001
+
+If critical params is most strongly correlated with:
+  - Dataset size: Critical P* is about storage capacity (P* ∝ S)
+  - Prime: Other prime-dependent factors matter beyond just dataset size
+  - Grok speed: Critical P* is where grokking becomes "fast enough"
+  - Mem speed: Critical P* is where memorization becomes "fast enough"
+  - Intersection: Your predicted critical point matches the empirical one
+
+Low CV (coefficient of variation) for a ratio/value suggests that relationship
+is roughly constant across primes, supporting that hypothesis.
+""")
+
     else:
-        print("Error: Please specify one of --critical, --speed, or --groks")
-        print("  --critical: Plot empirical critical parameter count vs prime")
-        print("  --speed:    Plot saturation time vs capacity fraction for multiple primes")
-        print("  --groks:    Plot critical capacity (from groks line-fitting) vs prime")
+        print("Error: Please specify one of --critical, --speed, --groks, --delay, or --correlation")
+        print("  --critical:    Plot empirical critical parameter count vs prime")
+        print("  --speed:       Plot saturation time vs capacity fraction for multiple primes")
+        print("  --groks:       Plot critical capacity (from groks line-fitting) vs prime")
+        print("  --delay:       Plot grokking delay vs capacity fraction for multiple primes")
+        print("  --correlation: Correlation analysis of what determines critical params")
 
 
 def main():
@@ -1661,7 +2671,7 @@ Examples:
     grok_subparser = subparsers.add_parser('groks', help='Grokking experiments')
     grok_subparser.set_defaults(func=groks)
 
-    grok_subparser.add_argument('--training-seed', type=int, default=42, help='training seed')
+    grok_subparser.add_argument('--seed', type=int, default=42, help='training seed')
     grok_subparser.add_argument('--training-fraction', type=float, default=0.5, help='training fraction')
     grok_subparser.add_argument('--op', type=str, default='/', help='operation', choices=['*', '/', '+', '-'])
     grok_subparser.add_argument('--split-type', type=str, default='random', help='split type', choices=['random', 'sequential', 'alternating'])
@@ -1695,6 +2705,8 @@ Examples:
                        help='Plot training and validation in separate subplots')
     grok_subparser.add_argument('--delay', action='store_true',
                        help='Plot grokking delay vs parameter count')
+    grok_subparser.add_argument('--integral', action='store_true',
+                       help='Plot grokking integral vs parameter count (sum of min(train_acc - val_acc, 0) after train reaches threshold)')
     grok_subparser.add_argument('--critical', action='store_true',
                        help='Find and plot critical model capacity where grokking delay first becomes positive (extrapolated from linear fit)')
     grok_subparser.add_argument('--time', action='store_true',
@@ -1716,6 +2728,8 @@ Examples:
                        help='Accuracy threshold for validation (default: 99.0)')
     grok_subparser.add_argument('--delay-threshold', type=float, default=0.5,
                        help='Minimum delay to include in critical capacity fit (default: 1.0)')
+    grok_subparser.add_argument('--saturation-threshold', type=float, default=99.0,
+                       help='Accuracy threshold for determining saturation epoch in speed experiments (default: 99.0)')
     grok_subparser.add_argument('--depth', type=int, default=2,
                        help='Depth for dimension comparison')
     grok_subparser.add_argument('--heads', type=int, default=1,
@@ -1764,7 +2778,7 @@ Examples:
                                help='Plot output directory (default: media/capacity)')
     cap_subparser.add_argument('--p', type=int, default=97,
                                help='Prime number (default: 97)')
-    cap_subparser.add_argument('--training-seed', type=int, default=42,
+    cap_subparser.add_argument('--seed', type=int, default=42,
                                help='Training seed (default: 42)')
     cap_subparser.add_argument('--dataset-type', type=str, default='random',
                                help='Dataset type (default: random)',
@@ -1843,7 +2857,9 @@ Examples:
                                      help='Accuracy threshold for validation (default: 99.0)')
     cross_exp_subparser.add_argument('--delay-threshold', type=float, default=0.5,
                                      help='Minimum delay to include in critical capacity fit (default: 1.0)')
-    
+    cross_exp_subparser.add_argument('--batch-size', type=int, default=512,
+                                     help='Batch size used in experiments (default: 512)')
+
     # Directory configuration
     cross_exp_subparser.add_argument('--data-dir', type=str, default='data/groks',
                                      help='Data directory (default: data/groks)')
@@ -1919,6 +2935,10 @@ Examples:
                                  help='Plot dT/dS (rate of change of saturation time) vs dataset size S')
     speed_subparser.add_argument('--rate-k', type=int, default=10,
                                  help='Delta k for rate estimation: dT/dS = (T(n+k) - T(n)) / k (default: 10)')
+    speed_subparser.add_argument('--batch-size', type=int, default=512,
+                                 help='Batch size used in speed experiments (default: 512)')
+    speed_subparser.add_argument('--saturation-threshold', type=float, default=99.0,
+                                 help='Accuracy threshold for determining saturation epoch (default: 99.0)')
     speed_subparser.add_argument('--summary', action='store_true',
                                  help='Print summary statistics')
 
@@ -1959,7 +2979,7 @@ Examples:
                                    help='Plot output directory (default: media/primes)')
     primes_subparser.add_argument('--p', nargs='+', type=int, required=True,
                                    help='Prime numbers (required, e.g., --p 97 113 127)')
-    primes_subparser.add_argument('--training-seed', type=int, default=42,
+    primes_subparser.add_argument('--seed', type=int, default=42,
                                    help='Training seed (default: 42)')
     primes_subparser.add_argument('--training-fraction', type=float, default=0.5,
                                    help='Training fraction (default: 0.5)')
@@ -1989,11 +3009,15 @@ Examples:
     # Analysis modes (mutually exclusive)
     analysis_group = primes_subparser.add_mutually_exclusive_group(required=True)
     analysis_group.add_argument('--critical', action='store_true',
-                                help='Plot empirical critical parameter count vs prime (first param size after which everything has delay > 0)')
+                                help='Plot empirical critical parameter count vs prime (first param size where minimum delay across seeds is non-zero)')
     analysis_group.add_argument('--speed', action='store_true',
                                 help='Plot saturation time vs capacity fraction for multiple primes')
     analysis_group.add_argument('--groks', action='store_true',
                                 help='Plot critical capacity from groks (line-fitting method) vs prime')
+    analysis_group.add_argument('--delay', action='store_true',
+                                help='Plot grokking delay (min across seeds) vs capacity fraction for multiple primes')
+    analysis_group.add_argument('--correlation', action='store_true',
+                                help='Correlation analysis: what determines critical parameter count?')
 
     # Threshold parameters
     primes_subparser.add_argument('--threshold-train', type=float, default=99.0,
@@ -2002,8 +3026,12 @@ Examples:
                                    help='Accuracy threshold for validation (default: 99.0)')
     primes_subparser.add_argument('--delay-threshold', type=float, default=0.5,
                                    help='Minimum delay to include in critical capacity fit (default: 0.5)')
+    primes_subparser.add_argument('--saturation-threshold', type=float, default=99.0,
+                                   help='Accuracy threshold for determining saturation epoch in speed experiments (default: 99.0, only used for --speed and --groks)')
     primes_subparser.add_argument('--batch-size', type=int, default=512,
                                    help='Batch size used in grokking experiments (default: 512, only used for --speed)')
+    primes_subparser.add_argument('--predicted-speed', action='store_true',
+                                   help='For --groks: use overall exponential fit (from all speed data) to predict memorization speed curve instead of per-model data')
 
     # Output options
     primes_subparser.add_argument('--save', action='store_true',
