@@ -687,8 +687,9 @@ def main():
     for result in results:
         summary_str = (f"dim={result['dim']:3d}: {result['param_count']:8,} params, "
                       f"final train acc={result['train_acc'][-1]:.1f}%, "
-                      f"final val acc={result['val_acc'][-1]:.1f}%, "
-                      f"final M_T={result['mem_t_trace'][-1]:.1f} bits")
+                      f"final val acc={result['val_acc'][-1]:.1f}%")
+        if 'mem_t_trace' in result:
+            summary_str += f", final M_T={result['mem_t_trace'][-1]:.1f} bits"
         if 'mem_u_trace' in result:
             summary_str += f", final M_U={result['mem_u_trace'][-1]:.1f} bits"
         print(summary_str)

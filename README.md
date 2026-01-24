@@ -1,12 +1,14 @@
 # Competing Speeds of Memorisation and Generalisation Predict Grokking
 
-Deep networks trained with gradient descent often exhibit grokking on small algorithmic datasets, where training accuracy saturates quickly while test accuracy remains near chance for many steps before achieving perfect generalisation.
-Existing hypotheses usually appeal to _information-theoretic capacity_: the network overfits and memorises before discovering a compact algorithmic solution; or to differences in _pattern learning speeds_ across features: the network learns fast features that generalise poorly first.
-In this work, we present a theory that unifies both perspectives to make quantitative predictions for when grokking should occur, demonstrating that the onset of grokking can be attributed to an optimisation tradeoff between the _speed_ with which a model memorises random data and the _speed_ with which it discovers an algorithmic solution.
-We establish information-theoretic estimates of model capacity and dataset complexity, confirming that models generalise when the two are comparable. Surprisingly, even with a capacity that is theoretically greater than dataset complexity, we find that smaller models prefer to generalise first, with grokking occurring only for larger models. We argue that this is because smaller models have lower memorisation speeds, so gradient descent finds the generalising solution first. We show empirically that the onset of grokking can be predicted where generalising speed intersects with memorisation speed.
-Our results support a picture in which (i) model capacity determines when both memorising and algorithmic solutions are representable, while (ii) their _relative learning speeds_ determine which solution dominates. This gives rise to three regimes of learning as model size increases: underfitting, immediate generalisation, and grokking.
-We argue that memorisation capacity and learning speeds are sufficient, in principle, to analytically predict these regimes for modular arithmetic, and outline how this programme could be extended to larger models and natural tasks.
+Deep networks trained with gradient descent have been observed to exhibit 'grokking', or delayed generalisation, on small algorithmic datasets. One class of explanations frames grokking as the result of different pattern learning speeds, where gradient descent first learns fast patterns that may overfit, and only later learns slower patterns that generalise better. However, this has not led to testable frameworks for predicting when grokking should arise. In this work, we present a quantitative theory of grokking in modular arithmetic, demonstrating that the onset of grokking correlates strongly with the intersection of memorisation and generalisation speeds, where the speed by which a model memorises random data equals that by which it discovers an algorithmic solution. We make our statements rigorous by building on recent work in language model memorisation to establish information-theoretic estimates of model capacity and dataset complexity. Surprisingly, we find that smaller models do not grok even if they have enough capacity to memorise the training set. We argue this is because smaller models have slower memorisation speeds, biasing gradient descent towards first discovering the faster, generalising solution. We also demonstrate empirically that model capacity to dataset complexity ratio accurately predicts memorisation speed through an exponential relationship, offering a principled explanation for the previously observed phenomenon that larger models memorise faster. Our results support a three-stage picture of grokking: as model capacity increases above zero, we move from underfitting, to immediate generalisation, and finally to grokking. We provide evidence that memorisation and learning speeds are sufficient to quantitatively predict these regimes for grokking, and may be useful for understanding the generalisation behaviour of larger models on natural tasks.
 
+## Reproducibility
+
+To reproduce the data, run the following command:
+
+```bash
+python main.py
+```
 
 ## License and Attribution
 
