@@ -2724,8 +2724,8 @@ Examples:
                             'When used with --delay: also plot delay vs maximum memorisation.')
     grok_subparser.add_argument('--threshold-train', type=float, default=99.0,
                        help='Accuracy threshold for training (default: 99.0)')
-    grok_subparser.add_argument('--threshold-val', type=float, default=99.0,
-                       help='Accuracy threshold for validation (default: 99.0)')
+    grok_subparser.add_argument('--threshold-val', type=float, default=97.0,
+                       help='Accuracy threshold for validation (default: 97.0)')
     grok_subparser.add_argument('--delay-threshold', type=float, default=0.5,
                        help='Minimum delay to include in critical capacity fit (default: 1.0)')
     grok_subparser.add_argument('--saturation-threshold', type=float, default=99.0,
@@ -2853,8 +2853,8 @@ Examples:
     # Threshold parameters
     cross_exp_subparser.add_argument('--threshold-train', type=float, default=99.0,
                                      help='Accuracy threshold for training (default: 99.0)')
-    cross_exp_subparser.add_argument('--threshold-val', type=float, default=99.0,
-                                     help='Accuracy threshold for validation (default: 99.0)')
+    cross_exp_subparser.add_argument('--threshold-val', type=float, default=97.0,
+                                     help='Accuracy threshold for validation (default: 97.0)')
     cross_exp_subparser.add_argument('--delay-threshold', type=float, default=0.5,
                                      help='Minimum delay to include in critical capacity fit (default: 1.0)')
     cross_exp_subparser.add_argument('--batch-size', type=int, default=512,
@@ -3022,8 +3022,8 @@ Examples:
     # Threshold parameters
     primes_subparser.add_argument('--threshold-train', type=float, default=99.0,
                                    help='Accuracy threshold for training (default: 99.0)')
-    primes_subparser.add_argument('--threshold-val', type=float, default=99.0,
-                                   help='Accuracy threshold for validation (default: 99.0)')
+    primes_subparser.add_argument('--threshold-val', type=float, default=97.0,
+                                   help='Accuracy threshold for validation (default: 97.0)')
     primes_subparser.add_argument('--delay-threshold', type=float, default=0.5,
                                    help='Minimum delay to include in critical capacity fit (default: 0.5)')
     primes_subparser.add_argument('--saturation-threshold', type=float, default=99.0,
