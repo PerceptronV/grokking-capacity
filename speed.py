@@ -263,6 +263,11 @@ def run_speed_experiment(
     results['dataset_bits'] = n_samples * bits_per_example
     results['bits_per_example'] = bits_per_example
     
+    # Compute saturation_epoch from saturation_step
+    bs = args.batch_size if args.batch_size != -1 else n_samples
+    steps_per_epoch = (n_samples + bs - 1) // bs
+    results['saturation_epoch'] = results['saturation_step'] / steps_per_epoch
+    
     return results
 
 
@@ -286,6 +291,7 @@ def save_results(results: Dict, args):
         epochs_trained=results['epochs_trained'],
         total_steps=results['total_steps'],
         saturation_step=results['saturation_step'],
+        saturation_epoch=results['saturation_epoch'],
         final_loss=results['final_loss'],
         final_acc=results['final_acc'],
         dataset_bits=results['dataset_bits'],
@@ -316,8 +322,15 @@ def load_or_run_experiment(
         if verbose:
             print(f"  Loading existing results: {fname}")
         data = np.load(fname)
-        return {key: data[key].item() if data[key].ndim == 0 else data[key] 
-                for key in data.files}
+        result = {key: data[key].item() if data[key].ndim == 0 else data[key] 
+                  for key in data.files}
+        # Compute saturation_epoch if not present (for old files)
+        if 'saturation_epoch' not in result:
+            n_samples = int(result['n_samples'])
+            bs = args.batch_size if args.batch_size != -1 else n_samples
+            steps_per_epoch = (n_samples + bs - 1) // bs
+            result['saturation_epoch'] = result['saturation_step'] / steps_per_epoch
+        return result
     
     # Run experiment
     result = run_speed_experiment(
