@@ -607,8 +607,8 @@ def main():
                        help='patience for early stopping (epochs without improvement). If negative, never stop early due to patience (default: -1)')
     parser.add_argument('--min-delta', type=float, default=1e-4,
                        help='minimum validation accuracy improvement to reset patience (default: 1e-4)')
-    parser.add_argument('--threshold-val', type=float, default=97.0,
-                       help='validation accuracy threshold for grokking time plot (default: 97.0)')
+    parser.add_argument('--threshold-val', type=float, default=99.0,
+                       help='validation accuracy threshold for grokking time plot (default: 99.0)')
     parser.add_argument('--data-dir', type=str, default='data/groks', help='data output directory')
     parser.add_argument('--plot-dir', type=str, default='media/groks', help='plot output directory')
     
