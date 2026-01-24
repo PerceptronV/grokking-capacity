@@ -269,7 +269,7 @@ def generate_commands(p_start, p_end, seeds, train_fraction=0.5, operation='/', 
 
     speed_dims = list(range(20, 128, 4)) + list(range(128, 264, 8))
     grok_starts = [20, 130]
-    grok_ends = [128, 200]
+    grok_ends = [128, 400]
     grok_steps = [2, 10]
 
     # Collect all commands to run

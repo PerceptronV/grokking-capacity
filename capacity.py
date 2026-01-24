@@ -402,7 +402,7 @@ def main():
     parser.add_argument('--dropout', type=float, default=0.0, 
                         help='Dropout (typically 0 for memorisation)')
     parser.add_argument('--dims', type=int, nargs='+', 
-                        default=[10, 16, 20, 28],
+                        default=[10, 12, 14, 16, 18, 20, 22],
                         help='List of model dimensions to test')
     
     # Dataset size args
