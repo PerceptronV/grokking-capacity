@@ -185,3 +185,6 @@ media/
 .hypothesis
 .pytest_cache
 .pytest_cache
+
+# Cursor
+.cursor

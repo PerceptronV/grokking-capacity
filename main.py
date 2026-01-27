@@ -289,12 +289,12 @@ def generate_commands(p_start, p_end, seeds, train_fraction=0.5, operation='/', 
                     f"--op {operation} --ignore-memorisation --epochs 5000 --no-show"
                 )
         
-        n, size = compute_dataset_size_bits(p, operation, train_fraction)
-        commands.append(
-            f"python speed.py --p {p} --dims {' '.join(map(str, speed_dims))} "
-            f"--samples-start {n} --samples-end {n} --samples-steps 1 --seed {default_seed} "
-            f"--epochs 5000 --no-show"
-        )
+            n, size = compute_dataset_size_bits(p, operation, train_fraction)
+            commands.append(
+                f"python speed.py --p {p} --dims {' '.join(map(str, speed_dims))} "
+                f"--samples-start {n} --samples-end {n} --samples-steps 1 --seed {seed} "
+                f"--epochs 5000 --no-show"
+            )
 
     return commands
 
@@ -309,7 +309,7 @@ def main():
     )
 
     # Required arguments
-    parser.add_argument('--p-start', type=int, default=90,
+    parser.add_argument('--p-start', type=int, default=40,
                        help='Starting prime number for the range')
     parser.add_argument('--p-end', type=int, default=160,
                        help='Ending prime number for the range')
