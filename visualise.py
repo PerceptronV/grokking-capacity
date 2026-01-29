@@ -2514,7 +2514,6 @@ def primes(args):
             cbar = plt.colorbar(im, ax=ax, shrink=0.8)
             cbar.set_label('Pearson r', fontsize=12)
 
-            ax.set_title('Correlation Matrix: Critical Params Analysis', fontsize=14, pad=20)
             plt.tight_layout()
 
             if save_path_corr:
