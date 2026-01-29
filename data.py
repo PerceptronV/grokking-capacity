@@ -3,7 +3,7 @@
 #       https://github.com/atveit/torch_grokking (MIT License)
 # which itself is a PyTorch port of the original MLX code by Jason Stock, available at
 #       https://github.com/stockeh/mlx-grokking
-# I have modified this file to add different split types and random data generation.
+# We have modified this file to add different split types and random data generation.
 # ---------------------------------------------
 
 

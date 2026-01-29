@@ -482,7 +482,7 @@ def plot_grokking_delay(results, threshold_train=99.0, threshold_val=99.0, thres
                    textcoords='offset points', fontsize=8)
     
     ax.set_xlabel('Parameter Count', fontsize=14)
-    ax.set_ylabel(f'Grokking Delay (epochs)', fontsize=14)
+    ax.set_ylabel(f'Generalisation Delay (epochs)', fontsize=14)
     ax.set_xscale('log')
     
     ax.grid(True, alpha=0.3)
@@ -786,10 +786,10 @@ def plot_grokking_delay_with_speed(
     # Left y-axis: Grokking delay (epochs)
     crest_cmap = sns.color_palette('crest', as_cmap=True)
     scatter = ax1.scatter(param_counts, delays, c=dims, cmap=crest_cmap,
-                         s=80, alpha=0.7, edgecolors='none', label='Grokking delay')
+                         s=80, alpha=0.7, edgecolors='none', label=f'Generalisation delay (val≥{threshold_val:.0f}% - train≥{threshold_train:.0f}%)')
 
     ax1.set_xlabel('Parameter Count', fontsize=14)
-    ax1.set_ylabel('Grokking Delay (epochs)', fontsize=14, color='#1b7a3d')
+    ax1.set_ylabel('Generalisation Delay (epochs)', fontsize=14, color='#1b7a3d')
     ax1.set_xscale('log')
     ax1.tick_params(axis='y', labelcolor='#1b7a3d')
     ax1.grid(True, alpha=0.3)
@@ -807,7 +807,7 @@ def plot_grokking_delay_with_speed(
 
     # Plot epochs to grok (val_acc reaching saturation_threshold)
     line1, = ax2.plot(param_counts, epochs_to_grok, '-', color='#d95f02', linewidth=2,
-             markersize=6, alpha=0.8, label=f'Epochs to grok (val≥{saturation_threshold:.0f}%)')
+             markersize=6, alpha=0.8, label=f'Epochs to generalise (val≥{saturation_threshold:.0f}%)')
 
     # Plot speed data (epochs to memorise, train_acc reaching saturation_threshold) if available
     line2 = None
@@ -995,10 +995,10 @@ def plot_delay_vs_memorization(
         mem_label = 'Memorisation'
     
     ax.set_xlabel(f'Maximum {mem_label} (bits)', fontsize=14)
-    ax.set_ylabel(f'Grokking Delay (epochs)', fontsize=14)
+    ax.set_ylabel(f'Generalisation Delay (epochs)', fontsize=14)
     
     if title is None:
-        title = f'Grokking Delay vs Maximum Memorisation\n(Delay = epochs for val to reach {threshold_val}% - epochs for train to reach {threshold_train}%)'
+        title = f'Generalisation Delay vs Maximum Memorisation\n(Delay = epochs for val to reach {threshold_val}% - epochs for train to reach {threshold_train}%)'
     ax.set_title(title, fontsize=16, pad=20)
     
     ax.grid(True, alpha=0.3, which='both')
@@ -1232,7 +1232,7 @@ def plot_grokking_critical_capacity(
     ax.axhline(y=0, color='gray', linestyle='--', alpha=0.5, linewidth=1)
     
     ax.set_xlabel('Parameter Count', fontsize=14)
-    ax.set_ylabel(f'Grokking Delay (epochs)', fontsize=14)
+    ax.set_ylabel(f'Generalisation Delay (epochs)', fontsize=14)
     ax.set_xscale('log')
     
     ax.grid(True, alpha=0.3)
@@ -1346,7 +1346,7 @@ def plot_delay_and_memorization_vs_params(
     
     # Plot delay on first axis (circles)
     scatter1 = ax1.scatter(param_counts, delays, c=dims, cmap=crest_cmap, 
-                          s=80, alpha=0.7, edgecolors='none', marker='o', label='Grokking Delay')
+                          s=80, alpha=0.7, edgecolors='none', marker='o', label='Generalisation Delay')
     
     # Plot max memorisation on second axis (triangles)
     scatter2 = ax2.scatter(param_counts, max_mems, c=dims, cmap=crest_cmap, 
@@ -1359,7 +1359,7 @@ def plot_delay_and_memorization_vs_params(
     
     # Configure axes
     ax1.set_xlabel('Parameter Count', fontsize=14)
-    ax1.set_ylabel('Grokking Delay (epochs)', fontsize=14)
+    ax1.set_ylabel('Generalisation Delay (epochs)', fontsize=14)
     ax1.tick_params(axis='y')
     ax1.set_xscale('log')
     
@@ -1374,7 +1374,7 @@ def plot_delay_and_memorization_vs_params(
     from matplotlib.lines import Line2D
     legend_elements = [
         Line2D([0], [0], marker='o', color='w', markerfacecolor='gray', markersize=8, 
-               label='Grokking Delay'),
+               label='Generalisation Delay'),
         Line2D([0], [0], marker='^', color='w', markerfacecolor='gray', markersize=8, 
                label='Max M_U (bits)')
     ]
@@ -1613,7 +1613,7 @@ def plot_capacity_curves(
         x_range = np.logspace(np.log10(x_min), np.log10(x_max), 50)
         bits_per_example = np.log2(p + 2)
         dataset_bits = x_range * bits_per_example
-        ax.plot(x_range, dataset_bits, '--', color='gray', alpha=0.5, label='Dataset size')
+        ax.plot(x_range, dataset_bits, '--', color='gray', alpha=0.5, label='Dataset complexity')
         
     ax.set_xlabel('Dataset size\n(number of datapoints)', fontsize=14)
     ax.set_ylabel('Memorisation\n(bits)', fontsize=14)
@@ -1643,7 +1643,7 @@ def plot_capacity_curves(
         
         ax.text(
             mid_x, mid_y,
-            'Dataset size (bits)',
+            'Dataset complexity (bits)',
             rotation=angle,
             rotation_mode='anchor',
             color='gray',
@@ -2225,89 +2225,6 @@ def compute_critical_params_from_speed(
     return None
 
 
-def plot_cross_exp_critical(
-    cross_exp_data: List[Dict],
-    title: Optional[str] = None,
-    save_path: Optional[str] = None,
-    show: bool = True
-):
-    """
-    Plot line-fitting based critical params vs speed-based (intersection) critical params.
-
-    Compares the empirical critical point obtained via line-fitting method with that obtained
-    via the intersection method used in visualize.py -> groks -> --speed.
-
-    Args:
-        cross_exp_data: List of dicts with keys 'signature', 'critical_params', 'critical_params_speed'
-        title: Plot title (auto-generated if None)
-        save_path: Path to save the plot (optional)
-        show: Whether to show the plot
-    """
-    if not cross_exp_data:
-        print("No cross-experiment data to plot")
-        return
-    
-    fig, ax = plt.subplots(figsize=(10, 8))
-    
-    # Extract data for plotting
-    signatures = [d['signature'] for d in cross_exp_data]
-    critical_params_line = [d['critical_params'] for d in cross_exp_data]
-    critical_params_speed = [d['critical_params_speed'] for d in cross_exp_data]
-
-    # Create scatter plot
-    colors = sns.color_palette('husl', len(cross_exp_data))
-
-    for i, (cp_line, cp_speed, sig) in enumerate(zip(critical_params_line, critical_params_speed, signatures)):
-        if cp_speed is not None:
-            ax.scatter(cp_line, cp_speed, c=[colors[i]], s=150, alpha=0.8, label=sig,
-                      edgecolors='white', linewidth=2)
-
-    # Fit line of best fit between line-fitting and speed-based critical points
-    # Only use points where both are available
-    valid_indices = [i for i, cp_speed in enumerate(critical_params_speed) if cp_speed is not None]
-    if len(valid_indices) >= 2:
-        cp_line_arr = np.array([critical_params_line[i] for i in valid_indices])
-        cp_speed_arr = np.array([critical_params_speed[i] for i in valid_indices])
-
-        # Linear fit: y = mx + b
-        m, b = np.polyfit(cp_line_arr, cp_speed_arr, 1)
-
-        # Calculate R²
-        y_pred = m * cp_line_arr + b
-        ss_res = np.sum((cp_speed_arr - y_pred) ** 2)
-        ss_tot = np.sum((cp_speed_arr - np.mean(cp_speed_arr)) ** 2)
-        r_squared = 1 - (ss_res / ss_tot)
-
-        # Plot line of best fit
-        x_line = np.linspace(cp_line_arr.min() * 0.95, cp_line_arr.max() * 1.05, 100)
-        y_line = m * x_line + b
-        ax.plot(x_line, y_line, 'k--', linewidth=2, alpha=0.6,
-                label=f'Fit: y = {m:.3f}x + {b:.0f}\n$R^2$ = {r_squared:.3f}')
-
-        # Print R² to console
-        print(f"\nLine of best fit:")
-        print(f"  y = {m:.3f}x + {b:.0f}")
-        print(f"  R² = {r_squared:.3f}")
-
-    ax.set_xlabel('Critical Params (line-fitting)', fontsize=14)
-    ax.set_ylabel('Critical Params (speed-based / intersection)', fontsize=14)
-    
-    ax.grid(True, alpha=0.2, linestyle='--')
-    ax.tick_params(axis='both', which='major', labelsize=11)
-    ax.legend(fontsize=11, loc='best', framealpha=0.9)
-    
-    plt.tight_layout()
-    
-    if save_path:
-        plt.savefig(save_path, bbox_inches='tight')
-        print(f"Cross-experiment plot saved to {save_path}")
-
-    if show:
-        plt.show()
-    else:
-        plt.close()
-
-
 # =============================================================================
 # Learning Speed Plotting Functions
 # =============================================================================
@@ -2828,15 +2745,15 @@ def plot_saturation_time_vs_capacity_fraction(
         ax.plot(x_fit, y_fit, '--', color='red', linewidth=2, alpha=0.7,
                 label=f'Fit: epochs = {a:.1f} × exp({b:.2f} × f)')
 
-    ax.set_xlabel('f = S/(CP) (Capacity Fraction)', fontsize=14)
+    ax.set_xlabel('Capacity Fraction', fontsize=14)
     ax.set_ylabel('Epochs to Saturation', fontsize=14)
 
-    if is_multi_prime:
+    '''if is_multi_prime:
         ax.set_title(f'Saturation Time vs Capacity Fraction - Multiple Primes (C={C:.2f} bits/param)',
                     fontsize=16, pad=20)
     else:
         ax.set_title(f'Saturation Time vs Capacity Fraction (C={C:.2f} bits/param)',
-                    fontsize=16, pad=20)
+                    fontsize=16, pad=20)'''
 
     ax.tick_params(axis='both', which='major', labelsize=12)
 
@@ -3252,12 +3169,12 @@ def plot_saturation_epochs_vs_inverse_capacity(
         )
 
     ax.set_xlabel('1 / (Model Capacity) [1/bits]', fontsize=14)
-    ax.set_ylabel('Saturation Epochs', fontsize=14)
+    ax.set_ylabel('Epochs to Saturation', fontsize=14)
 
-    if is_multi_prime:
+    '''if is_multi_prime:
         ax.set_title('Saturation Epochs vs Inverse Capacity (Multiple Primes)', fontsize=16, pad=20)
     else:
-        ax.set_title('Saturation Epochs vs Inverse Capacity', fontsize=16, pad=20)
+        ax.set_title('Saturation Epochs vs Inverse Capacity', fontsize=16, pad=20)'''
 
     ax.tick_params(axis='both', which='major', labelsize=12)
 
@@ -3445,9 +3362,9 @@ def plot_delay_vs_capacity_fraction(
         ax.plot(f_values, delays, 'o-', color=color, label=f'p={p}',
                 markersize=6, alpha=0.7, linewidth=1.5)
 
-    ax.set_xlabel('Capacity Fraction f = S/(CP)', fontsize=14)
-    ax.set_ylabel('Grokking Delay (epochs)', fontsize=14)
-    ax.set_title(f'Grokking Delay vs Capacity Fraction (C={C:.2f} bits/param)', fontsize=16, pad=20)
+    ax.set_xlabel('Capacity Fraction', fontsize=14)
+    ax.set_ylabel('Generalisation Delay (epochs)', fontsize=14)
+    ax.set_title(f'Generalisation Delay vs Capacity Fraction (C={C:.2f} bits/param)', fontsize=16, pad=20)
     ax.legend(fontsize=10, loc='upper left')
     ax.grid(True, alpha=0.3)
     ax.tick_params(axis='both', which='major', labelsize=12)
@@ -3470,7 +3387,8 @@ def plot_delay_vs_capacity_fraction(
 def plot_predicted_vs_empirical_grokking(
     grokking_points: List[Dict],
     save_path: Optional[str] = None,
-    show: bool = True
+    show: bool = True,
+    title: Optional[str] = None
 ):
     """
     Plot predicted vs empirical grokking points for multiple primes.
@@ -3479,6 +3397,7 @@ def plot_predicted_vs_empirical_grokking(
         grokking_points: List of dicts with keys 'p', 'predicted', 'empirical'
         save_path: Path to save the plot (optional)
         show: Whether to show the plot
+        title: Optional custom title for the plot
     """
     if not grokking_points:
         print("No grokking points to plot")
@@ -3526,7 +3445,8 @@ def plot_predicted_vs_empirical_grokking(
 
     ax.set_xlabel('Predicted Grokking Point (params)', fontsize=14)
     ax.set_ylabel('Empirical Grokking Point (params)', fontsize=14)
-    ax.set_title('Predicted vs Empirical Grokking Points\n(Multiple Primes)', fontsize=16, pad=20)
+    plot_title = title if title else 'Predicted vs Empirical Grokking Points\n(Multiple Primes)'
+    ax.set_title(plot_title, fontsize=16, pad=20)
     ax.legend(fontsize=12)
     ax.grid(True, alpha=0.3)
     ax.tick_params(axis='both', which='major', labelsize=12)
