@@ -309,9 +309,9 @@ def main():
     )
 
     # Required arguments
-    parser.add_argument('--p-start', type=int, default=40,
+    parser.add_argument('--p-start', type=int, default=90,
                        help='Starting prime number for the range')
-    parser.add_argument('--p-end', type=int, default=160,
+    parser.add_argument('--p-end', type=int, default=140,
                        help='Ending prime number for the range')
 
     # Experiment parameters
