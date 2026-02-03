@@ -27,7 +27,7 @@ python visualise.py primes --p 97 101 103 107 109 113 127 131 137 139 --threshol
 
 ## License and Attribution
 
-Use the following BibTeX entry to cite this work (under review at ICML 2026):
+Use the following BibTeX entry to cite this work:
 
 ```bibtex
 @article{song2026competing,
