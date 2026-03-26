@@ -2542,13 +2542,1429 @@ Low CV (coefficient of variation) for a ratio/value suggests that relationship
 is roughly constant across primes, supporting that hypothesis.
 """)
 
+    elif args.cv:
+        print("\n" + "="*80)
+        print("CROSS-VALIDATION ANALYSIS: INCREMENTAL VALIDITY OF INTERSECTION")
+        print("="*80)
+        print("Testing whether intersection adds predictive value beyond dataset_bits")
+
+        from scipy import stats
+        from scipy.interpolate import interp1d
+        import pandas as pd
+
+        # =================================================================
+        # STEP 1: Collect data (same as --correlation)
+        # =================================================================
+        cv_data = []
+
+        # First, compute GLOBAL exponential fit from all primes' speed data
+        print("\n" + "-"*60)
+        print("Computing global exponential fit from all primes' speed data...")
+        print("-"*60)
+
+        all_f_values = []
+        all_speed_epochs = []
+
+        for p_prime in primes_list:
+            n_prime, size_prime = compute_dataset_size_bits(p_prime, args.op, args.training_fraction)
+            speed_data_temp = aggregate_speed_results_across_seeds(p_prime, n_prime, args.batch_size, args.saturation_threshold)
+
+            for sp in speed_data_temp:
+                if sp.get('saturation_epoch') is not None and sp['saturation_epoch'] > 0:
+                    P = sp['param_count']
+                    f = size_prime / (consts.C * P)
+                    all_f_values.append(f)
+                    all_speed_epochs.append(sp['saturation_epoch'])
+
+        global_a, global_b = None, None
+        if len(all_f_values) >= 2:
+            all_f_values = np.array(all_f_values)
+            all_speed_epochs = np.array(all_speed_epochs)
+
+            global_b, global_log_a = np.polyfit(all_f_values, np.log(all_speed_epochs), 1)
+            global_a = np.exp(global_log_a)
+
+            y_pred_log = global_b * all_f_values + global_log_a
+            ss_res = np.sum((np.log(all_speed_epochs) - y_pred_log) ** 2)
+            ss_tot = np.sum((np.log(all_speed_epochs) - np.mean(np.log(all_speed_epochs))) ** 2)
+            global_r2 = 1 - ss_res / ss_tot if ss_tot > 0 else 0
+
+            print(f"  Global fit: epochs = {global_a:.2f} × exp({global_b:.2f} × f)")
+            print(f"  R² = {global_r2:.4f}")
+        else:
+            print("  Warning: Not enough speed data for global fit")
+
+        print("\n" + "-"*60)
+        print("Collecting data for each prime...")
+        print("-"*60)
+
+        for p_prime in primes_list:
+            print(f"\nProcessing prime p={p_prime}")
+
+            n_prime, size_prime = compute_dataset_size_bits(p_prime, args.op, args.training_fraction)
+
+            def get_files_for_prime(prime_data_dir):
+                if args.pattern:
+                    pattern = os.path.join(prime_data_dir, args.pattern)
+                    return sorted(glob(pattern), key=extract_dim)
+                elif args.dims:
+                    return [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
+                           for d in args.dims]
+                elif args.dims_start and args.dims_end:
+                    dims = list(range(args.dims_start, args.dims_end + 1, args.dims_step))
+                    return [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
+                           for d in dims]
+                else:
+                    pattern = os.path.join(prime_data_dir, f'grokking_dim*_depth{args.depth}_heads{args.heads}.npz')
+                    return sorted(glob(pattern), key=extract_dim)
+
+            prime_results = aggregate_grokking_results_across_seeds(
+                p_prime, args.data_dir, args.split_type, get_files_for_prime,
+                args.threshold_train, args.threshold_val, args.saturation_threshold, use_min_delay=True
+            )
+
+            if not prime_results:
+                print(f"  Warning: No grokking results found for p={p_prime}")
+                continue
+
+            if args.max_dim is not None:
+                prime_results = [r for r in prime_results if r['dim'] <= args.max_dim]
+                if not prime_results:
+                    print(f"  Warning: No results found for p={p_prime} with dim <= {args.max_dim}")
+                    continue
+
+            speed_data = aggregate_speed_results_across_seeds(p_prime, n_prime, args.batch_size, args.saturation_threshold)
+
+            # Compute empirical critical params
+            delay_data = sorted(prime_results, key=lambda x: x['param_count'])
+            empirical_critical_params = None
+            last_zero_idx = -1
+            for i in range(len(delay_data) - 1, -1, -1):
+                if delay_data[i]['delay'] == 0:
+                    last_zero_idx = i
+                    break
+            if last_zero_idx >= 0 and last_zero_idx + 1 < len(delay_data):
+                empirical_critical_params = delay_data[last_zero_idx + 1]['param_count']
+            elif last_zero_idx == -1 and delay_data[0]['delay'] > 0:
+                empirical_critical_params = delay_data[0]['param_count']
+
+            if empirical_critical_params is None:
+                print(f"  Warning: Could not find empirical critical params for p={p_prime}")
+                continue
+
+            # Get grok_speed and mem_speed at critical point
+            grok_speed_at_critical = None
+            mem_speed_at_critical = None
+
+            for result in prime_results:
+                if result['param_count'] == empirical_critical_params:
+                    grok_speed_at_critical = result.get('epochs_to_grok')
+                    break
+
+            for sp in speed_data:
+                if abs(sp['param_count'] - empirical_critical_params) <= 1:
+                    mem_speed_at_critical = sp.get('saturation_epoch')
+                    break
+
+            # If no exact match for mem_speed, use nearest
+            if mem_speed_at_critical is None and speed_data:
+                nearest = min(speed_data, key=lambda sp: abs(sp['param_count'] - empirical_critical_params))
+                diff_pct = abs(nearest['param_count'] - empirical_critical_params) / empirical_critical_params * 100
+                if diff_pct <= 50:
+                    mem_speed_at_critical = nearest.get('saturation_epoch')
+
+            # Get grokking and speed curve data
+            grok_params = []
+            grok_epochs = []
+            for result in sorted(prime_results, key=lambda x: x['param_count']):
+                etg = result.get('epochs_to_grok')
+                if etg is not None and etg > 0:
+                    grok_params.append(result['param_count'])
+                    grok_epochs.append(etg)
+
+            speed_params = []
+            speed_epochs = []
+            for sp in sorted(speed_data, key=lambda x: x['param_count']):
+                if sp.get('saturation_epoch') is not None and sp['saturation_epoch'] > 0:
+                    speed_params.append(sp['param_count'])
+                    speed_epochs.append(sp['saturation_epoch'])
+
+            # Compute intersection (empirical - linear interpolation)
+            intersection_params = None
+            if len(grok_params) >= 2 and len(speed_params) >= 2:
+                grok_params_arr = np.array(grok_params)
+                grok_epochs_arr = np.array(grok_epochs)
+                speed_params_arr = np.array(speed_params)
+                speed_epochs_arr = np.array(speed_epochs)
+
+                try:
+                    f_grok = interp1d(grok_params_arr, grok_epochs_arr, kind='linear', fill_value='extrapolate')
+                    f_speed = interp1d(speed_params_arr, speed_epochs_arr, kind='linear', fill_value='extrapolate')
+
+                    x_min = max(grok_params_arr.min(), speed_params_arr.min())
+                    x_max = min(grok_params_arr.max(), speed_params_arr.max())
+
+                    if x_min < x_max:
+                        x_test = np.logspace(np.log10(x_min), np.log10(x_max), 1000)
+                        y_grok_test = f_grok(x_test)
+                        y_speed_test = f_speed(x_test)
+
+                        valid_mask = (y_grok_test > 0) & (y_speed_test > 0)
+                        if valid_mask.sum() > 0:
+                            diff = np.abs(np.log(np.maximum(y_grok_test, 1e-6)) - np.log(np.maximum(y_speed_test, 1e-6)))
+                            diff[~valid_mask] = np.inf
+                            idx_closest = np.argmin(diff)
+                            intersection_params = x_test[idx_closest]
+                except Exception as e:
+                    print(f"  Warning: Could not compute intersection: {e}")
+
+            # Compute intersection using per-prime exponential fit
+            intersection_params_exp = None
+            if len(grok_params) >= 2 and len(speed_params) >= 2:
+                try:
+                    speed_f = size_prime / (consts.C * speed_params_arr)
+                    log_speed_epochs = np.log(speed_epochs_arr)
+                    b_fit, log_a_fit = np.polyfit(speed_f, log_speed_epochs, 1)
+                    a_fit = np.exp(log_a_fit)
+
+                    def speed_exp_model(P):
+                        f = size_prime / (consts.C * P)
+                        return a_fit * np.exp(b_fit * f)
+
+                    f_grok = interp1d(grok_params_arr, grok_epochs_arr, kind='linear', fill_value='extrapolate')
+                    x_min = grok_params_arr.min()
+                    x_max = grok_params_arr.max()
+                    x_test = np.logspace(np.log10(x_min), np.log10(x_max), 1000)
+                    y_grok_test = f_grok(x_test)
+                    y_speed_exp_test = speed_exp_model(x_test)
+
+                    valid_mask = (y_grok_test > 0) & (y_speed_exp_test > 0)
+                    if valid_mask.sum() > 0:
+                        diff = np.abs(np.log(np.maximum(y_grok_test, 1e-6)) - np.log(np.maximum(y_speed_exp_test, 1e-6)))
+                        diff[~valid_mask] = np.inf
+                        idx_closest = np.argmin(diff)
+                        intersection_params_exp = x_test[idx_closest]
+                except Exception as e:
+                    print(f"  Warning: Could not compute exponential intersection: {e}")
+
+            # Compute intersection using global exponential fit
+            intersection_params_global = None
+            if global_a is not None and global_b is not None and len(grok_params) >= 2:
+                try:
+                    def speed_global_model(P):
+                        f = size_prime / (consts.C * P)
+                        return global_a * np.exp(global_b * f)
+
+                    f_grok = interp1d(grok_params_arr, grok_epochs_arr, kind='linear', fill_value='extrapolate')
+                    x_min = grok_params_arr.min()
+                    x_max = grok_params_arr.max()
+                    x_test = np.logspace(np.log10(x_min), np.log10(x_max), 1000)
+                    y_grok_test = f_grok(x_test)
+                    y_speed_global_test = speed_global_model(x_test)
+
+                    valid_mask = (y_grok_test > 0) & (y_speed_global_test > 0)
+                    if valid_mask.sum() > 0:
+                        diff = np.abs(np.log(np.maximum(y_grok_test, 1e-6)) - np.log(np.maximum(y_speed_global_test, 1e-6)))
+                        diff[~valid_mask] = np.inf
+                        idx_closest = np.argmin(diff)
+                        intersection_params_global = x_test[idx_closest]
+                except Exception as e:
+                    print(f"  Warning: Could not compute global intersection: {e}")
+
+            entry = {
+                'p': p_prime,
+                'dataset_bits': size_prime,
+                'critical_params': empirical_critical_params,
+                'grok_speed': grok_speed_at_critical,
+                'mem_speed': mem_speed_at_critical,
+                'intersection_params': intersection_params,
+                'intersection_params_exp': intersection_params_exp,
+                'intersection_params_global': intersection_params_global
+            }
+            cv_data.append(entry)
+            print(f"  Critical params: {empirical_critical_params:,.0f}, Dataset bits: {size_prime:,.0f}")
+
+        if len(cv_data) < 5:
+            print(f"\nError: Need at least 5 primes for meaningful CV analysis (have {len(cv_data)})")
+            return
+
+        df = pd.DataFrame(cv_data)
+        print("\n" + "="*80)
+        print("DATA SUMMARY")
+        print("="*80)
+        print(df.to_string(index=False))
+
+        # =================================================================
+        # STEP 2: Define LOOCV helper functions
+        # =================================================================
+
+        def loocv_ols(X, y):
+            """
+            Perform leave-one-out cross-validation with OLS.
+            Returns: predictions, residuals, LOOCV-R², LOOCV-MSE
+            """
+            n = len(y)
+            predictions = np.zeros(n)
+            residuals = np.zeros(n)
+
+            for i in range(n):
+                # Leave out point i
+                X_train = np.delete(X, i, axis=0)
+                y_train = np.delete(y, i)
+                X_test = X[i:i+1]
+                y_test = y[i]
+
+                # Fit OLS: beta = (X'X)^-1 X'y
+                try:
+                    beta = np.linalg.lstsq(X_train, y_train, rcond=None)[0]
+                    pred = X_test @ beta
+                    predictions[i] = pred[0]
+                except np.linalg.LinAlgError:
+                    predictions[i] = np.mean(y_train)
+
+                residuals[i] = y_test - predictions[i]
+
+            mse = np.mean(residuals ** 2)
+            ss_tot = np.sum((y - np.mean(y)) ** 2)
+            ss_res = np.sum(residuals ** 2)
+            r2 = 1 - ss_res / ss_tot if ss_tot > 0 else 0
+
+            return predictions, residuals, r2, mse
+
+        def fit_ols(X, y):
+            """Fit OLS and return R², coefficients."""
+            try:
+                beta = np.linalg.lstsq(X, y, rcond=None)[0]
+                y_pred = X @ beta
+                ss_res = np.sum((y - y_pred) ** 2)
+                ss_tot = np.sum((y - np.mean(y)) ** 2)
+                r2 = 1 - ss_res / ss_tot if ss_tot > 0 else 0
+                return r2, beta
+            except np.linalg.LinAlgError:
+                return 0, None
+
+        # =================================================================
+        # STEP 3: Define all predictors
+        # =================================================================
+
+        all_predictors = {
+            'dataset_bits': 'Dataset bits',
+            'p': 'Prime (p)',
+            'grok_speed': 'Grok speed',
+            'mem_speed': 'Mem speed',
+            'intersection_params': 'Intersection (empirical)',
+            'intersection_params_exp': 'Intersection (per-prime exp)',
+            'intersection_params_global': 'Intersection (global exp)'
+        }
+
+        # =================================================================
+        # STEP 4: Univariate LOOCV-R² for all predictors
+        # =================================================================
+
+        print("\n" + "="*80)
+        print("UNIVARIATE LOOCV-R² (single predictor models)")
+        print("="*80)
+
+        univariate_results = []
+        for var, name in all_predictors.items():
+            valid_mask = df[var].notna() & df['critical_params'].notna()
+            n_valid = valid_mask.sum()
+
+            if n_valid < 3:
+                print(f"  {name:35s}: Insufficient data (n={n_valid})")
+                continue
+
+            y_uni = df.loc[valid_mask, 'critical_params'].values
+            X_uni = np.column_stack([np.ones(n_valid), df.loc[valid_mask, var].values])
+
+            r2_in, _ = fit_ols(X_uni, y_uni)
+            _, _, r2_cv, mse_cv = loocv_ols(X_uni, y_uni)
+
+            univariate_results.append((var, name, n_valid, r2_in, r2_cv, np.sqrt(mse_cv)))
+            print(f"  {name:35s}: R²={r2_in:.4f}, LOOCV-R²={r2_cv:.4f}, RMSE={np.sqrt(mse_cv):,.0f} (n={n_valid})")
+
+        # Rank by LOOCV-R²
+        print("\n  Ranked by LOOCV-R²:")
+        univariate_results.sort(key=lambda x: x[4], reverse=True)
+        for i, (var, name, n, r2_in, r2_cv, rmse) in enumerate(univariate_results):
+            print(f"    {i+1}. {name:35s}: LOOCV-R² = {r2_cv:.4f}")
+
+        # =================================================================
+        # STEP 5: Incremental validity for each baseline
+        # =================================================================
+
+        # Define baselines to test
+        baselines = ['dataset_bits', 'p', 'grok_speed', 'mem_speed']
+        baseline_names = {
+            'dataset_bits': 'Dataset bits',
+            'p': 'Prime (p)',
+            'grok_speed': 'Grok speed',
+            'mem_speed': 'Mem speed'
+        }
+
+        n_permutations = 10000
+        rng = np.random.default_rng(42)
+
+        # Store all results for summary
+        all_incremental_results = {}
+
+        for baseline_var in baselines:
+            baseline_name = baseline_names[baseline_var]
+
+            print("\n" + "="*80)
+            print(f"INCREMENTAL VALIDITY BEYOND: {baseline_name}")
+            print("="*80)
+            print(f"Testing: critical_params ~ {baseline_name} + X")
+
+            # Get valid mask for baseline
+            baseline_valid = df[baseline_var].notna() & df['critical_params'].notna()
+            if baseline_valid.sum() < 5:
+                print(f"  Insufficient data for baseline {baseline_name}")
+                continue
+
+            incremental_results = []
+
+            # Test each other predictor as incremental
+            for inc_var, inc_name in all_predictors.items():
+                if inc_var == baseline_var:
+                    continue  # Skip if same as baseline
+
+                # Get valid mask for this combination
+                valid_mask = baseline_valid & df[inc_var].notna()
+                n_valid = valid_mask.sum()
+
+                if n_valid < 5:
+                    continue
+
+                y = df.loc[valid_mask, 'critical_params'].values
+                x_base = df.loc[valid_mask, baseline_var].values
+                x_inc = df.loc[valid_mask, inc_var].values
+
+                X_baseline = np.column_stack([np.ones(n_valid), x_base])
+                X_augmented = np.column_stack([np.ones(n_valid), x_base, x_inc])
+
+                # In-sample analysis
+                r2_base_in, _ = fit_ols(X_baseline, y)
+                r2_aug_in, _ = fit_ols(X_augmented, y)
+                delta_r2_in = r2_aug_in - r2_base_in
+
+                # LOOCV analysis
+                _, _, r2_base_cv, _ = loocv_ols(X_baseline, y)
+                _, _, r2_aug_cv, mse_aug_cv = loocv_ols(X_augmented, y)
+                delta_r2_cv = r2_aug_cv - r2_base_cv
+
+                # Permutation test
+                perm_deltas = np.zeros(n_permutations)
+                for b in range(n_permutations):
+                    x_inc_perm = rng.permutation(x_inc)
+                    X_aug_perm = np.column_stack([np.ones(n_valid), x_base, x_inc_perm])
+                    _, _, r2_aug_perm, _ = loocv_ols(X_aug_perm, y)
+                    perm_deltas[b] = r2_aug_perm - r2_base_cv
+
+                p_value_perm = (1 + np.sum(perm_deltas >= delta_r2_cv)) / (1 + n_permutations)
+
+                incremental_results.append({
+                    'var': inc_var,
+                    'name': inc_name,
+                    'n': n_valid,
+                    'delta_r2_in': delta_r2_in,
+                    'delta_r2_cv': delta_r2_cv,
+                    'p_value': p_value_perm,
+                    'rmse_cv': np.sqrt(mse_aug_cv)
+                })
+
+            # Sort by LOOCV ΔR²
+            incremental_results.sort(key=lambda x: x['delta_r2_cv'], reverse=True)
+
+            # Print results table
+            print(f"\n  {'Predictor':<35s} {'ΔR²(in)':>10s} {'ΔR²(LOOCV)':>12s} {'p-value':>10s}")
+            print("  " + "-"*70)
+            for res in incremental_results:
+                sig = "***" if res['p_value'] < 0.001 else "**" if res['p_value'] < 0.01 else "*" if res['p_value'] < 0.05 else ""
+                print(f"  {res['name']:<35s} {res['delta_r2_in']:>+10.4f} {res['delta_r2_cv']:>+12.4f} {res['p_value']:>9.4f} {sig}")
+
+            # Store for summary
+            all_incremental_results[baseline_var] = incremental_results
+
+        # =================================================================
+        # STEP 6: Summary matrix
+        # =================================================================
+
+        print("\n" + "="*80)
+        print("SUMMARY: BEST INCREMENTAL PREDICTOR FOR EACH BASELINE")
+        print("="*80)
+
+        print(f"\n  {'Baseline':<20s} {'Best Incremental Predictor':<35s} {'ΔR²(LOOCV)':>12s} {'p-value':>10s}")
+        print("  " + "-"*80)
+
+        for baseline_var in baselines:
+            if baseline_var not in all_incremental_results:
+                continue
+            results = all_incremental_results[baseline_var]
+            if not results:
+                continue
+            best = results[0]  # Already sorted by delta_r2_cv
+            sig = "***" if best['p_value'] < 0.001 else "**" if best['p_value'] < 0.01 else "*" if best['p_value'] < 0.05 else ""
+            print(f"  {baseline_names[baseline_var]:<20s} {best['name']:<35s} {best['delta_r2_cv']:>+12.4f} {best['p_value']:>9.4f} {sig}")
+
+        # =================================================================
+        # STEP 7: Consistency check - is intersection consistently best?
+        # =================================================================
+
+        print("\n" + "="*80)
+        print("CONSISTENCY CHECK: HOW OFTEN IS EACH PREDICTOR THE BEST?")
+        print("="*80)
+
+        # Count how often each predictor is ranked #1
+        rank1_counts = {}
+        for baseline_var, results in all_incremental_results.items():
+            if results:
+                best_var = results[0]['var']
+                rank1_counts[best_var] = rank1_counts.get(best_var, 0) + 1
+
+        print("\n  Times ranked #1 (across all baselines):")
+        for var, count in sorted(rank1_counts.items(), key=lambda x: -x[1]):
+            print(f"    {all_predictors[var]:<35s}: {count}")
+
+        # Check if any intersection type is consistently in top 2
+        intersection_vars = ['intersection_params', 'intersection_params_exp', 'intersection_params_global']
+        print("\n  Average rank of intersection predictors:")
+        for int_var in intersection_vars:
+            ranks = []
+            for baseline_var, results in all_incremental_results.items():
+                for i, res in enumerate(results):
+                    if res['var'] == int_var:
+                        ranks.append(i + 1)
+                        break
+            if ranks:
+                avg_rank = np.mean(ranks)
+                print(f"    {all_predictors[int_var]:<35s}: avg rank = {avg_rank:.1f} (across {len(ranks)} baselines)")
+
+        # =================================================================
+        # STEP 8: Final interpretation
+        # =================================================================
+
+        print("\n" + "="*80)
+        print("INTERPRETATION")
+        print("="*80)
+
+        # Find overall best predictor (most consistent across baselines)
+        if rank1_counts:
+            best_overall = max(rank1_counts.items(), key=lambda x: x[1])
+            print(f"\n  Most consistent best predictor: {all_predictors[best_overall[0]]}")
+            print(f"  (Ranked #1 in {best_overall[1]} out of {len(all_incremental_results)} baselines)")
+
+            # Check if it's an intersection type
+            if best_overall[0] in intersection_vars:
+                print("\n  → CONCLUSION: An intersection predictor is consistently the best")
+                print("    incremental predictor across multiple baselines.")
+            else:
+                print(f"\n  → CONCLUSION: {all_predictors[best_overall[0]]} is a stronger predictor")
+                print("    than intersection metrics across most baselines.")
+
+        print("\n" + "="*80)
+
+    elif args.nlcv:
+        # =====================================================================
+        # NON-LINEAR CROSS-VALIDATION (Kernel Ridge Regression)
+        # =====================================================================
+        print("\n" + "="*80)
+        print("NON-LINEAR CROSS-VALIDATION (Kernel Ridge Regression)")
+        print("="*80)
+        print("Testing predictors with non-linear relationships")
+
+        from scipy import stats
+        from scipy.interpolate import interp1d
+        from sklearn.kernel_ridge import KernelRidge
+        from sklearn.preprocessing import StandardScaler
+        from sklearn.model_selection import LeaveOneOut
+        import pandas as pd
+
+        # =================================================================
+        # STEP 1: Collect data (same as --cv)
+        # =================================================================
+        nlcv_data = []
+
+        # Compute global exponential fit
+        print("\n" + "-"*60)
+        print("Computing global exponential fit from speed data...")
+        print("-"*60)
+
+        all_f_values = []
+        all_speed_epochs = []
+
+        for p_prime in primes_list:
+            n_prime, size_prime = compute_dataset_size_bits(p_prime, args.op, args.training_fraction)
+            speed_data_temp = aggregate_speed_results_across_seeds(p_prime, n_prime, args.batch_size, args.saturation_threshold)
+
+            for sp in speed_data_temp:
+                if sp.get('saturation_epoch') is not None and sp['saturation_epoch'] > 0:
+                    P = sp['param_count']
+                    f = size_prime / (consts.C * P)
+                    all_f_values.append(f)
+                    all_speed_epochs.append(sp['saturation_epoch'])
+
+        global_a, global_b = None, None
+        if len(all_f_values) >= 2:
+            all_f_values = np.array(all_f_values)
+            all_speed_epochs = np.array(all_speed_epochs)
+            global_b, global_log_a = np.polyfit(all_f_values, np.log(all_speed_epochs), 1)
+            global_a = np.exp(global_log_a)
+            print(f"  Global fit: epochs = {global_a:.2f} × exp({global_b:.2f} × f)")
+
+        print("\n" + "-"*60)
+        print("Collecting data for each prime...")
+        print("-"*60)
+
+        for p_prime in primes_list:
+            n_prime, size_prime = compute_dataset_size_bits(p_prime, args.op, args.training_fraction)
+
+            def get_files_for_prime(prime_data_dir):
+                if args.pattern:
+                    pattern = os.path.join(prime_data_dir, args.pattern)
+                    return sorted(glob(pattern), key=extract_dim)
+                elif args.dims:
+                    return [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
+                           for d in args.dims]
+                elif args.dims_start and args.dims_end:
+                    dims = list(range(args.dims_start, args.dims_end + 1, args.dims_step))
+                    return [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
+                           for d in dims]
+                else:
+                    pattern = os.path.join(prime_data_dir, f'grokking_dim*_depth{args.depth}_heads{args.heads}.npz')
+                    return sorted(glob(pattern), key=extract_dim)
+
+            prime_results = aggregate_grokking_results_across_seeds(
+                p_prime, args.data_dir, args.split_type, get_files_for_prime,
+                args.threshold_train, args.threshold_val, args.saturation_threshold, use_min_delay=True
+            )
+
+            if not prime_results:
+                continue
+
+            if args.max_dim is not None:
+                prime_results = [r for r in prime_results if r['dim'] <= args.max_dim]
+                if not prime_results:
+                    continue
+
+            speed_data = aggregate_speed_results_across_seeds(p_prime, n_prime, args.batch_size, args.saturation_threshold)
+
+            # Compute empirical critical params
+            delay_data = sorted(prime_results, key=lambda x: x['param_count'])
+            empirical_critical_params = None
+            last_zero_idx = -1
+            for i in range(len(delay_data) - 1, -1, -1):
+                if delay_data[i]['delay'] == 0:
+                    last_zero_idx = i
+                    break
+            if last_zero_idx >= 0 and last_zero_idx + 1 < len(delay_data):
+                empirical_critical_params = delay_data[last_zero_idx + 1]['param_count']
+            elif last_zero_idx == -1 and delay_data[0]['delay'] > 0:
+                empirical_critical_params = delay_data[0]['param_count']
+
+            if empirical_critical_params is None:
+                continue
+
+            # Get grok_speed and mem_speed at critical point
+            grok_speed_at_critical = None
+            mem_speed_at_critical = None
+
+            for result in prime_results:
+                if result['param_count'] == empirical_critical_params:
+                    grok_speed_at_critical = result.get('epochs_to_grok')
+                    break
+
+            for sp in speed_data:
+                if abs(sp['param_count'] - empirical_critical_params) <= 1:
+                    mem_speed_at_critical = sp.get('saturation_epoch')
+                    break
+
+            if mem_speed_at_critical is None and speed_data:
+                nearest = min(speed_data, key=lambda sp: abs(sp['param_count'] - empirical_critical_params))
+                diff_pct = abs(nearest['param_count'] - empirical_critical_params) / empirical_critical_params * 100
+                if diff_pct <= 50:
+                    mem_speed_at_critical = nearest.get('saturation_epoch')
+
+            # Get curve data for intersection computation
+            grok_params = []
+            grok_epochs = []
+            for result in sorted(prime_results, key=lambda x: x['param_count']):
+                etg = result.get('epochs_to_grok')
+                if etg is not None and etg > 0:
+                    grok_params.append(result['param_count'])
+                    grok_epochs.append(etg)
+
+            speed_params = []
+            speed_epochs = []
+            for sp in sorted(speed_data, key=lambda x: x['param_count']):
+                if sp.get('saturation_epoch') is not None and sp['saturation_epoch'] > 0:
+                    speed_params.append(sp['param_count'])
+                    speed_epochs.append(sp['saturation_epoch'])
+
+            # Compute intersections
+            intersection_params = None
+            intersection_params_exp = None
+            intersection_params_global = None
+
+            if len(grok_params) >= 2 and len(speed_params) >= 2:
+                grok_params_arr = np.array(grok_params)
+                grok_epochs_arr = np.array(grok_epochs)
+                speed_params_arr = np.array(speed_params)
+                speed_epochs_arr = np.array(speed_epochs)
+
+                try:
+                    f_grok = interp1d(grok_params_arr, grok_epochs_arr, kind='linear', fill_value='extrapolate')
+                    f_speed = interp1d(speed_params_arr, speed_epochs_arr, kind='linear', fill_value='extrapolate')
+                    x_min = max(grok_params_arr.min(), speed_params_arr.min())
+                    x_max = min(grok_params_arr.max(), speed_params_arr.max())
+                    if x_min < x_max:
+                        x_test = np.logspace(np.log10(x_min), np.log10(x_max), 1000)
+                        y_grok_test = f_grok(x_test)
+                        y_speed_test = f_speed(x_test)
+                        valid_mask = (y_grok_test > 0) & (y_speed_test > 0)
+                        if valid_mask.sum() > 0:
+                            diff = np.abs(np.log(np.maximum(y_grok_test, 1e-6)) - np.log(np.maximum(y_speed_test, 1e-6)))
+                            diff[~valid_mask] = np.inf
+                            intersection_params = x_test[np.argmin(diff)]
+                except:
+                    pass
+
+                try:
+                    speed_f = size_prime / (consts.C * speed_params_arr)
+                    b_fit, log_a_fit = np.polyfit(speed_f, np.log(speed_epochs_arr), 1)
+                    a_fit = np.exp(log_a_fit)
+                    def speed_exp_model(P):
+                        return a_fit * np.exp(b_fit * size_prime / (consts.C * P))
+                    f_grok = interp1d(grok_params_arr, grok_epochs_arr, kind='linear', fill_value='extrapolate')
+                    x_test = np.logspace(np.log10(grok_params_arr.min()), np.log10(grok_params_arr.max()), 1000)
+                    y_grok_test = f_grok(x_test)
+                    y_speed_exp_test = speed_exp_model(x_test)
+                    valid_mask = (y_grok_test > 0) & (y_speed_exp_test > 0)
+                    if valid_mask.sum() > 0:
+                        diff = np.abs(np.log(np.maximum(y_grok_test, 1e-6)) - np.log(np.maximum(y_speed_exp_test, 1e-6)))
+                        diff[~valid_mask] = np.inf
+                        intersection_params_exp = x_test[np.argmin(diff)]
+                except:
+                    pass
+
+                if global_a is not None and global_b is not None:
+                    try:
+                        def speed_global_model(P):
+                            return global_a * np.exp(global_b * size_prime / (consts.C * P))
+                        f_grok = interp1d(grok_params_arr, grok_epochs_arr, kind='linear', fill_value='extrapolate')
+                        x_test = np.logspace(np.log10(grok_params_arr.min()), np.log10(grok_params_arr.max()), 1000)
+                        y_grok_test = f_grok(x_test)
+                        y_speed_global_test = speed_global_model(x_test)
+                        valid_mask = (y_grok_test > 0) & (y_speed_global_test > 0)
+                        if valid_mask.sum() > 0:
+                            diff = np.abs(np.log(np.maximum(y_grok_test, 1e-6)) - np.log(np.maximum(y_speed_global_test, 1e-6)))
+                            diff[~valid_mask] = np.inf
+                            intersection_params_global = x_test[np.argmin(diff)]
+                    except:
+                        pass
+
+            nlcv_data.append({
+                'p': p_prime,
+                'dataset_bits': size_prime,
+                'critical_params': empirical_critical_params,
+                'grok_speed': grok_speed_at_critical,
+                'mem_speed': mem_speed_at_critical,
+                'intersection_params': intersection_params,
+                'intersection_params_exp': intersection_params_exp,
+                'intersection_params_global': intersection_params_global
+            })
+            print(f"  p={p_prime}: critical_params={empirical_critical_params:,}")
+
+        if len(nlcv_data) < 5:
+            print(f"\nError: Need at least 5 primes for meaningful analysis (have {len(nlcv_data)})")
+            return
+
+        df = pd.DataFrame(nlcv_data)
+        print("\n" + "="*80)
+        print("DATA SUMMARY")
+        print("="*80)
+        print(df.to_string(index=False))
+
+        # =================================================================
+        # STEP 2: Define Kernel Ridge LOOCV helper
+        # =================================================================
+
+        def krr_loocv(X, y, gamma_values=None):
+            """
+            Perform LOOCV with Kernel Ridge Regression.
+            Selects best gamma via inner LOOCV.
+            Returns: LOOCV-R², LOOCV-MSE, best_gamma
+            """
+            if gamma_values is None:
+                gamma_values = np.logspace(-2, 1, 10)  # Reduced grid for speed
+
+            n = len(y)
+            loo = LeaveOneOut()
+
+            # Standardize features
+            scaler = StandardScaler()
+
+            best_gamma = None
+            best_score = -np.inf
+
+            # Select gamma via LOOCV
+            for gamma in gamma_values:
+                scores = []
+                for train_idx, test_idx in loo.split(X):
+                    X_train, X_test = X[train_idx], X[test_idx]
+                    y_train, y_test = y[train_idx], y[test_idx]
+
+                    scaler_inner = StandardScaler()
+                    X_train_scaled = scaler_inner.fit_transform(X_train)
+                    X_test_scaled = scaler_inner.transform(X_test)
+
+                    krr = KernelRidge(kernel='rbf', gamma=gamma, alpha=1.0)
+                    krr.fit(X_train_scaled, y_train)
+                    pred = krr.predict(X_test_scaled)
+                    scores.append((y_test[0] - pred[0]) ** 2)
+
+                mse = np.mean(scores)
+                if -mse > best_score:
+                    best_score = -mse
+                    best_gamma = gamma
+
+            # Final LOOCV with best gamma
+            predictions = np.zeros(n)
+            for train_idx, test_idx in loo.split(X):
+                X_train, X_test = X[train_idx], X[test_idx]
+                y_train, y_test = y[train_idx], y[test_idx]
+
+                scaler_inner = StandardScaler()
+                X_train_scaled = scaler_inner.fit_transform(X_train)
+                X_test_scaled = scaler_inner.transform(X_test)
+
+                krr = KernelRidge(kernel='rbf', gamma=best_gamma, alpha=1.0)
+                krr.fit(X_train_scaled, y_train)
+                predictions[test_idx] = krr.predict(X_test_scaled)
+
+            residuals = y - predictions
+            mse = np.mean(residuals ** 2)
+            ss_tot = np.sum((y - np.mean(y)) ** 2)
+            ss_res = np.sum(residuals ** 2)
+            r2 = 1 - ss_res / ss_tot if ss_tot > 0 else 0
+
+            return r2, mse, best_gamma, residuals
+
+        def krr_loocv_fixed_gamma(X, y, gamma):
+            """
+            Fast LOOCV with fixed gamma (for permutation tests).
+            """
+            n = len(y)
+            loo = LeaveOneOut()
+            predictions = np.zeros(n)
+
+            for train_idx, test_idx in loo.split(X):
+                X_train, X_test = X[train_idx], X[test_idx]
+                y_train = y[train_idx]
+
+                scaler = StandardScaler()
+                X_train_scaled = scaler.fit_transform(X_train)
+                X_test_scaled = scaler.transform(X_test)
+
+                krr = KernelRidge(kernel='rbf', gamma=gamma, alpha=1.0)
+                krr.fit(X_train_scaled, y_train)
+                predictions[test_idx] = krr.predict(X_test_scaled)
+
+            ss_tot = np.sum((y - np.mean(y)) ** 2)
+            ss_res = np.sum((y - predictions) ** 2)
+            r2 = 1 - ss_res / ss_tot if ss_tot > 0 else 0
+            return r2
+
+        # =================================================================
+        # STEP 3: Define predictors
+        # =================================================================
+
+        all_predictors = {
+            'dataset_bits': 'Dataset bits',
+            'p': 'Prime (p)',
+            'grok_speed': 'Grok speed',
+            'mem_speed': 'Mem speed',
+            'intersection_params': 'Intersection (empirical)',
+            'intersection_params_exp': 'Intersection (per-prime exp)',
+            'intersection_params_global': 'Intersection (global exp)'
+        }
+
+        # =================================================================
+        # STEP 4: Univariate KRR LOOCV
+        # =================================================================
+
+        print("\n" + "="*80)
+        print("UNIVARIATE KERNEL RIDGE REGRESSION (LOOCV)")
+        print("="*80)
+
+        y = df['critical_params'].values
+        univariate_results = []
+
+        for var, name in all_predictors.items():
+            valid_mask = df[var].notna()
+            n_valid = valid_mask.sum()
+
+            if n_valid < 5:
+                print(f"  {name:35s}: Insufficient data (n={n_valid})")
+                continue
+
+            X = df.loc[valid_mask, var].values.reshape(-1, 1)
+            y_valid = df.loc[valid_mask, 'critical_params'].values
+
+            r2_cv, mse_cv, best_gamma, _ = krr_loocv(X, y_valid)
+            univariate_results.append((var, name, n_valid, r2_cv, np.sqrt(mse_cv), best_gamma))
+            print(f"  {name:35s}: LOOCV-R²={r2_cv:.4f}, RMSE={np.sqrt(mse_cv):,.0f}, γ={best_gamma:.4f} (n={n_valid})")
+
+        print("\n  Ranked by LOOCV-R²:")
+        univariate_results.sort(key=lambda x: x[3], reverse=True)
+        for i, (var, name, n, r2_cv, rmse, gamma) in enumerate(univariate_results):
+            print(f"    {i+1}. {name:35s}: LOOCV-R² = {r2_cv:.4f}")
+
+        # =================================================================
+        # STEP 5: Incremental validity for each baseline (KRR)
+        # =================================================================
+
+        baselines = ['dataset_bits', 'p', 'grok_speed', 'mem_speed']
+        baseline_names = {
+            'dataset_bits': 'Dataset bits',
+            'p': 'Prime (p)',
+            'grok_speed': 'Grok speed',
+            'mem_speed': 'Mem speed'
+        }
+
+        n_permutations = 100  # Reduced for KRR (use fixed gamma for speed)
+        rng = np.random.default_rng(42)
+
+        all_incremental_results = {}
+
+        for baseline_var in baselines:
+            baseline_name = baseline_names[baseline_var]
+
+            print("\n" + "="*80)
+            print(f"INCREMENTAL VALIDITY BEYOND: {baseline_name} (Kernel Ridge)")
+            print("="*80)
+
+            baseline_valid = df[baseline_var].notna() & df['critical_params'].notna()
+            if baseline_valid.sum() < 5:
+                print(f"  Insufficient data for baseline {baseline_name}")
+                continue
+
+            incremental_results = []
+
+            for inc_var, inc_name in all_predictors.items():
+                if inc_var == baseline_var:
+                    continue
+
+                valid_mask = baseline_valid & df[inc_var].notna()
+                n_valid = valid_mask.sum()
+
+                if n_valid < 5:
+                    continue
+
+                y_valid = df.loc[valid_mask, 'critical_params'].values
+                X_base = df.loc[valid_mask, baseline_var].values.reshape(-1, 1)
+                X_aug = np.column_stack([
+                    df.loc[valid_mask, baseline_var].values,
+                    df.loc[valid_mask, inc_var].values
+                ])
+
+                # LOOCV for baseline and augmented (with gamma selection)
+                r2_base_cv, _, gamma_base, resid_base = krr_loocv(X_base, y_valid)
+                r2_aug_cv, mse_aug_cv, gamma_aug, resid_aug = krr_loocv(X_aug, y_valid)
+                delta_r2_cv = r2_aug_cv - r2_base_cv
+
+                # Permutation test (use fixed gamma for speed)
+                perm_deltas = []
+                x_inc = df.loc[valid_mask, inc_var].values
+                for _ in range(n_permutations):
+                    x_inc_perm = rng.permutation(x_inc)
+                    X_aug_perm = np.column_stack([
+                        df.loc[valid_mask, baseline_var].values,
+                        x_inc_perm
+                    ])
+                    r2_aug_perm = krr_loocv_fixed_gamma(X_aug_perm, y_valid, gamma_aug)
+                    perm_deltas.append(r2_aug_perm - r2_base_cv)
+
+                p_value = (1 + np.sum(np.array(perm_deltas) >= delta_r2_cv)) / (1 + n_permutations)
+
+                incremental_results.append({
+                    'var': inc_var,
+                    'name': inc_name,
+                    'n': n_valid,
+                    'delta_r2_cv': delta_r2_cv,
+                    'p_value': p_value,
+                    'rmse_cv': np.sqrt(mse_aug_cv)
+                })
+
+            incremental_results.sort(key=lambda x: x['delta_r2_cv'], reverse=True)
+
+            print(f"\n  {'Predictor':<35s} {'ΔR²(LOOCV)':>12s} {'p-value':>10s}")
+            print("  " + "-"*60)
+            for res in incremental_results:
+                sig = "***" if res['p_value'] < 0.001 else "**" if res['p_value'] < 0.01 else "*" if res['p_value'] < 0.05 else ""
+                print(f"  {res['name']:<35s} {res['delta_r2_cv']:>+12.4f} {res['p_value']:>9.4f} {sig}")
+
+            all_incremental_results[baseline_var] = incremental_results
+
+        # =================================================================
+        # STEP 6: Summary
+        # =================================================================
+
+        print("\n" + "="*80)
+        print("SUMMARY: BEST INCREMENTAL PREDICTOR (NON-LINEAR)")
+        print("="*80)
+
+        print(f"\n  {'Baseline':<20s} {'Best Predictor':<35s} {'ΔR²':>10s} {'p-value':>10s}")
+        print("  " + "-"*78)
+
+        rank1_counts = {}
+        for baseline_var, results in all_incremental_results.items():
+            if results:
+                best = results[0]
+                sig = "***" if best['p_value'] < 0.001 else "**" if best['p_value'] < 0.01 else "*" if best['p_value'] < 0.05 else ""
+                print(f"  {baseline_names[baseline_var]:<20s} {best['name']:<35s} {best['delta_r2_cv']:>+10.4f} {best['p_value']:>9.4f} {sig}")
+                rank1_counts[best['var']] = rank1_counts.get(best['var'], 0) + 1
+
+        print("\n  Times ranked #1:")
+        for var, count in sorted(rank1_counts.items(), key=lambda x: -x[1]):
+            print(f"    {all_predictors[var]:<35s}: {count}")
+
+        print("\n" + "="*80)
+
+    elif args.ccv:
+        # =====================================================================
+        # CURVE-BASED CROSS-VALIDATION
+        # =====================================================================
+        print("\n" + "="*80)
+        print("CURVE-BASED CROSS-VALIDATION")
+        print("="*80)
+        print("Testing: Does intersection beat full curve embeddings?")
+
+        from scipy import stats
+        from scipy.interpolate import interp1d
+        from sklearn.kernel_ridge import KernelRidge
+        from sklearn.preprocessing import StandardScaler
+        from sklearn.model_selection import LeaveOneOut
+        import pandas as pd
+
+        # =================================================================
+        # STEP 1: Collect curve data for all primes
+        # =================================================================
+
+        print("\n" + "-"*60)
+        print("Collecting curve data for each prime...")
+        print("-"*60)
+
+        curve_data = []
+        all_grok_param_counts = set()
+        all_speed_param_counts = set()
+
+        # First pass: collect all unique param counts
+        for p_prime in primes_list:
+            n_prime, size_prime = compute_dataset_size_bits(p_prime, args.op, args.training_fraction)
+
+            def get_files_for_prime(prime_data_dir):
+                if args.pattern:
+                    pattern = os.path.join(prime_data_dir, args.pattern)
+                    return sorted(glob(pattern), key=extract_dim)
+                elif args.dims:
+                    return [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
+                           for d in args.dims]
+                elif args.dims_start and args.dims_end:
+                    dims = list(range(args.dims_start, args.dims_end + 1, args.dims_step))
+                    return [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
+                           for d in dims]
+                else:
+                    pattern = os.path.join(prime_data_dir, f'grokking_dim*_depth{args.depth}_heads{args.heads}.npz')
+                    return sorted(glob(pattern), key=extract_dim)
+
+            prime_results = aggregate_grokking_results_across_seeds(
+                p_prime, args.data_dir, args.split_type, get_files_for_prime,
+                args.threshold_train, args.threshold_val, args.saturation_threshold, use_min_delay=True
+            )
+
+            if not prime_results:
+                continue
+
+            if args.max_dim is not None:
+                prime_results = [r for r in prime_results if r['dim'] <= args.max_dim]
+
+            speed_data = aggregate_speed_results_across_seeds(p_prime, n_prime, args.batch_size, args.saturation_threshold)
+
+            for result in prime_results:
+                if result.get('epochs_to_grok') is not None and result['epochs_to_grok'] > 0:
+                    all_grok_param_counts.add(result['param_count'])
+
+            for sp in speed_data:
+                if sp.get('saturation_epoch') is not None and sp['saturation_epoch'] > 0:
+                    all_speed_param_counts.add(sp['param_count'])
+
+        all_grok_param_counts = sorted(all_grok_param_counts)
+        all_speed_param_counts = sorted(all_speed_param_counts)
+
+        print(f"  Found {len(all_grok_param_counts)} unique grok param counts")
+        print(f"  Found {len(all_speed_param_counts)} unique speed param counts")
+
+        # Second pass: build curve embeddings
+        for p_prime in primes_list:
+            n_prime, size_prime = compute_dataset_size_bits(p_prime, args.op, args.training_fraction)
+
+            def get_files_for_prime(prime_data_dir):
+                if args.pattern:
+                    pattern = os.path.join(prime_data_dir, args.pattern)
+                    return sorted(glob(pattern), key=extract_dim)
+                elif args.dims:
+                    return [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
+                           for d in args.dims]
+                elif args.dims_start and args.dims_end:
+                    dims = list(range(args.dims_start, args.dims_end + 1, args.dims_step))
+                    return [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
+                           for d in dims]
+                else:
+                    pattern = os.path.join(prime_data_dir, f'grokking_dim*_depth{args.depth}_heads{args.heads}.npz')
+                    return sorted(glob(pattern), key=extract_dim)
+
+            prime_results = aggregate_grokking_results_across_seeds(
+                p_prime, args.data_dir, args.split_type, get_files_for_prime,
+                args.threshold_train, args.threshold_val, args.saturation_threshold, use_min_delay=True
+            )
+
+            if not prime_results:
+                continue
+
+            if args.max_dim is not None:
+                prime_results = [r for r in prime_results if r['dim'] <= args.max_dim]
+                if not prime_results:
+                    continue
+
+            speed_data = aggregate_speed_results_across_seeds(p_prime, n_prime, args.batch_size, args.saturation_threshold)
+
+            # Compute critical params
+            delay_data = sorted(prime_results, key=lambda x: x['param_count'])
+            empirical_critical_params = None
+            last_zero_idx = -1
+            for i in range(len(delay_data) - 1, -1, -1):
+                if delay_data[i]['delay'] == 0:
+                    last_zero_idx = i
+                    break
+            if last_zero_idx >= 0 and last_zero_idx + 1 < len(delay_data):
+                empirical_critical_params = delay_data[last_zero_idx + 1]['param_count']
+            elif last_zero_idx == -1 and delay_data[0]['delay'] > 0:
+                empirical_critical_params = delay_data[0]['param_count']
+
+            if empirical_critical_params is None:
+                continue
+
+            # Build grok curve embedding
+            grok_by_param = {r['param_count']: r.get('epochs_to_grok') for r in prime_results}
+            grok_embedding = []
+            for pc in all_grok_param_counts:
+                val = grok_by_param.get(pc)
+                grok_embedding.append(val if val is not None and val > 0 else np.nan)
+
+            # Build speed curve embedding
+            speed_by_param = {sp['param_count']: sp.get('saturation_epoch') for sp in speed_data}
+            speed_embedding = []
+            for pc in all_speed_param_counts:
+                val = speed_by_param.get(pc)
+                speed_embedding.append(val if val is not None and val > 0 else np.nan)
+
+            # Compute intersection
+            grok_params = []
+            grok_epochs = []
+            for result in sorted(prime_results, key=lambda x: x['param_count']):
+                etg = result.get('epochs_to_grok')
+                if etg is not None and etg > 0:
+                    grok_params.append(result['param_count'])
+                    grok_epochs.append(etg)
+
+            speed_params = []
+            speed_epochs = []
+            for sp in sorted(speed_data, key=lambda x: x['param_count']):
+                if sp.get('saturation_epoch') is not None and sp['saturation_epoch'] > 0:
+                    speed_params.append(sp['param_count'])
+                    speed_epochs.append(sp['saturation_epoch'])
+
+            intersection_params_exp = None
+            if len(grok_params) >= 2 and len(speed_params) >= 2:
+                try:
+                    grok_params_arr = np.array(grok_params)
+                    grok_epochs_arr = np.array(grok_epochs)
+                    speed_params_arr = np.array(speed_params)
+                    speed_epochs_arr = np.array(speed_epochs)
+
+                    speed_f = size_prime / (consts.C * speed_params_arr)
+                    b_fit, log_a_fit = np.polyfit(speed_f, np.log(speed_epochs_arr), 1)
+                    a_fit = np.exp(log_a_fit)
+
+                    def speed_exp_model(P):
+                        return a_fit * np.exp(b_fit * size_prime / (consts.C * P))
+
+                    f_grok = interp1d(grok_params_arr, grok_epochs_arr, kind='linear', fill_value='extrapolate')
+                    x_test = np.logspace(np.log10(grok_params_arr.min()), np.log10(grok_params_arr.max()), 1000)
+                    y_grok_test = f_grok(x_test)
+                    y_speed_exp_test = speed_exp_model(x_test)
+                    valid_mask = (y_grok_test > 0) & (y_speed_exp_test > 0)
+                    if valid_mask.sum() > 0:
+                        diff = np.abs(np.log(np.maximum(y_grok_test, 1e-6)) - np.log(np.maximum(y_speed_exp_test, 1e-6)))
+                        diff[~valid_mask] = np.inf
+                        intersection_params_exp = x_test[np.argmin(diff)]
+                except:
+                    pass
+
+            curve_data.append({
+                'p': p_prime,
+                'critical_params': empirical_critical_params,
+                'intersection_exp': intersection_params_exp,
+                'grok_embedding': grok_embedding,
+                'speed_embedding': speed_embedding
+            })
+            print(f"  p={p_prime}: critical_params={empirical_critical_params:,}")
+
+        if len(curve_data) < 5:
+            print(f"\nError: Need at least 5 primes (have {len(curve_data)})")
+            return
+
+        print(f"\n  Collected data for {len(curve_data)} primes")
+        print(f"  Grok embedding dimension: {len(all_grok_param_counts)}")
+        print(f"  Speed embedding dimension: {len(all_speed_param_counts)}")
+
+        # =================================================================
+        # STEP 2: Define KRR LOOCV with NaN handling
+        # =================================================================
+
+        def krr_loocv_with_nan(X, y, gamma_values=None):
+            """
+            KRR LOOCV that handles NaN by using only valid features per sample.
+            Uses imputation: replace NaN with column mean from training set.
+            """
+            import warnings
+            # Suppress expected warnings from nanmean on empty slices
+            with warnings.catch_warnings():
+                warnings.filterwarnings('ignore', 'Mean of empty slice')
+                return _krr_loocv_with_nan_impl(X, y, gamma_values)
+
+        def _krr_loocv_with_nan_impl(X, y, gamma_values):
+            if gamma_values is None:
+                gamma_values = np.logspace(-3, 2, 15)
+
+            n = len(y)
+            loo = LeaveOneOut()
+
+            best_gamma = gamma_values[len(gamma_values) // 2]  # Default
+            best_score = -np.inf
+
+            # Select gamma via LOOCV
+            for gamma in gamma_values:
+                scores = []
+                for train_idx, test_idx in loo.split(X):
+                    X_train, X_test = X[train_idx].copy(), X[test_idx].copy()
+                    y_train, y_test = y[train_idx], y[test_idx]
+
+                    # Impute NaN with column mean from training set
+                    col_means = np.nanmean(X_train, axis=0)
+                    for j in range(X_train.shape[1]):
+                        mask = np.isnan(X_train[:, j])
+                        X_train[mask, j] = col_means[j] if not np.isnan(col_means[j]) else 0
+                        mask_test = np.isnan(X_test[:, j])
+                        X_test[mask_test, j] = col_means[j] if not np.isnan(col_means[j]) else 0
+
+                    # Remove columns that are all NaN
+                    valid_cols = ~np.all(np.isnan(X_train) | (X_train == 0), axis=0)
+                    if valid_cols.sum() == 0:
+                        scores.append(np.inf)
+                        continue
+
+                    X_train = X_train[:, valid_cols]
+                    X_test = X_test[:, valid_cols]
+
+                    scaler = StandardScaler()
+                    X_train_scaled = scaler.fit_transform(X_train)
+                    X_test_scaled = scaler.transform(X_test)
+
+                    krr = KernelRidge(kernel='rbf', gamma=gamma, alpha=1.0)
+                    krr.fit(X_train_scaled, y_train)
+                    pred = krr.predict(X_test_scaled)
+                    scores.append((y_test[0] - pred[0]) ** 2)
+
+                mse = np.mean(scores)
+                if -mse > best_score:
+                    best_score = -mse
+                    best_gamma = gamma
+
+            # Final LOOCV with best gamma
+            predictions = np.zeros(n)
+            for train_idx, test_idx in loo.split(X):
+                X_train, X_test = X[train_idx].copy(), X[test_idx].copy()
+                y_train = y[train_idx]
+
+                col_means = np.nanmean(X_train, axis=0)
+                for j in range(X_train.shape[1]):
+                    mask = np.isnan(X_train[:, j])
+                    X_train[mask, j] = col_means[j] if not np.isnan(col_means[j]) else 0
+                    mask_test = np.isnan(X_test[:, j])
+                    X_test[mask_test, j] = col_means[j] if not np.isnan(col_means[j]) else 0
+
+                valid_cols = ~np.all(np.isnan(X_train) | (X_train == 0), axis=0)
+                if valid_cols.sum() == 0:
+                    predictions[test_idx] = np.mean(y_train)
+                    continue
+
+                X_train = X_train[:, valid_cols]
+                X_test = X_test[:, valid_cols]
+
+                scaler = StandardScaler()
+                X_train_scaled = scaler.fit_transform(X_train)
+                X_test_scaled = scaler.transform(X_test)
+
+                krr = KernelRidge(kernel='rbf', gamma=best_gamma, alpha=1.0)
+                krr.fit(X_train_scaled, y_train)
+                predictions[test_idx] = krr.predict(X_test_scaled)
+
+            residuals = y - predictions
+            mse = np.mean(residuals ** 2)
+            ss_tot = np.sum((y - np.mean(y)) ** 2)
+            ss_res = np.sum(residuals ** 2)
+            r2 = 1 - ss_res / ss_tot if ss_tot > 0 else 0
+
+            return r2, mse, best_gamma
+
+        # =================================================================
+        # STEP 3: Prepare feature matrices
+        # =================================================================
+
+        y = np.array([d['critical_params'] for d in curve_data])
+
+        # Intersection (scalar)
+        X_intersection = np.array([d['intersection_exp'] if d['intersection_exp'] is not None else np.nan
+                                   for d in curve_data]).reshape(-1, 1)
+
+        # Grok curve embedding
+        X_grok = np.array([d['grok_embedding'] for d in curve_data])
+
+        # Speed curve embedding
+        X_speed = np.array([d['speed_embedding'] for d in curve_data])
+
+        # Both curves
+        X_both = np.hstack([X_grok, X_speed])
+
+        # =================================================================
+        # STEP 4: Compare models
+        # =================================================================
+
+        print("\n" + "="*80)
+        print("MODEL COMPARISON (Kernel Ridge Regression)")
+        print("="*80)
+
+        models = [
+            ('Intersection (scalar)', X_intersection),
+            ('Grok curve (embedding)', X_grok),
+            ('Speed curve (embedding)', X_speed),
+            ('Both curves (embedding)', X_both)
+        ]
+
+        results = []
+        for name, X in models:
+            # Check for valid data
+            valid_rows = ~np.all(np.isnan(X), axis=1)
+            if valid_rows.sum() < 5:
+                print(f"  {name:30s}: Insufficient valid data")
+                continue
+
+            X_valid = X[valid_rows]
+            y_valid = y[valid_rows]
+
+            r2_cv, mse_cv, best_gamma = krr_loocv_with_nan(X_valid, y_valid)
+            results.append((name, valid_rows.sum(), r2_cv, np.sqrt(mse_cv), best_gamma))
+            print(f"  {name:30s}: LOOCV-R²={r2_cv:.4f}, RMSE={np.sqrt(mse_cv):,.0f}, γ={best_gamma:.4f} (n={valid_rows.sum()})")
+
+        print("\n  Ranked by LOOCV-R²:")
+        results.sort(key=lambda x: x[2], reverse=True)
+        for i, (name, n, r2, rmse, gamma) in enumerate(results):
+            print(f"    {i+1}. {name:30s}: LOOCV-R² = {r2:.4f}")
+
+        # =================================================================
+        # STEP 5: Statistical comparison
+        # =================================================================
+
+        print("\n" + "="*80)
+        print("KEY COMPARISONS")
+        print("="*80)
+
+        # Find results by name
+        result_dict = {r[0]: r for r in results}
+
+        if 'Intersection (scalar)' in result_dict and 'Grok curve (embedding)' in result_dict:
+            r2_inter = result_dict['Intersection (scalar)'][2]
+            r2_grok = result_dict['Grok curve (embedding)'][2]
+            print(f"\n  Intersection vs Grok curve:")
+            print(f"    Intersection: LOOCV-R² = {r2_inter:.4f}")
+            print(f"    Grok curve:   LOOCV-R² = {r2_grok:.4f}")
+            if r2_inter > r2_grok:
+                print(f"    → Intersection is better by {r2_inter - r2_grok:.4f}")
+            else:
+                print(f"    → Grok curve is better by {r2_grok - r2_inter:.4f}")
+
+        if 'Intersection (scalar)' in result_dict and 'Speed curve (embedding)' in result_dict:
+            r2_inter = result_dict['Intersection (scalar)'][2]
+            r2_speed = result_dict['Speed curve (embedding)'][2]
+            print(f"\n  Intersection vs Speed curve:")
+            print(f"    Intersection: LOOCV-R² = {r2_inter:.4f}")
+            print(f"    Speed curve:  LOOCV-R² = {r2_speed:.4f}")
+            if r2_inter > r2_speed:
+                print(f"    → Intersection is better by {r2_inter - r2_speed:.4f}")
+            else:
+                print(f"    → Speed curve is better by {r2_speed - r2_inter:.4f}")
+
+        if 'Both curves (embedding)' in result_dict:
+            r2_both = result_dict['Both curves (embedding)'][2]
+            print(f"\n  Both curves combined: LOOCV-R² = {r2_both:.4f}")
+
+            if 'Grok curve (embedding)' in result_dict:
+                r2_grok = result_dict['Grok curve (embedding)'][2]
+                if r2_both > r2_grok:
+                    print(f"    → Better than grok alone by {r2_both - r2_grok:.4f}")
+
+            if 'Speed curve (embedding)' in result_dict:
+                r2_speed = result_dict['Speed curve (embedding)'][2]
+                if r2_both > r2_speed:
+                    print(f"    → Better than speed alone by {r2_both - r2_speed:.4f}")
+
+        # =================================================================
+        # STEP 6: Interpretation
+        # =================================================================
+
+        print("\n" + "="*80)
+        print("INTERPRETATION")
+        print("="*80)
+
+        if results:
+            best = results[0]
+            print(f"\n  Best model: {best[0]}")
+            print(f"  LOOCV-R² = {best[2]:.4f}")
+
+            if 'Intersection' in best[0]:
+                print("\n  → CONCLUSION: The intersection point (a scalar) is the best predictor,")
+                print("    outperforming full curve embeddings. This suggests the intersection")
+                print("    captures the essential information from both curves.")
+            elif 'Both' in best[0]:
+                print("\n  → CONCLUSION: Using both curves together is best. The intersection")
+                print("    may not fully capture all relevant curve information.")
+            else:
+                print(f"\n  → CONCLUSION: {best[0]} is the best predictor.")
+
+        print("\n" + "="*80)
+
     else:
-        print("Error: Please specify one of --critical, --speed, --groks, --delay, or --correlation")
+        print("Error: Please specify one of --critical, --speed, --groks, --delay, --correlation, --cv, --nlcv, or --ccv")
         print("  --critical:    Plot empirical critical parameter count vs prime")
         print("  --speed:       Plot saturation time vs capacity fraction for multiple primes")
         print("  --groks:       Plot critical capacity (from groks line-fitting) vs prime")
         print("  --delay:       Plot grokking delay vs capacity fraction for multiple primes")
         print("  --correlation: Correlation analysis of what determines critical params")
+        print("  --cv:          Cross-validation test of intersection's incremental validity")
+        print("  --nlcv:        Non-linear CV with kernel ridge regression")
+        print("  --ccv:         Curve-based CV comparing intersection vs full curve embeddings")
 
 
 def main():
@@ -2871,6 +4287,12 @@ Examples:
                                 help='Plot grokking delay (min across seeds) vs capacity fraction for multiple primes')
     analysis_group.add_argument('--correlation', action='store_true',
                                 help='Correlation analysis: what determines critical parameter count?')
+    analysis_group.add_argument('--cv', action='store_true',
+                                help='Cross-validation analysis: test if intersection adds predictive value beyond dataset size')
+    analysis_group.add_argument('--nlcv', action='store_true',
+                                help='Non-linear CV: same as --cv but with kernel ridge regression for non-linear relationships')
+    analysis_group.add_argument('--ccv', action='store_true',
+                                help='Curve CV: test if intersection beats full curve embeddings as predictors')
 
     # Threshold parameters
     primes_subparser.add_argument('--threshold-train', type=float, default=99.0,
