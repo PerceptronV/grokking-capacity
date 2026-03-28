@@ -70,6 +70,19 @@ def load_model(model_path, device='cpu'):
     return model, metadata
 
 
+def get_device(device=None, cpu=False):
+    """Select compute device. Mirrors the repeated device-selection block in trainer scripts."""
+    if device is not None:
+        return device
+    if cpu:
+        return 'cpu'
+    if torch.cuda.is_available():
+        return 'cuda'
+    if torch.backends.mps.is_available():
+        return 'mps'
+    return 'cpu'
+
+
 def compute_dataset_size_bits(p: int, op: str = '/', training_fraction: float = 0.5) -> float:
     """
     Compute dataset size in samples and bits.

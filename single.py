@@ -25,7 +25,7 @@ import torch.optim as optim_torch
 from models import TransformerTorch
 from data import grokking_data_torch
 from groks import GrokkingTrainer
-from utils import save_model
+from utils import save_model, get_device
 
 
 def count_parameters(model):
@@ -99,12 +99,7 @@ def run_experiment(args):
         'dropout': args.dropout
     }
     
-    device = 'cpu'
-    if not args.cpu:
-        if torch.cuda.is_available():
-            device = 'cuda'
-        elif torch.backends.mps.is_available():
-            device = 'mps'
+    device = get_device(cpu=args.cpu)
     
     print(f"\nBuilding model...")
     print(f"  Architecture: depth={args.depth}, dim={args.dim}, heads={args.heads}")

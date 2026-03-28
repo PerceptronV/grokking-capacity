@@ -172,9 +172,27 @@ class RoPETorch(nn_torch.Module):
     def __init__(self, dim_head, base=1e6):
         super().__init__()
         self.rope = RotaryPositionalEmbeddings(dim_head, base=base)
-        
+
     def forward(self, x, input_pos=None):
         # x shape: (b, seq, heads, dim_head)
         # This is already in the format torchtune expects: [b, s, n_h, h_d]
         return self.rope(x, input_pos=input_pos)
+
+
+def build_model(config, device='cpu'):
+    """Build a TransformerTorch from an ExperimentConfig and move it to device.
+
+    Accepts any object with .depth, .dim, .heads, .p, .dropout attributes.
+    Sets config.param_count as a side effect.
+    """
+    model = TransformerTorch(
+        depth=config.depth,
+        dim=config.dim,
+        heads=config.heads,
+        n_tokens=config.p + 2,
+        seq_len=4,
+        dropout=config.dropout,
+    ).to(device)
+    config.param_count = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    return model
 

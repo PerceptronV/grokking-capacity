@@ -1,349 +1,661 @@
-import os
+"""
+Main entry point for running YAML-defined experiment suites in parallel.
+
+Parses a YAML config file, expands parameter grids, resolves n_samples: auto
+and match_by: param_count, dispatches trainer scripts in parallel across all
+available GPUs, and builds match tables.
+
+Usage:
+    python main.py --config configs/weight_decay_sweep.yaml
+    python main.py --config configs/central.yaml --dry-run
+    python main.py --config configs/tasks.yaml --max-workers 8
+    python main.py --config configs/depth_scaling.yaml --force
+"""
+
 import argparse
+import itertools
+import json
+import os
+import subprocess
 import sys
-import psutil
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from threading import Lock, Event
+from threading import Event, Lock
+
 import torch
-from utils import compute_dataset_size_bits
+import yaml
 
-# Global flag for handling interrupts
-shutdown_event = Event()
-
-
-def primes_in_range(start, end):
-    '''Sieve of Eratosthenes'''
-    sieve = [True] * (end + 1)
-    sieve[0] = sieve[1] = False
-    for i in range(2, int(end**0.5) + 1):
-        if sieve[i]:
-            sieve[i*i:end+1:i] = [False] * len(range(i*i, end+1, i))
-    return [i for i in range(start, end + 1) if sieve[i]]
+from matching import compute_n_equiv, find_dims_for_param_targets, build_match_table, save_match_table
+from results import ResultsIndex
+import consts
 
 
-def kill_child_processes():
-    """Kill all child python processes"""
+# ---------------------------------------------------------------------------
+# Config expansion helpers
+# ---------------------------------------------------------------------------
+
+# Keys that are NOT expanded in the Cartesian product — they are iterated
+# directly (primes, seeds) or resolved separately (dims/dim_ranges/targets).
+_NON_GRID_KEYS = {'seeds', 'primes', 'dims', 'dim_ranges', 'param_count_targets',
+                  'match_by', 'n_samples', 'type'}
+
+
+def _merge(defaults: dict, spec: dict) -> dict:
+    """Merge defaults into spec, with spec taking precedence."""
+    merged = {**defaults}
+    for k, v in spec.items():
+        merged[k] = v
+    return merged
+
+
+def expand_experiment(exp_spec: dict, defaults: dict) -> list:
+    """Merge defaults into exp_spec, then Cartesian-product all list-valued keys.
+
+    Only scalar-typed keys (excluding _NON_GRID_KEYS) are gridded.
+    Returns a list of single-valued dicts, one per grid point.
+    """
+    merged = _merge(defaults, exp_spec)
+    grid_keys = [k for k, v in merged.items()
+                 if isinstance(v, list) and k not in _NON_GRID_KEYS]
+    scalar_part = {k: v for k, v in merged.items() if k not in grid_keys}
+
+    if not grid_keys:
+        return [merged]
+
+    configs = []
+    for combo in itertools.product(*[merged[k] for k in grid_keys]):
+        cfg = {**scalar_part, **dict(zip(grid_keys, combo))}
+        configs.append(cfg)
+    return configs
+
+
+def resolve_dims(cfg: dict) -> list:
+    """Expand dim_ranges or match_by to a list of dims.
+
+    For match_by: param_count, returns a list of (dim, actual_param_count) tuples.
+    For dim_ranges or dims, returns a list of ints.
+    """
+    if cfg.get('match_by') == 'param_count':
+        targets = cfg.get('param_count_targets', [])
+        p = cfg['primes'] if isinstance(cfg.get('primes'), int) else cfg.get('primes', [113])[0]
+        return find_dims_for_param_targets(
+            targets,
+            depth=cfg.get('depth', 2),
+            heads=cfg.get('heads', 1),
+            p=p,
+        )
+    elif 'dim_ranges' in cfg:
+        dims = []
+        for r in cfg['dim_ranges']:
+            dims.extend(range(r['start'], r['end'] + 1, r.get('step', 1)))
+        return sorted(set(dims))
+    elif 'dims' in cfg:
+        return list(cfg['dims'])
+    return []
+
+
+def resolve_n_samples(cfg: dict, p: int) -> int | None:
+    """Resolve n_samples: auto to the matched random dataset size."""
+    if cfg.get('n_samples') == 'auto':
+        op = cfg.get('operation', '/')
+        tf = cfg.get('train_fraction', 0.5)
+        n_equiv, _ = compute_n_equiv(p, op, tf)
+        return n_equiv
+    return cfg.get('n_samples')
+
+
+def _iter_list(cfg: dict, key: str) -> list:
+    val = cfg.get(key, [])
+    if isinstance(val, list):
+        return val
+    return [val]
+
+
+# ---------------------------------------------------------------------------
+# Existence checks
+# ---------------------------------------------------------------------------
+
+def _op_safe(op: str) -> str:
+    return op.replace('/', 'div').replace('*', 'mul').replace('+', 'add').replace('-', 'sub')
+
+
+def _wd_matches(npz_path: str, weight_decay: float, legacy_default: float) -> bool:
+    """Check whether an existing npz was run with the requested weight_decay.
+
+    Reads the .meta.json sidecar if present. If no sidecar exists (legacy file),
+    assumes the file was generated with legacy_default weight_decay.
+    """
+    meta_path = npz_path[:-4] + '.meta.json'
+    if os.path.exists(meta_path):
+        with open(meta_path) as f:
+            meta = json.load(f)
+        stored_wd = meta.get('optimizer', {}).get('weight_decay')
+        if stored_wd is not None:
+            return abs(stored_wd - weight_decay) < 1e-9
+    # No sidecar — treat as legacy default
+    return abs(weight_decay - legacy_default) < 1e-9
+
+
+def _check_speed_exists(p: int, seed: int, dim: int, n_samples: int,
+                        operation: str = '/', weight_decay: float = None,
+                        depth: int = 2, heads: int = 1) -> bool:
+    dir_new = os.path.join('data', 'speed', f'p{p}_op_{_op_safe(operation)}_seed{seed}')
+    # Standard format: depth and heads always in filename, samples at end
+    fname_std = os.path.join(dir_new,
+                             f'speed_dim{dim}_depth{depth}_heads{heads}_wd{weight_decay}_samples{n_samples}.npz')
+    if os.path.exists(fname_std):
+        return True
+    # Intermediate format (pre-standardisation, depth=2/heads=1 only): samples in middle, no depth/heads
+    if depth == 2 and heads == 1:
+        fname_mid = os.path.join(dir_new,
+                                 f'speed_dim{dim}_samples{n_samples}_wd{weight_decay}.npz')
+        if os.path.exists(fname_mid):
+            return True
+        # Legacy path: no op in directory, no wd in filename
+        fname_old = os.path.join('data', 'speed', f'p{p}_seed{seed}',
+                                 f'speed_dim{dim}_samples{n_samples}.npz')
+        if not os.path.exists(fname_old):
+            return False
+        if weight_decay is None:
+            return True
+        return _wd_matches(fname_old, weight_decay, legacy_default=0.01)
+    return False
+
+
+def _check_groks_exists(p: int, seed: int, dim: int, depth: int, heads: int,
+                        split_type: str = 'random', operation: str = '/',
+                        weight_decay: float = None, train_fraction: float = 0.5) -> bool:
+    tf_suffix = f'_tf{train_fraction}' if train_fraction != 0.5 else ''
+    # New path: op in directory, wd (and optionally tf) in filename
+    fname_new = os.path.join('data', 'groks',
+                             f'p{p}_op_{_op_safe(operation)}_seed{seed}_split{split_type}',
+                             f'grokking_dim{dim}_depth{depth}_heads{heads}_wd{weight_decay}{tf_suffix}.npz')
+    if os.path.exists(fname_new):
+        return True
+    # Legacy path: no op in directory, no wd/tf in filename (tf=0.5 only)
+    if train_fraction == 0.5:
+        fname_old = os.path.join('data', 'groks', f'p{p}_seed{seed}_split{split_type}',
+                                 f'grokking_dim{dim}_depth{depth}_heads{heads}.npz')
+        if not os.path.exists(fname_old):
+            return False
+        if weight_decay is None:
+            return True
+        return _wd_matches(fname_old, weight_decay, legacy_default=1.0)
+    return False
+
+
+def _check_capacity_exists(p: int, seed: int, dim: int, n_samples: int,
+                            dataset_type: str = 'random', depth: int = 2,
+                            heads: int = 1, weight_decay: float = None) -> bool:
+    symb_map = {'random': 'random', '+': 'add', '-': 'sub', '*': 'mul', '/': 'div'}
+    op = symb_map.get(dataset_type, dataset_type)
+    fname = os.path.join('data', 'capacity', f'p{p}_op_{op}_seed{seed}',
+                         f'capacity_dim{dim}_depth{depth}_heads{heads}_wd{weight_decay}_samples{n_samples}.npz')
+    return os.path.exists(fname)
+
+
+# ---------------------------------------------------------------------------
+# Command builders
+# ---------------------------------------------------------------------------
+
+def build_speed_cmd(cfg: dict, p: int, seed: int, dim: int, n_samples: int,
+                    force: bool = False) -> list:
+    cmd = [
+        sys.executable, 'speed.py',
+        '--p', str(p),
+        '--seed', str(seed),
+        '--dims', str(dim),
+        '--samples-start', str(n_samples),
+        '--samples-end', str(n_samples),
+        '--samples-steps', '1',
+        '--operation', str(cfg.get('operation', '/')),
+        '--train-fraction', str(cfg.get('train_fraction', 0.5)),
+        '--split-type', str(cfg.get('split_type', 'random')),
+        '--weight-decay', str(cfg.get('weight_decay', 0.01)),
+        '--lr', str(cfg.get('lr', 1e-3)),
+        '--depth', str(cfg.get('depth', 2)),
+        '--heads', str(cfg.get('heads', 1)),
+        '--dropout', str(cfg.get('dropout', 0.2)),
+        '--epochs', str(cfg.get('max_epochs', 5000)),
+        '--batch-size', str(cfg.get('batch_size', 512)),
+        '--beta1', str(cfg.get('beta1', 0.9)),
+        '--beta2', str(cfg.get('beta2', 0.98)),
+        '--no-show',
+    ]
+    if force:
+        cmd.append('--force')
+    return cmd
+
+
+def build_groks_cmd(cfg: dict, p: int, seed: int, dims: list,
+                    force: bool = False) -> list:
+    cmd = [
+        sys.executable, 'groks.py',
+        '--p', str(p),
+        '--seed', str(seed),
+        '--dims', *[str(d) for d in dims],
+        '--op', str(cfg.get('operation', '/')),
+        '--train-fraction', str(cfg.get('train_fraction', 0.5)),
+        '--split-type', str(cfg.get('split_type', 'random')),
+        '--weight-decay', str(cfg.get('weight_decay', 1.0)),
+        '--lr', str(cfg.get('lr', 1e-3)),
+        '--depth', str(cfg.get('depth', 2)),
+        '--heads', str(cfg.get('heads', 1)),
+        '--dropout', str(cfg.get('dropout', 0.2)),
+        '--epochs', str(cfg.get('max_epochs', 200)),
+        '--batch-size', str(cfg.get('batch_size', 512)),
+        '--beta1', str(cfg.get('beta1', 0.9)),
+        '--beta2', str(cfg.get('beta2', 0.98)),
+        '--ignore-memorisation',
+        '--no-show',
+    ]
+    if force:
+        cmd.append('--force')
+    return cmd
+
+
+def build_capacity_cmd(cfg: dict, p: int, seed: int, dims: list,
+                       n_samples_start: int, n_samples_end: int, n_samples_steps: int,
+                       force: bool = False) -> list:
+    cmd = [
+        sys.executable, 'capacity.py',
+        '--p', str(p),
+        '--seed', str(seed),
+        '--dims', *[str(d) for d in dims],
+        '--samples-start', str(n_samples_start),
+        '--samples-end', str(n_samples_end),
+        '--samples-steps', str(n_samples_steps),
+        '--dataset-type', str(cfg.get('operation', 'random')),
+        '--weight-decay', str(cfg.get('weight_decay', 0.01)),
+        '--lr', str(cfg.get('lr', 1e-3)),
+        '--depth', str(cfg.get('depth', 2)),
+        '--heads', str(cfg.get('heads', 1)),
+        '--dropout', str(cfg.get('dropout', 0.0)),
+        '--epochs', str(cfg.get('max_epochs', 5000)),
+        '--batch-size', str(cfg.get('batch_size', 512)),
+        '--beta1', str(cfg.get('beta1', 0.9)),
+        '--beta2', str(cfg.get('beta2', 0.98)),
+        '--no-show',
+    ]
+    if force:
+        cmd.append('--force')
+    return cmd
+
+
+# ---------------------------------------------------------------------------
+# Parallel execution
+# ---------------------------------------------------------------------------
+
+_shutdown = Event()
+
+
+def _kill_children() -> None:
+    """Terminate all child processes spawned by this process."""
     try:
-        current_process = psutil.Process()
-        children = current_process.children(recursive=True)
-
-        if children:
-            print(f"\nTerminating {len(children)} child process(es)...")
-            for child in children:
-                try:
-                    child.terminate()
-                except psutil.NoSuchProcess:
-                    pass
-
-            # Wait a bit for graceful termination
-            _, alive = psutil.wait_procs(children, timeout=3)
-
-            # Force kill any remaining processes
-            for child in alive:
-                try:
-                    print(f"Force killing process {child.pid}...")
-                    child.kill()
-                except psutil.NoSuchProcess:
-                    pass
+        import psutil
+        current = psutil.Process()
+        children = current.children(recursive=True)
+        if not children:
+            return
+        for c in children:
+            try:
+                c.terminate()
+            except psutil.NoSuchProcess:
+                pass
+        _, alive = psutil.wait_procs(children, timeout=3)
+        for c in alive:
+            try:
+                c.kill()
+            except psutil.NoSuchProcess:
+                pass
     except Exception as e:
-        print(f"Error killing child processes: {e}")
+        print(f'Warning: error killing child processes: {e}')
 
 
-def run_in_env(cmd):
-    """Run command (assumes conda environment is already activated)"""
-    # Just run the command directly - user should activate conda environment
-    # before running this script (e.g., conda activate ml13 && python main.py ...)
-    return os.system(cmd)
+def _get_device_assignment(max_workers: int | None,
+                           workers_per_gpu: int | None = None) -> tuple[int, list]:
+    """Return (n_workers, device_id_list) based on available hardware.
 
-
-def get_cuda_devices():
-    """Get number of available CUDA devices using torch"""
-    if torch.cuda.is_available():
-        return torch.cuda.device_count()
-    return 0
-
-
-def get_workers_per_gpu(device_id):
-    """Determine number of workers a GPU can support based on compute capability
-
-    Mapping based on GPU architecture:
-    - Compute 9.0+ (H100, H200): 4 workers
-    - Compute 8.0-8.9 (A100, A10): 3 workers
-    - Compute 7.0-7.9 (V100, T4): 2 workers
-    - Compute < 7.0: 1 worker
+    device_id_list is empty on CPU-only machines; workers are assigned to
+    devices in round-robin order based on the list.
     """
-    if not torch.cuda.is_available():
-        return 1
+    if not torch.cuda.is_available() or torch.cuda.device_count() == 0:
+        return max_workers or os.cpu_count(), []
 
-    capability = torch.cuda.get_device_capability(device_id)
-    major, minor = capability
-    compute_capability = major + minor / 10
-
-    if compute_capability >= 9.0:
-        return 4  # H100, H200
-    elif compute_capability >= 8.0:
-        return 3  # A100, A10
-    elif compute_capability >= 7.0:
-        return 2  # V100, T4
-    else:
-        return 1  # Older GPUs
-
-
-def get_total_workers():
-    """Calculate total workers based on compute capability of all GPUs"""
-    num_devices = get_cuda_devices()
-    if num_devices == 0:
-        return os.cpu_count()
-
-    total_workers = 0
     gpu_info = []
-    for device_id in range(num_devices):
-        workers = get_workers_per_gpu(device_id)
-        total_workers += workers
+    total = 0
+    for dev in range(torch.cuda.device_count()):
+        major, minor = torch.cuda.get_device_capability(dev)
+        cc = major + minor / 10
+        workers = workers_per_gpu if workers_per_gpu is not None else (
+            4 if cc >= 9.0 else 3 if cc >= 8.0 else 2 if cc >= 7.0 else 1
+        )
+        total += workers
+        name = torch.cuda.get_device_properties(dev).name
+        gpu_info.append({'id': dev, 'name': name,
+                         'capability': f'{major}.{minor}', 'workers': workers})
 
-        # Get GPU name and capability for logging
-        props = torch.cuda.get_device_properties(device_id)
-        capability = torch.cuda.get_device_capability(device_id)
-        gpu_info.append({
-            'id': device_id,
-            'name': props.name,
-            'capability': f"{capability[0]}.{capability[1]}",
-            'workers': workers
-        })
+    # Cap --max-workers at the GPU-capacity total so per-GPU limits are respected.
+    if max_workers is not None and max_workers > total:
+        print(f"  Note: --max-workers {max_workers} exceeds GPU capacity ({total}); capping at {total}")
+        max_workers = total
+    n_workers = max_workers if max_workers is not None else total
+    print('GPU Worker Allocation:')
+    for g in gpu_info:
+        print(f"  GPU {g['id']}: {g['name']} (Compute {g['capability']}) → {g['workers']} workers")
 
-    return total_workers, gpu_info
+    assignment = []
+    for g in gpu_info:
+        assignment.extend([g['id']] * g['workers'])
+    return n_workers, assignment
 
 
-def run_command_with_device(cmd, device_id, print_lock):
-    """Run a command with specified CUDA device"""
-    # Check if shutdown was requested
-    if shutdown_event.is_set():
+def _run_one(cmd: list, device_id: int | None, lock: Lock) -> int:
+    """Run one command, injecting --device if a GPU id is provided."""
+    if _shutdown.is_set():
         return -1
-
-    # Only add --device flag if a specific GPU is assigned
-    # Otherwise let the script use its default (could be MPS, CPU, etc.)
-    if device_id is not None:
-        cmd_with_device = f"{cmd} --device cuda:{device_id}"
-        device_str = f"cuda:{device_id}"
-    else:
-        cmd_with_device = cmd
-        device_str = "default"
-
-    with print_lock:
-        print(f"[{device_str}] Running: {cmd}")
-
-    exit_status = run_in_env(cmd_with_device)
-
-    # Check if command was interrupted (exit code 130 = SIGINT, 256*130 = 33280 on some systems)
-    # os.system returns the exit code in the wait() format, so SIGINT (2) is encoded as 2 or 130
-    if exit_status in (2, 130, 33280) or (exit_status >> 8) == 130:
-        with print_lock:
-            print(f"[{device_str}] Interrupted by user")
-        shutdown_event.set()
+    full_cmd = cmd + ['--device', f'cuda:{device_id}'] if device_id is not None else cmd
+    label = f'cuda:{device_id}' if device_id is not None else 'default'
+    with lock:
+        print(f'[{label}] {" ".join(cmd)}')
+    rc = subprocess.run(full_cmd).returncode
+    if rc in (2, 130) or (rc >> 8) == 130:
+        _shutdown.set()
         return -1
-
-    with print_lock:
-        status = "✓" if exit_status == 0 else "✗"
-        print(f"[{device_str}] {status} Completed")
-
-    return exit_status
+    with lock:
+        print(f'[{label}] {"✓" if rc == 0 else "✗"} ({" ".join(cmd[:3])}...)')
+    return rc
 
 
-def run_experiment(commands, max_workers=None):
-    """Run grokking experiments across a range of primes with multithreading
+def _run_batch(cmds: list, dry_run: bool, max_workers: int | None,
+               workers_per_gpu: int | None = None) -> None:
+    """Dispatch a list of commands in parallel. Blocks until all complete.
 
-    Note: Activate your conda environment before running this script:
-    conda activate ml13 && python main.py --p-start 97 --p-end 113
+    Commands within a batch are independent and run concurrently. Batches
+    are run sequentially by run_suite to respect capacity → speed → groks order.
     """
+    if not cmds:
+        return
+    if dry_run:
+        for cmd in cmds:
+            print('DRY RUN:', ' '.join(cmd))
+        return
 
-    # Get available CUDA devices
-    num_devices = get_cuda_devices()
-    print(f"Found {num_devices} CUDA device(s)")
+    n_workers, assignment = _get_device_assignment(max_workers, workers_per_gpu)
+    print(f'\nDispatching {len(cmds)} job(s) with {n_workers} worker(s)...\n')
 
-    # Determine number of workers based on GPU compute capability
-    if max_workers is None:
-        if num_devices > 0:
-            max_workers, gpu_info = get_total_workers()
-            print("\nGPU Worker Allocation:")
-            for info in gpu_info:
-                print(f"  GPU {info['id']}: {info['name']} "
-                      f"(Compute {info['capability']}) -> {info['workers']} workers")
-        else:
-            max_workers = os.cpu_count()
-            gpu_info = None
-    else:
-        # Manual worker count specified, but still get GPU info for device assignment
-        if num_devices > 0:
-            _, gpu_info = get_total_workers()
-        else:
-            gpu_info = None
-
-    print(f"\nUsing {max_workers} worker thread(s)\n")
-    print(f"Total commands to execute: {len(commands)}\n")
-
-    # Create device assignment list based on workers per GPU
-    device_assignment = []
-    if num_devices > 0 and gpu_info is not None:
-        for info in gpu_info:
-            device_assignment.extend([info['id']] * info['workers'])
-
-    # Execute commands in parallel with device assignment
-    print_lock = Lock()
-    failed_commands = []
-    cancelled_commands = []
+    lock = Lock()
+    failed = []
+    cancelled = []
 
     try:
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            # Submit all tasks
-            future_to_cmd = {}
-            for idx, cmd in enumerate(commands):
-                if shutdown_event.is_set():
+        with ThreadPoolExecutor(max_workers=n_workers) as executor:
+            futures = {}
+            for i, cmd in enumerate(cmds):
+                if _shutdown.is_set():
                     break
-                # Assign device in round-robin fashion from device_assignment list
-                if device_assignment:
-                    device_id = device_assignment[idx % len(device_assignment)]
-                else:
-                    device_id = None
-                future = executor.submit(run_command_with_device, cmd, device_id,
-                                        print_lock)
-                future_to_cmd[future] = cmd
+                dev = assignment[i % len(assignment)] if assignment else None
+                futures[executor.submit(_run_one, cmd, dev, lock)] = cmd
 
-            # Wait for completion
-            for future in as_completed(future_to_cmd):
-                if shutdown_event.is_set():
-                    # Cancel remaining futures
-                    for f in future_to_cmd:
+            for fut in as_completed(futures):
+                if _shutdown.is_set():
+                    for f in futures:
                         if not f.done():
                             f.cancel()
-                            cancelled_commands.append(future_to_cmd[f])
+                            cancelled.append(futures[f])
                     break
-
-                cmd = future_to_cmd[future]
+                cmd = futures[fut]
                 try:
-                    return_code = future.result()
-                    if return_code == -1:
-                        cancelled_commands.append(cmd)
-                    elif return_code != 0:
-                        failed_commands.append(cmd)
+                    rc = fut.result()
+                    if rc == -1:
+                        cancelled.append(cmd)
+                    elif rc != 0:
+                        failed.append(cmd)
                 except Exception as e:
-                    with print_lock:
-                        print(f"Error executing command: {cmd}")
-                        print(f"Exception: {e}")
-                    failed_commands.append(cmd)
+                    with lock:
+                        print(f'Exception running {" ".join(cmd[:3])}: {e}')
+                    failed.append(cmd)
     except KeyboardInterrupt:
-        print("\nKeyboard interrupt in main thread, shutting down...")
-        shutdown_event.set()
-        kill_child_processes()
+        _shutdown.set()
+        _kill_children()
 
-    # Ensure all child processes are terminated
-    kill_child_processes()
+    _kill_children()
 
-    # Report results
-    print("\n" + "="*80)
-    completed = len(commands) - len(failed_commands) - len(cancelled_commands)
-    print(f"Execution summary: {completed}/{len(commands)} completed successfully")
-
-    if cancelled_commands:
-        print(f"\nCancelled commands ({len(cancelled_commands)}):")
-        for cmd in cancelled_commands[:5]:  # Show first 5
-            print(f"  - {cmd}")
-        if len(cancelled_commands) > 5:
-            print(f"  ... and {len(cancelled_commands) - 5} more")
-
-    if failed_commands:
-        print(f"\nFailed commands ({len(failed_commands)}):")
-        for cmd in failed_commands:
-            print(f"  - {cmd}")
-        return 1
-
-    if cancelled_commands:
-        return 130  # Standard exit code for SIGINT
-
-    return 0
+    if cancelled:
+        print(f'\nCancelled: {len(cancelled)} job(s)')
+        sys.exit(130)
+    if failed:
+        print(f'\nFailed: {len(failed)} job(s):')
+        for cmd in failed[:10]:
+            print(f'  {" ".join(cmd)}')
+        sys.exit(1)
 
 
-def generate_commands(p_start, p_end, seeds, train_fraction=0.5, operation='/', split_type='random'):
-    """Generate commands for the experiment"""
-    primes = primes_in_range(p_start, p_end)
-    p_mid = primes[len(primes) // 2]
+# ---------------------------------------------------------------------------
+# Match table builder
+# ---------------------------------------------------------------------------
 
-    speed_dims = list(range(20, 128, 4)) + list(range(128, 264, 8))
-    grok_starts = [20, 130]
-    grok_ends = [128, 1000]
-    grok_steps = [2, 10]
+def _build_suite_match_table(suite_name: str, spec: dict) -> None:
+    """Query ResultsIndex for this suite's results and build a match table."""
+    print(f"\nBuilding match table for suite '{suite_name}'...")
+    index = ResultsIndex('data')
+    if len(index) == 0:
+        print("  No .meta.json files found — skipping match table.")
+        return
 
-    # Collect all commands to run
-    commands = []
-    default_seed = seeds[0]
-    
-    # Capacity experiment (single run)
-    commands.append(f"python capacity.py --p {p_mid} --no-show --seed {default_seed}")
+    defaults = spec.get('defaults', {})
+    experiments = spec.get('experiments', {})
 
-    # Speed and grokking experiments for each prime
-    for p in primes:
-        for seed in seeds:
-            for gs, ge, gt in zip(grok_starts, grok_ends, grok_steps):
-                commands.append(
-                    f"python groks.py --p {p} --dim-start {gs} --dim-end {ge} --dim-step {gt} "
-                    f"--train-fraction {train_fraction} --seed {seed} --split-type {split_type} "
-                    f"--op {operation} --ignore-memorisation --epochs 5000 --no-show"
-                )
-        
-            n, size = compute_dataset_size_bits(p, operation, train_fraction)
-            commands.append(
-                f"python speed.py --p {p} --dims {' '.join(map(str, speed_dims))} "
-                f"--samples-start {n} --samples-end {n} --samples-steps 1 --seed {seed} "
-                f"--epochs 5000 --no-show"
-            )
+    # Collect groks and speed experiments defined in this suite
+    groks_specs = {k: v for k, v in experiments.items() if v.get('type') == 'groks'}
+    speed_specs = {k: v for k, v in experiments.items() if v.get('type') == 'speed'}
 
-    return commands
+    if not groks_specs or not speed_specs:
+        print("  Suite has no groks+speed pair — skipping match table.")
+        return
 
+    # Build filter sets from the suite spec to narrow the index query
+    def _collect_values(specs, key, default):
+        vals = set()
+        for sp in specs.values():
+            merged = _merge(defaults, sp)
+            v = merged.get(key, default)
+            if isinstance(v, list):
+                vals.update(v)
+            else:
+                vals.add(v)
+        return vals
+
+    primes = _collect_values({**groks_specs, **speed_specs}, 'primes', [113])
+    primes_flat = set()
+    for pv in primes:
+        if isinstance(pv, list):
+            primes_flat.update(pv)
+        else:
+            primes_flat.add(pv)
+
+    all_groks = []
+    all_speed = []
+    for p in primes_flat:
+        all_groks.extend(index.query(experiment_type='groks', p=p))
+        all_speed.extend(index.query(experiment_type='speed', p=p))
+
+    if not all_groks or not all_speed:
+        print(f"  No groks ({len(all_groks)}) or speed ({len(all_speed)}) entries found.")
+        return
+
+    matches = build_match_table(all_groks, all_speed, capacity_constant=consts.C,
+                                capacity_source=f"consts.C={consts.C}")
+
+    os.makedirs(os.path.join('data', suite_name), exist_ok=True)
+    out_path = os.path.join('data', suite_name, 'matches.json')
+    save_match_table(matches, out_path)
+    print(f"  Match table: {len(matches)} pairs → {out_path}")
+
+
+# ---------------------------------------------------------------------------
+# Suite runner
+# ---------------------------------------------------------------------------
+
+def run_suite(yaml_path: str, dry_run: bool = False, force: bool = False,
+              no_match_table: bool = False, max_workers: int | None = None,
+              workers_per_gpu: int | None = None,
+              node_rank: int = 0, num_nodes: int = 1) -> None:
+    with open(yaml_path) as f:
+        spec = yaml.safe_load(f)
+
+    suite_name = spec['name']
+    defaults = spec.get('defaults', {})
+    experiments = spec.get('experiments', {})
+
+    print(f"Suite: {suite_name}")
+    print(f"Description: {spec.get('description', '')}")
+    print(f"Dry run: {dry_run}\n")
+    if num_nodes > 1:
+        print(f"Multi-node: node {node_rank} of {num_nodes}\n")
+
+    # Enforce dependency order: capacity → speed → groks (then other types)
+    ordered_types = ['capacity', 'speed', 'groks']
+    exp_order = []
+    for t in ordered_types:
+        for name, esp in experiments.items():
+            if esp.get('type', name) == t and name not in exp_order:
+                exp_order.append(name)
+    for name in experiments:
+        if name not in exp_order:
+            exp_order.append(name)
+
+    for exp_name in exp_order:
+        if exp_name not in experiments:
+            continue
+        exp_spec = experiments[exp_name]
+        exp_type = exp_spec.get('type', exp_name)
+        print(f"--- Experiment: {exp_name} (type={exp_type}) ---")
+
+        # Collect all pending commands for this experiment type, then dispatch
+        # them as a single parallel batch. Types are sequenced (capacity before
+        # speed before groks) but jobs within a type run concurrently.
+        pending_cmds = []
+        configs = expand_experiment(exp_spec, defaults)
+
+        for cfg in configs:
+            primes_val = cfg.get('primes', defaults.get('primes', [113]))
+            if not isinstance(primes_val, list):
+                primes_val = [primes_val]
+
+            for p in primes_val:
+                n_samples = resolve_n_samples(cfg, p)
+                dims_raw = resolve_dims(cfg)
+                seeds = _iter_list(cfg, 'seeds')
+
+                # Unpack (dim, param_count) tuples from match_by: param_count
+                if dims_raw and isinstance(dims_raw[0], tuple):
+                    dims = [d for d, _ in dims_raw]
+                else:
+                    dims = dims_raw
+
+                for seed in seeds:
+                    if exp_type == 'speed':
+                        wd = cfg.get('weight_decay')
+                        operation = cfg.get('operation', '/')
+                        depth = cfg.get('depth', 2)
+                        heads = cfg.get('heads', 1)
+                        for dim in dims:
+                            if not force and n_samples is not None and \
+                               _check_speed_exists(p, seed, dim, n_samples,
+                                                   operation=operation, weight_decay=wd,
+                                                   depth=depth, heads=heads):
+                                print(f"  Skip (exists): speed p={p} seed={seed} "
+                                      f"dim={dim} n={n_samples} wd={wd} depth={depth}")
+                                continue
+                            pending_cmds.append(
+                                build_speed_cmd(cfg, p, seed, dim, n_samples, force=force))
+
+                    elif exp_type == 'groks':
+                        depth = cfg.get('depth', 2)
+                        heads = cfg.get('heads', 1)
+                        split_type = cfg.get('split_type', 'random')
+                        wd = cfg.get('weight_decay')
+                        operation = cfg.get('operation', '/')
+                        tf = cfg.get('train_fraction', 0.5)
+                        pending_dims = dims
+                        if not force:
+                            pending_dims = [
+                                d for d in dims
+                                if not _check_groks_exists(p, seed, d, depth, heads,
+                                                           split_type, operation=operation,
+                                                           weight_decay=wd,
+                                                           train_fraction=tf)
+                            ]
+                            skipped = len(dims) - len(pending_dims)
+                            if skipped:
+                                print(f"  Skip (exists): groks p={p} seed={seed} "
+                                      f"wd={wd} — {skipped} dims already done")
+                        if pending_dims:
+                            pending_cmds.append(
+                                build_groks_cmd(cfg, p, seed, pending_dims, force=force))
+
+                    elif exp_type == 'capacity':
+                        n_start = cfg.get('samples_start', 1000)
+                        n_end = cfg.get('samples_end', 9300)
+                        n_steps = cfg.get('samples_steps', 8)
+                        pending_cmds.append(
+                            build_capacity_cmd(cfg, p, seed, dims,
+                                               n_start, n_end, n_steps, force=force))
+
+        if num_nodes > 1 and pending_cmds:
+            pending_cmds = [
+                cmd for i, cmd in enumerate(pending_cmds)
+                if i % num_nodes == node_rank
+            ]
+        _run_batch(pending_cmds, dry_run, max_workers, workers_per_gpu)
+
+    if not no_match_table and not dry_run and node_rank == 0:
+        _build_suite_match_table(suite_name, spec)
+
+
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
 
 def main():
-    # Don't register custom SIGINT handler - let default KeyboardInterrupt work
-    # signal.signal(signal.SIGINT, signal_handler)
-
     parser = argparse.ArgumentParser(
-        description='Run grokking experiments across a range of prime numbers with multithreading',
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        description='Run a YAML-defined experiment suite in parallel'
     )
-
-    # Required arguments
-    parser.add_argument('--p-start', type=int, default=90,
-                       help='Starting prime number for the range')
-    parser.add_argument('--p-end', type=int, default=140,
-                       help='Ending prime number for the range')
-
-    # Experiment parameters
-    parser.add_argument('--train-fraction', type=float, default=0.5,
-                       help='Fraction of data to use for training')
-    parser.add_argument('--seeds', type=int, nargs='+', default=list(range(42, 42 + 10)),
-                       help='Random seeds for reproducibility')
-    parser.add_argument('--operation', type=str, default='/',
-                       choices=['*', '/', '+', '-'],
-                       help='Arithmetic operation to use')
-    parser.add_argument('--split-type', type=str, default='random',
-                       choices=['random', 'sequential', 'alternating'],
-                       help='Type of train/val split')
-
-    # Parallelization options
+    parser.add_argument('--config', type=str, required=True,
+                        help='Path to YAML config file (e.g. configs/weight_decay_sweep.yaml)')
+    parser.add_argument('--dry-run', action='store_true',
+                        help='Print commands without executing them')
+    parser.add_argument('--force', action='store_true',
+                        help='Re-run experiments even if results already exist')
+    parser.add_argument('--no-match-table', action='store_true',
+                        help='Skip building the match table after experiments')
     parser.add_argument('--max-workers', type=int, default=None,
-                       help='Maximum number of parallel workers (defaults to number of GPUs or CPUs)')
-
+                        help='Max parallel workers (default: auto-detect from GPU compute capability)')
+    parser.add_argument('--workers-per-gpu', type=int, default=None,
+                        help='Override workers-per-GPU (default: auto from compute capability; H100=4)')
+    parser.add_argument('--node-rank', type=int, default=0,
+                        help='Zero-based index of this node (default: 0)')
+    parser.add_argument('--num-nodes', type=int, default=1,
+                        help='Total number of nodes (default: 1, single-node mode)')
     args = parser.parse_args()
+    if args.node_rank < 0 or args.node_rank >= args.num_nodes:
+        print(f'Error: --node-rank {args.node_rank} out of range for --num-nodes {args.num_nodes}')
+        sys.exit(1)
 
-    # Run the experiment
-    commands = generate_commands(
-        p_start=args.p_start,
-        p_end=args.p_end,
-        train_fraction=args.train_fraction,
-        seeds=args.seeds,
-        operation=args.operation,
-        split_type=args.split_type
+    if not os.path.exists(args.config):
+        print(f"Error: config file not found: {args.config}")
+        sys.exit(1)
+
+    run_suite(
+        yaml_path=args.config,
+        dry_run=args.dry_run,
+        force=args.force,
+        no_match_table=args.no_match_table,
+        max_workers=args.max_workers,
+        workers_per_gpu=args.workers_per_gpu,
+        node_rank=args.node_rank,
+        num_nodes=args.num_nodes,
     )
-    return_code = run_experiment(commands, max_workers=args.max_workers)
-
-    sys.exit(return_code)
 
 
 if __name__ == '__main__':

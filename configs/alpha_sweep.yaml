@@ -1,0 +1,37 @@
+name: alpha_sweep
+description: "Training fraction sweep (Experiment 1d)"
+
+# Different train_fractions → different n_equiv via compute_n_equiv(p, op, alpha).
+# n_samples: auto handles this per (p, operation, train_fraction).
+# No new capacity experiments are needed: C_model is architecture-invariant
+# across alpha values (same architecture family).
+
+defaults:
+  operation: "/"
+  split_type: random
+  depth: 2
+  heads: 1
+  dropout: 0.2
+  lr: 0.001
+  beta1: 0.9
+  beta2: 0.98
+  batch_size: 512
+  max_epochs: 5000
+  primes: [97, 113, 139]
+  seeds: [42, 43, 44, 45, 46, 47, 48, 49, 50, 51]
+
+experiments:
+  speed:
+    type: speed
+    weight_decay: 1.0
+    train_fraction: [0.3, 0.4, 0.5, 0.6, 0.7]
+    n_samples: auto
+    dims: [20, 24, 28, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 200, 256]
+
+  groks:
+    type: groks
+    weight_decay: 1.0
+    train_fraction: [0.3, 0.4, 0.5, 0.6, 0.7]
+    dim_ranges:
+      - {start: 20, end: 128, step: 4}
+      - {start: 130, end: 600, step: 20}

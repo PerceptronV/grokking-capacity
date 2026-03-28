@@ -1,0 +1,45 @@
+name: central_grokking_legacy
+description: "Historical configuration with mismatched weight decay (speed=0.01, groks=1.0). Reference only — do not use for new experiments."
+
+defaults:
+  operation: "/"
+  train_fraction: 0.5
+  split_type: random
+  depth: 2
+  heads: 1
+  dropout: 0.2
+  lr: 0.001
+  beta1: 0.9
+  beta2: 0.98
+  batch_size: 512
+  max_epochs: 5000
+  seeds: [42, 43, 44, 45, 46, 47, 48, 49, 50, 51]
+
+experiments:
+  capacity:
+    type: capacity
+    weight_decay: 0.01
+    dropout: 0.0
+    primes: [113]
+    dims: [10, 12, 14, 16, 18, 20, 22]
+    seeds: [42]
+
+  speed:
+    type: speed
+    # weight_decay=0.01 here does NOT match groks weight_decay=1.0.
+    # This file exists solely to reproduce the original submitted results.
+    weight_decay: 0.01
+    primes: [97, 101, 103, 107, 109, 113, 127, 131, 137, 139]
+    n_samples: auto
+    dims: [20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 68, 72,
+           76, 80, 84, 88, 92, 96, 100, 104, 108, 112, 116, 120, 124,
+           128, 136, 144, 152, 160, 168, 176, 184, 192, 200, 208,
+           216, 224, 232, 240, 248, 256]
+
+  groks:
+    type: groks
+    weight_decay: 1.0
+    primes: [97, 101, 103, 107, 109, 113, 127, 131, 137, 139]
+    dim_ranges:
+      - {start: 20, end: 128, step: 2}
+      - {start: 130, end: 1000, step: 10}

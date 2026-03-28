@@ -26,7 +26,8 @@ import torch.nn.functional as F
 from models import TransformerTorch
 from data import grokking_data_torch
 from plotting import plot_combined_curves, plot_separate_curves, plot_grokking_time
-from utils import load_model
+from utils import load_model, get_device
+from experiment import ExperimentConfig, save_run
 
 
 def count_parameters(model: nn.Module) -> int:
@@ -358,11 +359,12 @@ def save_individual_results(dim, train_acc, val_acc, param_count, args,
     plt.tight_layout()
     
     # Save plot
-    plot_fname = os.path.join(args.plot_dir, f'grokking_dim{dim}_depth{args.depth}_heads{args.heads}.pdf')
+    _tf_suffix = f'_tf{args.train_fraction}' if args.train_fraction != 0.5 else ''
+    plot_fname = os.path.join(args.plot_dir, f'grokking_dim{dim}_depth{args.depth}_heads{args.heads}_wd{args.weight_decay}{_tf_suffix}.pdf')
     plt.savefig(plot_fname, bbox_inches='tight')
     print(f"  Saved plot: {plot_fname}")
     plt.close()
-    
+
     # Prepare data dict
     data_dict = {
         'train_acc': train_acc, 
@@ -395,9 +397,38 @@ def save_individual_results(dim, train_acc, val_acc, param_count, args,
             data_dict['baseline_path'] = baseline_path
     
     # Save raw data
-    data_fname = os.path.join(args.data_dir, f'grokking_dim{dim}_depth{args.depth}_heads{args.heads}.npz')
+    data_fname = os.path.join(args.data_dir, f'grokking_dim{dim}_depth{args.depth}_heads{args.heads}_wd{args.weight_decay}{_tf_suffix}.npz')
     np.savez(data_fname, **data_dict)
     print(f"  Saved data: {data_fname}")
+
+    n_full = args.p * (args.p - 1) if args.op == '/' else args.p * args.p
+    n_train_actual = int(args.train_fraction * n_full)
+    config = ExperimentConfig(
+        experiment_type="groks",
+        p=args.p,
+        operation=args.op,
+        train_fraction=args.train_fraction,
+        split_type=args.split_type,
+        n_samples=n_train_actual,
+        dim=dim,
+        depth=args.depth,
+        heads=args.heads,
+        dropout=args.dropout,
+        param_count=param_count,
+        lr=args.lr,
+        weight_decay=args.weight_decay,
+        beta1=args.beta1,
+        beta2=args.beta2,
+        batch_size=args.batch_size,
+        max_epochs=args.epochs,
+        seed=args.seed,
+    )
+    results_summary = {
+        "final_train_acc": float(train_acc[-1]),
+        "final_val_acc": float(val_acc[-1]),
+        "epochs_trained": len(train_acc),
+    }
+    save_run(config, results_summary, data_fname)
 
 
 def run_experiment(dim, args, baseline_model=None, baseline_path=None):
@@ -409,7 +440,8 @@ def run_experiment(dim, args, baseline_model=None, baseline_path=None):
     print(f"{'='*60}")
     
     # Check if results already exist
-    data_fname = os.path.join(args.data_dir, f'grokking_dim{dim}_depth{args.depth}_heads{args.heads}.npz')
+    _tf_suffix = f'_tf{args.train_fraction}' if args.train_fraction != 0.5 else ''
+    data_fname = os.path.join(args.data_dir, f'grokking_dim{dim}_depth{args.depth}_heads{args.heads}_wd{args.weight_decay}{_tf_suffix}.npz')
     if os.path.exists(data_fname) and not args.force:
         print(f"Results already exist for dim={dim}, loading from {data_fname}")
         data = np.load(data_fname)
@@ -451,19 +483,7 @@ def run_experiment(dim, args, baseline_model=None, baseline_path=None):
         'dropout': args.dropout
     }
     
-    # Select device
-    if args.device is not None:
-        device = args.device
-    elif args.cpu:
-        device = 'cpu'
-    else:
-        if torch.cuda.is_available():
-            device = 'cuda'
-        elif torch.backends.mps.is_available():
-            device = 'mps'
-        else:
-            device = 'cpu'
-    
+    device = get_device(args.device, args.cpu)
     model = TransformerTorch(**model_kwargs).to(device)
     param_count = count_parameters(model)
     print(f"Device: {device}")
@@ -587,6 +607,8 @@ def main():
     parser.add_argument('--dim-start', type=int, default=20, help='starting dimension')
     parser.add_argument('--dim-end', type=int, default=240, help='ending dimension')
     parser.add_argument('--dim-step', type=int, default=20, help='dimension step size')
+    parser.add_argument('--dims', type=int, nargs='+', default=None,
+                       help='Explicit list of model dimensions (overrides --dim-start/end/step when provided)')
     
     # Optimizer args
     parser.add_argument('--lr', type=float, default=1e-3, help='learning rate')
@@ -631,7 +653,8 @@ def main():
     args = parser.parse_args()
 
     # Set data and plot directories
-    signature = f'p{args.p}_seed{args.seed}_split{args.split_type}'
+    _op_safe = args.op.replace('/', 'div').replace('*', 'mul').replace('+', 'add').replace('-', 'sub')
+    signature = f'p{args.p}_op_{_op_safe}_seed{args.seed}_split{args.split_type}'
     args.data_dir = os.path.join(args.data_dir, signature)
     args.plot_dir = os.path.join(args.plot_dir, signature)
 
@@ -650,24 +673,17 @@ def main():
             return
         
         print(f"\nLoading baseline model from: {model_file}")
-        if args.device is not None:
-            device = args.device
-        elif args.cpu:
-            device = 'cpu'
-        else:
-            if torch.cuda.is_available():
-                device = 'cuda'
-            elif torch.backends.mps.is_available():
-                device = 'mps'
-            else:
-                device = 'cpu'
+        device = get_device(args.device, args.cpu)
         baseline_model, baseline_metadata = load_model(model_file, device=device)
         print(f"Baseline model loaded: {baseline_metadata['param_count']:,} parameters")
     
     n_tokens = args.p + 2
     
     # Generate dimension values
-    dims = list(range(args.dim_start, args.dim_end + 1, args.dim_step))
+    if args.dims is not None:
+        dims = args.dims
+    else:
+        dims = list(range(args.dim_start, args.dim_end + 1, args.dim_step))
     print(f"Running experiments with dimensions: {dims}")
     print(f"Prime p={args.p}, n_tokens={n_tokens}, max bits per sample = log_2({n_tokens}) = {np.log2(n_tokens):.2f}")
     

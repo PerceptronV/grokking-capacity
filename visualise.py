@@ -50,6 +50,8 @@ from plotting import (
 )
 from utils import compute_dataset_size_bits
 import consts
+from results import ResultsIndex
+from matching import load_match_table
 
 
 def list_results(data_dir, pattern='grokking_dim*.npz'):
@@ -1367,8 +1369,135 @@ def aggregate_speed_results_across_seeds(p_prime, n_prime, batch_size: int = 512
     return aggregated_results
 
 
+def _primes_from_match_table(args):
+    """Load paired (groks, speed) data from a match table and run the requested analysis.
+
+    This is an alternative to the glob-based loading in primes(). It reads
+    ExperimentMatch dicts from the JSON produced by run_config.py or
+    scripts/migrate_legacy_data.py, loads the corresponding .npz traces,
+    and builds the same data structures used by the existing plotting functions.
+
+    Currently supports: --speed, --delay, --correlation, --cv analysis modes.
+    For --critical, falls back to the glob-based primes() path.
+    """
+    import numpy as np
+
+    matches = load_match_table(args.match_table)
+    index = ResultsIndex(args.index_dir)
+
+    show = not args.no_show
+    plot_dir = args.plot_dir
+    os.makedirs(plot_dir, exist_ok=True)
+
+    # Build per-prime dicts of groks and speed data.
+    # groks_data[p] = list of {dim, param_count, train_acc, val_acc}
+    # speed_data[p] = list of {param_count, n_samples, dataset_bits, saturation_epoch}
+    groks_data = {}
+    speed_data = {}
+
+    for m in matches:
+        p = m['p']
+        # Load groks traces
+        if os.path.exists(m['groks_npz_path']):
+            g = np.load(m['groks_npz_path'], allow_pickle=True)
+            groks_entry = {
+                'dim': int(g['dim']),
+                'param_count': m['param_count_groks'],
+                'train_acc': g['train_acc'],
+                'val_acc': g['val_acc'],
+                'dataset_bits': m['dataset_bits'],
+                'capacity_fraction': m['capacity_fraction'],
+            }
+            groks_data.setdefault(p, []).append(groks_entry)
+
+        # Load speed traces
+        if os.path.exists(m['speed_npz_path']):
+            s = np.load(m['speed_npz_path'], allow_pickle=True)
+            speed_entry = {
+                'param_count': m['param_count_speed'],
+                'n_samples': m['n_equiv'],
+                'dataset_bits': m['dataset_bits'],
+                'saturation_epoch': float(s['saturation_epoch']),
+                'capacity_fraction': m['capacity_fraction'],
+            }
+            speed_data.setdefault(p, []).append(speed_entry)
+
+    if not groks_data and not speed_data:
+        print("No data loaded from match table — check that .npz paths exist.")
+        return
+
+    primes_list = sorted(set(list(groks_data.keys()) + list(speed_data.keys())))
+    if args.p:
+        filter_p = args.p if isinstance(args.p, list) else [args.p]
+        primes_list = [p for p in primes_list if p in filter_p]
+
+    print(f"Match table loaded: {len(matches)} pairs across {len(primes_list)} primes")
+
+    # Delegate to the same analysis functions used by the glob-based path.
+    # We reconstruct a minimal args-like structure and call into the relevant
+    # plotting utilities directly.
+    if args.speed:
+        all_speed_results = []
+        for p in primes_list:
+            for se in speed_data.get(p, []):
+                all_speed_results.append({
+                    'p': p,
+                    'param_count': se['param_count'],
+                    'dataset_bits': se['dataset_bits'],
+                    'saturation_epoch': se['saturation_epoch'],
+                    'capacity_fraction': se['capacity_fraction'],
+                })
+        if all_speed_results:
+            plot_saturation_epochs_vs_params(
+                all_speed_results,
+                save=getattr(args, 'save', False),
+                show=show,
+                plot_dir=plot_dir,
+            )
+        else:
+            print("No speed data found in match table.")
+
+    elif args.delay:
+        all_delay_results = []
+        for p in primes_list:
+            n_equiv, K_mem = compute_dataset_size_bits(p, getattr(args, 'op', '/'),
+                                                       getattr(args, 'training_fraction', 0.5))
+            for ge in groks_data.get(p, []):
+                delay = calculate_grokking_delay(
+                    ge['train_acc'], ge['val_acc'],
+                    threshold_train=getattr(args, 'threshold_train', 99.0),
+                    threshold_val=getattr(args, 'threshold_val', 97.0),
+                )
+                all_delay_results.append({
+                    'p': p,
+                    'param_count': ge['param_count'],
+                    'capacity_fraction': ge['capacity_fraction'],
+                    'delay': delay,
+                })
+        if all_delay_results:
+            plot_delay_vs_capacity_fraction(
+                all_delay_results,
+                save=getattr(args, 'save', False),
+                show=show,
+                plot_dir=plot_dir,
+            )
+        else:
+            print("No grokking data found in match table.")
+
+    else:
+        # For unsupported modes, warn and fall through to the glob-based path
+        print("Note: --match-table is not yet implemented for this analysis mode. "
+              "Falling back to glob-based loading.")
+        primes(args)
+
+
 def primes(args):
     """Handle primes subcommand for multi-prime analysis."""
+    # Dispatch to match-table path when --match-table is provided
+    if getattr(args, 'match_table', None):
+        _primes_from_match_table(args)
+        return
+
     # Ensure args.p is a list
     primes_list = args.p if isinstance(args.p, list) else [args.p]
 
@@ -4274,6 +4403,16 @@ Examples:
                                    help='Model depth (default: 2)')
     primes_subparser.add_argument('--heads', type=int, default=1,
                                    help='Number of attention heads (default: 1)')
+
+    # Match-table loading (alternative to glob-based file discovery)
+    primes_subparser.add_argument('--match-table', type=str, default=None,
+                                   help='Path to a match table JSON produced by run_config.py or '
+                                        'scripts/migrate_legacy_data.py. When provided, loads paired '
+                                        '(groks, speed) data from the match table instead of using '
+                                        'glob-based file discovery.')
+    primes_subparser.add_argument('--index-dir', type=str, default='data',
+                                   help='Base directory for ResultsIndex scan (default: data). '
+                                        'Used together with --match-table to locate .npz files.')
 
     # Analysis modes (mutually exclusive)
     analysis_group = primes_subparser.add_mutually_exclusive_group(required=True)

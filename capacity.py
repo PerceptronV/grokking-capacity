@@ -25,6 +25,8 @@ import torch.nn.functional as F
 from models import TransformerTorch
 from data import random_target_data_torch, grokking_data_torch
 from plotting import plot_capacity_curves, plot_capacity_estimation, estimate_capacity
+from experiment import ExperimentConfig, save_run
+from utils import get_device
 
 
 def count_parameters(model: nn.Module) -> int:
@@ -264,22 +266,10 @@ def run_capacity_experiment(
         'dropout': args.dropout
     }
     
-    # Select device
-    if args.device is not None:
-        device = args.device
-    elif args.cpu:
-        device = 'cpu'
-    else:
-        if torch.cuda.is_available():
-            device = 'cuda'
-        elif torch.backends.mps.is_available():
-            device = 'mps'
-        else:
-            device = 'cpu'
-    
+    device = get_device(args.device, args.cpu)
     model = TransformerTorch(**model_kwargs).to(device)
     param_count = count_parameters(model)
-    
+
     if verbose:
         print(f"  Dataset size: {n_samples}, Model dim: {dim}, Parameters: {param_count:,}")
     
@@ -321,9 +311,9 @@ def save_results(results: Dict, args, signature: str):
     
     fname = os.path.join(
         args.data_dir,
-        f'capacity_dim{results["dim"]}_samples{results["n_samples"]}.npz'
+        f'capacity_dim{results["dim"]}_depth{results["depth"]}_heads{results["heads"]}_wd{args.weight_decay}_samples{results["n_samples"]}.npz'
     )
-    
+
     np.savez(
         fname,
         n_samples=results['n_samples'],
@@ -340,7 +330,33 @@ def save_results(results: Dict, args, signature: str):
         train_acc_trace=results['train_acc_trace'],
         bits_trace=results['bits_trace']
     )
-    
+
+    config = ExperimentConfig(
+        experiment_type="capacity",
+        p=args.p,
+        operation=args.dataset_type,
+        n_samples=int(results['n_samples']),
+        dim=int(results['dim']),
+        depth=int(results['depth']),
+        heads=int(results['heads']),
+        dropout=args.dropout,
+        param_count=int(results['param_count']),
+        lr=args.lr,
+        weight_decay=args.weight_decay,
+        beta1=args.beta1,
+        beta2=args.beta2,
+        batch_size=args.batch_size,
+        max_epochs=args.epochs,
+        seed=args.seed,
+    )
+    results_summary = {
+        "final_acc": float(results['final_acc']),
+        "final_loss": float(results['final_loss']),
+        "total_bits_memorized": float(results['total_bits_memorized']),
+        "epochs_trained": int(results['epochs_trained']),
+    }
+    save_run(config, results_summary, fname)
+
     return fname
 
 
@@ -355,9 +371,9 @@ def load_or_run_experiment(
     """Load existing results or run a new experiment."""
     fname = os.path.join(
         args.data_dir,
-        f'capacity_dim{dim}_samples{n_samples}.npz'
+        f'capacity_dim{dim}_depth{args.depth}_heads{args.heads}_wd{args.weight_decay}_samples{n_samples}.npz'
     )
-    
+
     if os.path.exists(fname) and not force:
         if verbose:
             print(f"  Loading existing results: {fname}")
@@ -463,7 +479,7 @@ def main():
         '*': 'mul',
         '/': 'div'
     }
-    signature = f'p{args.p}_seed{args.seed}_ds{symb_map[args.dataset_type]}'
+    signature = f'p{args.p}_op_{symb_map[args.dataset_type]}_seed{args.seed}'
     args.data_dir = os.path.join(args.data_dir, signature)
     args.plot_dir = os.path.join(args.plot_dir, signature)
 

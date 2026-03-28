@@ -1,0 +1,50 @@
+name: depth_scaling
+description: "Vary depth at fixed width (Experiment 3a)"
+
+# Dependency order enforced by run_config.py: capacity → speed → groks.
+# Capacity must run first to measure C_model per depth. The per-depth C_model
+# is read from the ResultsIndex when building the match table.
+#
+# match_by: param_count means dims are selected to hit the param_count_targets
+# rather than being specified directly. find_dims_for_param_targets() is called
+# per (depth, p) to find the dim values closest to each target.
+
+defaults:
+  operation: "/"
+  train_fraction: 0.5
+  split_type: random
+  heads: 1
+  dropout: 0.2
+  lr: 0.001
+  beta1: 0.9
+  beta2: 0.98
+  batch_size: 512
+  max_epochs: 5000
+  primes: [113]
+  seeds: [42, 43, 44, 45, 46, 47, 48, 49, 50, 51]
+
+experiments:
+  # Step 1: measure C_model for each depth
+  capacity:
+    type: capacity
+    weight_decay: 0.01
+    dropout: 0.0
+    depth: [2, 3, 4, 6, 8, 10]
+    dims: [10, 12, 14, 16, 18, 20, 22]
+    seeds: [42]
+
+  # Step 2: speed and groks matched by param count, not dim
+  speed:
+    type: speed
+    weight_decay: 1.0
+    depth: [2, 4, 6, 8]
+    n_samples: auto
+    match_by: param_count
+    param_count_targets: [5000, 10000, 20000, 50000, 100000, 200000, 500000]
+
+  groks:
+    type: groks
+    weight_decay: 1.0
+    depth: [2, 4, 6, 8]
+    match_by: param_count
+    param_count_targets: [5000, 10000, 20000, 50000, 100000, 200000, 500000]

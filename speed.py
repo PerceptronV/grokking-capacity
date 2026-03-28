@@ -20,6 +20,8 @@ import torch.nn.functional as F
 
 from models import TransformerTorch
 from data import random_target_data_torch
+from experiment import ExperimentConfig, save_run
+from utils import get_device
 
 import matplotlib.pyplot as plt
 from plotting import (
@@ -209,19 +211,7 @@ def run_speed_experiment(
         'dropout': args.dropout
     }
     
-    # Select device
-    if args.device is not None:
-        device = args.device
-    elif args.cpu:
-        device = 'cpu'
-    else:
-        if torch.cuda.is_available():
-            device = 'cuda'
-        elif torch.backends.mps.is_available():
-            device = 'mps'
-        else:
-            device = 'cpu'
-    
+    device = get_device(args.device, args.cpu)
     model = TransformerTorch(**model_kwargs).to(device)
     param_count = count_parameters(model)
     
@@ -277,9 +267,9 @@ def save_results(results: Dict, args):
     
     fname = os.path.join(
         args.data_dir,
-        f'speed_dim{results["dim"]}_samples{results["n_samples"]}.npz'
+        f'speed_dim{results["dim"]}_depth{args.depth}_heads{args.heads}_wd{args.weight_decay}_samples{results["n_samples"]}.npz'
     )
-    
+
     np.savez(
         fname,
         n_samples=results['n_samples'],
@@ -301,7 +291,37 @@ def save_results(results: Dict, args):
         train_acc_trace=results['train_acc_trace'],
         steps_trace=results['steps_trace']
     )
-    
+
+    config = ExperimentConfig(
+        experiment_type="speed",
+        p=int(results['p']),
+        operation=args.operation,
+        train_fraction=args.train_fraction,
+        split_type=args.split_type,
+        n_samples=int(results['n_samples']),
+        dataset_bits=float(results['dataset_bits']),
+        dim=int(results['dim']),
+        depth=int(results['depth']),
+        heads=int(results['heads']),
+        dropout=args.dropout,
+        param_count=int(results['param_count']),
+        lr=args.lr,
+        weight_decay=args.weight_decay,
+        beta1=args.beta1,
+        beta2=args.beta2,
+        batch_size=args.batch_size,
+        max_epochs=args.epochs,
+        seed=args.seed,
+        saturation_threshold=args.saturation_threshold,
+    )
+    results_summary = {
+        "saturated": bool(results['saturated']),
+        "saturation_epoch": float(results['saturation_epoch']),
+        "final_acc": float(results['final_acc']),
+        "final_loss": float(results['final_loss']),
+    }
+    save_run(config, results_summary, fname)
+
     return fname
 
 
@@ -315,9 +335,9 @@ def load_or_run_experiment(
     """Load existing results or run a new experiment."""
     fname = os.path.join(
         args.data_dir,
-        f'speed_dim{dim}_samples{n_samples}.npz'
+        f'speed_dim{dim}_depth{args.depth}_heads{args.heads}_wd{args.weight_decay}_samples{n_samples}.npz'
     )
-    
+
     if os.path.exists(fname) and not force:
         if verbose:
             print(f"  Loading existing results: {fname}")
@@ -358,9 +378,17 @@ def main():
     )
     
     # Data args
-    parser.add_argument('--p', type=int, default=97, 
+    parser.add_argument('--p', type=int, default=97,
                         help='Prime number (determines vocabulary size)')
-    
+    parser.add_argument('--operation', type=str, default='/',
+                        choices=['*', '/', '+', '-'],
+                        help='Operation this speed run is matched to (informational; speed uses random data)')
+    parser.add_argument('--train-fraction', type=float, default=0.5,
+                        help='Training fraction of the grokking task this run is matched to (informational)')
+    parser.add_argument('--split-type', type=str, default='random',
+                        choices=['random', 'sequential', 'alternating'],
+                        help='Split type (informational; passed through to sidecar)')
+
     # Model args
     parser.add_argument('--depth', type=int, default=2, help='Transformer depth')
     parser.add_argument('--heads', type=int, default=1, help='Attention heads')
@@ -422,7 +450,8 @@ def main():
     torch.manual_seed(args.seed)
     
     # Create output directories with signature
-    signature = f'p{args.p}_seed{args.seed}'
+    _op_safe = args.operation.replace('/', 'div').replace('*', 'mul').replace('+', 'add').replace('-', 'sub')
+    signature = f'p{args.p}_op_{_op_safe}_seed{args.seed}'
     args.data_dir = os.path.join(args.data_dir, signature)
     args.plot_dir = os.path.join(args.plot_dir, signature)
     
