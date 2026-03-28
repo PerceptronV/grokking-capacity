@@ -24,17 +24,41 @@ class ResultsIndex:
 
     def _scan(self):
         pattern = os.path.join(self.base_dir, '**', '*.meta.json')
+        cache_path = os.path.join(self.base_dir, '.results_cache.json')
+
+        try:
+            with open(cache_path) as f:
+                cache = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            cache = {}
+
         self._entries = []
+        new_cache = {}
         for json_path in glob.glob(pattern, recursive=True):
             try:
-                with open(json_path) as f:
-                    entry = json.load(f)
-                entry['_json_path'] = json_path
-                # Strip '.meta.json' (not just '.json') to get the npz stem
-                entry['_npz_path'] = json_path[:-len('.meta.json')] + '.npz'
-                self._entries.append(entry)
-            except (json.JSONDecodeError, OSError):
-                pass
+                mtime = os.path.getmtime(json_path)
+            except OSError:
+                continue
+            cached = cache.get(json_path)
+            if cached and cached.get('mtime') == mtime:
+                entry = cached['entry']
+            else:
+                try:
+                    with open(json_path) as f:
+                        entry = json.load(f)
+                    entry['_json_path'] = json_path
+                    # Strip '.meta.json' (not just '.json') to get the npz stem
+                    entry['_npz_path'] = json_path[:-len('.meta.json')] + '.npz'
+                except (json.JSONDecodeError, OSError):
+                    continue
+            new_cache[json_path] = {'mtime': mtime, 'entry': entry}
+            self._entries.append(entry)
+
+        try:
+            with open(cache_path, 'w') as f:
+                json.dump(new_cache, f)
+        except OSError:
+            pass
 
     def refresh(self):
         """Re-scan the directory (e.g. after new files are written)."""

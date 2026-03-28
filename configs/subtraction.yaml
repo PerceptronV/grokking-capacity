@@ -3,9 +3,9 @@ description: "Modular subtraction (Experiment 2c)"
 
 # Subtraction is algebraically equivalent to addition (a - b = a + (p-b) mod p),
 # but the model does not know this; the learned circuit may differ from addition.
-# T_mem uses random data (operation-independent), so speed results from the
-# tasks.yaml addition run can be reused — only groks needs to run here.
-# n_equiv for subtraction equals n_equiv for addition (N_full = p^2).
+# T_mem uses random data (operation-independent), so n_equiv is the same as
+# addition (N_full = p^2). Speed is re-run under the op_sub directory so that
+# sidecar metadata accurately records the matched operation.
 
 defaults:
   operation: "-"
