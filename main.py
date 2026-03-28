@@ -14,7 +14,6 @@ Usage:
 
 import argparse
 import itertools
-import json
 import os
 import subprocess
 import sys
@@ -114,83 +113,25 @@ def _iter_list(cfg: dict, key: str) -> list:
 # Existence checks
 # ---------------------------------------------------------------------------
 
-def _op_safe(op: str) -> str:
-    return op.replace('/', 'div').replace('*', 'mul').replace('+', 'add').replace('-', 'sub')
-
-
-def _wd_matches(npz_path: str, weight_decay: float, legacy_default: float) -> bool:
-    """Check whether an existing npz was run with the requested weight_decay.
-
-    Reads the .meta.json sidecar if present. If no sidecar exists (legacy file),
-    assumes the file was generated with legacy_default weight_decay.
-    """
-    meta_path = npz_path[:-4] + '.meta.json'
-    if os.path.exists(meta_path):
-        with open(meta_path) as f:
-            meta = json.load(f)
-        stored_wd = meta.get('optimizer', {}).get('weight_decay')
-        if stored_wd is not None:
-            return abs(stored_wd - weight_decay) < 1e-9
-    # No sidecar — treat as legacy default
-    return abs(weight_decay - legacy_default) < 1e-9
-
-
-def _check_speed_exists(p: int, seed: int, dim: int, n_samples: int,
+def _check_speed_exists(index: ResultsIndex, p: int, seed: int, dim: int, n_samples: int,
                         operation: str = '/', weight_decay: float = None,
-                        depth: int = 2, heads: int = 1) -> bool:
-    dir_new = os.path.join('data', 'speed', f'p{p}_op_{_op_safe(operation)}_seed{seed}')
-    # Standard format: depth and heads always in filename, samples at end
-    fname_std = os.path.join(dir_new,
-                             f'speed_dim{dim}_depth{depth}_heads{heads}_wd{weight_decay}_samples{n_samples}.npz')
-    if os.path.exists(fname_std):
-        return True
-    # Intermediate format (pre-standardisation, depth=2/heads=1 only): samples in middle, no depth/heads
-    if depth == 2 and heads == 1:
-        fname_mid = os.path.join(dir_new,
-                                 f'speed_dim{dim}_samples{n_samples}_wd{weight_decay}.npz')
-        if os.path.exists(fname_mid):
-            return True
-        # Legacy path: no op in directory, no wd in filename
-        fname_old = os.path.join('data', 'speed', f'p{p}_seed{seed}',
-                                 f'speed_dim{dim}_samples{n_samples}.npz')
-        if not os.path.exists(fname_old):
-            return False
-        if weight_decay is None:
-            return True
-        return _wd_matches(fname_old, weight_decay, legacy_default=0.01)
-    return False
+                        depth: int = 2, heads: int = 1, init_scale: float = 1.0) -> bool:
+    is_filter = (lambda x: x is None or x == init_scale) if init_scale == 1.0 else init_scale
+    return index.exists(experiment_type="speed", p=p, seed=seed, dim=dim,
+                        n_samples=n_samples, operation=operation,
+                        weight_decay=weight_decay, depth=depth, heads=heads,
+                        init_scale=is_filter)
 
 
-def _check_groks_exists(p: int, seed: int, dim: int, depth: int, heads: int,
-                        split_type: str = 'random', operation: str = '/',
-                        weight_decay: float = None, train_fraction: float = 0.5) -> bool:
-    tf_suffix = f'_tf{train_fraction}' if train_fraction != 0.5 else ''
-    # New path: op in directory, wd (and optionally tf) in filename
-    fname_new = os.path.join('data', 'groks',
-                             f'p{p}_op_{_op_safe(operation)}_seed{seed}_split{split_type}',
-                             f'grokking_dim{dim}_depth{depth}_heads{heads}_wd{weight_decay}{tf_suffix}.npz')
-    if os.path.exists(fname_new):
-        return True
-    # Legacy path: no op in directory, no wd/tf in filename (tf=0.5 only)
-    if train_fraction == 0.5:
-        fname_old = os.path.join('data', 'groks', f'p{p}_seed{seed}_split{split_type}',
-                                 f'grokking_dim{dim}_depth{depth}_heads{heads}.npz')
-        if not os.path.exists(fname_old):
-            return False
-        if weight_decay is None:
-            return True
-        return _wd_matches(fname_old, weight_decay, legacy_default=1.0)
-    return False
-
-
-def _check_capacity_exists(p: int, seed: int, dim: int, n_samples: int,
-                            dataset_type: str = 'random', depth: int = 2,
-                            heads: int = 1, weight_decay: float = None) -> bool:
-    symb_map = {'random': 'random', '+': 'add', '-': 'sub', '*': 'mul', '/': 'div'}
-    op = symb_map.get(dataset_type, dataset_type)
-    fname = os.path.join('data', 'capacity', f'p{p}_op_{op}_seed{seed}',
-                         f'capacity_dim{dim}_depth{depth}_heads{heads}_wd{weight_decay}_samples{n_samples}.npz')
-    return os.path.exists(fname)
+def _check_groks_exists(index: ResultsIndex, p: int, seed: int, dim: int, depth: int,
+                        heads: int, split_type: str = 'random', operation: str = '/',
+                        weight_decay: float = None, train_fraction: float = 0.5,
+                        init_scale: float = 1.0) -> bool:
+    is_filter = (lambda x: x is None or x == init_scale) if init_scale == 1.0 else init_scale
+    return index.exists(experiment_type="groks", p=p, seed=seed, dim=dim,
+                        depth=depth, heads=heads, split_type=split_type,
+                        operation=operation, weight_decay=weight_decay,
+                        train_fraction=train_fraction, init_scale=is_filter)
 
 
 # ---------------------------------------------------------------------------
@@ -215,6 +156,7 @@ def build_speed_cmd(cfg: dict, p: int, seed: int, dim: int, n_samples: int,
         '--depth', str(cfg.get('depth', 2)),
         '--heads', str(cfg.get('heads', 1)),
         '--dropout', str(cfg.get('dropout', 0.2)),
+        '--init-scale', str(cfg.get('init_scale', 1.0)),
         '--epochs', str(cfg.get('max_epochs', 5000)),
         '--batch-size', str(cfg.get('batch_size', 512)),
         '--beta1', str(cfg.get('beta1', 0.9)),
@@ -241,6 +183,7 @@ def build_groks_cmd(cfg: dict, p: int, seed: int, dims: list,
         '--depth', str(cfg.get('depth', 2)),
         '--heads', str(cfg.get('heads', 1)),
         '--dropout', str(cfg.get('dropout', 0.2)),
+        '--init-scale', str(cfg.get('init_scale', 1.0)),
         '--epochs', str(cfg.get('max_epochs', 200)),
         '--batch-size', str(cfg.get('batch_size', 512)),
         '--beta1', str(cfg.get('beta1', 0.9)),
@@ -270,6 +213,7 @@ def build_capacity_cmd(cfg: dict, p: int, seed: int, dims: list,
         '--depth', str(cfg.get('depth', 2)),
         '--heads', str(cfg.get('heads', 1)),
         '--dropout', str(cfg.get('dropout', 0.0)),
+        '--init-scale', str(cfg.get('init_scale', 1.0)),
         '--epochs', str(cfg.get('max_epochs', 5000)),
         '--batch-size', str(cfg.get('batch_size', 512)),
         '--beta1', str(cfg.get('beta1', 0.9)),
@@ -513,6 +457,8 @@ def run_suite(yaml_path: str, dry_run: bool = False, force: bool = False,
     if num_nodes > 1:
         print(f"Multi-node: node {node_rank} of {num_nodes}\n")
 
+    index = ResultsIndex("data")
+
     # Enforce dependency order: capacity → speed → groks (then other types)
     ordered_types = ['capacity', 'speed', 'groks']
     exp_order = []
@@ -559,11 +505,13 @@ def run_suite(yaml_path: str, dry_run: bool = False, force: bool = False,
                         operation = cfg.get('operation', '/')
                         depth = cfg.get('depth', 2)
                         heads = cfg.get('heads', 1)
+                        init_scale = cfg.get('init_scale', 1.0)
                         for dim in dims:
                             if not force and n_samples is not None and \
-                               _check_speed_exists(p, seed, dim, n_samples,
+                               _check_speed_exists(index, p, seed, dim, n_samples,
                                                    operation=operation, weight_decay=wd,
-                                                   depth=depth, heads=heads):
+                                                   depth=depth, heads=heads,
+                                                   init_scale=init_scale):
                                 print(f"  Skip (exists): speed p={p} seed={seed} "
                                       f"dim={dim} n={n_samples} wd={wd} depth={depth}")
                                 continue
@@ -577,14 +525,16 @@ def run_suite(yaml_path: str, dry_run: bool = False, force: bool = False,
                         wd = cfg.get('weight_decay')
                         operation = cfg.get('operation', '/')
                         tf = cfg.get('train_fraction', 0.5)
+                        init_scale = cfg.get('init_scale', 1.0)
                         pending_dims = dims
                         if not force:
                             pending_dims = [
                                 d for d in dims
-                                if not _check_groks_exists(p, seed, d, depth, heads,
+                                if not _check_groks_exists(index, p, seed, d, depth, heads,
                                                            split_type, operation=operation,
                                                            weight_decay=wd,
-                                                           train_fraction=tf)
+                                                           train_fraction=tf,
+                                                           init_scale=init_scale)
                             ]
                             skipped = len(dims) - len(pending_dims)
                             if skipped:

@@ -263,7 +263,8 @@ def run_capacity_experiment(
         'heads': heads,
         'n_tokens': p + 2,  # Full vocabulary including op tokens
         'seq_len': 4,
-        'dropout': args.dropout
+        'dropout': args.dropout,
+        'init_scale': args.init_scale,
     }
     
     device = get_device(args.device, args.cpu)
@@ -309,9 +310,10 @@ def save_results(results: Dict, args, signature: str):
     """Save individual experiment results."""
     os.makedirs(args.data_dir, exist_ok=True)
     
+    _is_suffix = f'_is{args.init_scale}' if args.init_scale != 1.0 else ''
     fname = os.path.join(
         args.data_dir,
-        f'capacity_dim{results["dim"]}_depth{results["depth"]}_heads{results["heads"]}_wd{args.weight_decay}_samples{results["n_samples"]}.npz'
+        f'capacity_dim{results["dim"]}_depth{results["depth"]}_heads{results["heads"]}_wd{args.weight_decay}_samples{results["n_samples"]}{_is_suffix}.npz'
     )
 
     np.savez(
@@ -341,6 +343,7 @@ def save_results(results: Dict, args, signature: str):
         heads=int(results['heads']),
         dropout=args.dropout,
         param_count=int(results['param_count']),
+        init_scale=args.init_scale,
         lr=args.lr,
         weight_decay=args.weight_decay,
         beta1=args.beta1,
@@ -415,9 +418,11 @@ def main():
     # Model args
     parser.add_argument('--depth', type=int, default=2, help='Transformer depth')
     parser.add_argument('--heads', type=int, default=1, help='Attention heads')
-    parser.add_argument('--dropout', type=float, default=0.0, 
+    parser.add_argument('--dropout', type=float, default=0.0,
                         help='Dropout (typically 0 for memorisation)')
-    parser.add_argument('--dims', type=int, nargs='+', 
+    parser.add_argument('--init-scale', type=float, default=1.0,
+                        help='Weight initialisation scale factor (default: 1.0, no change)')
+    parser.add_argument('--dims', type=int, nargs='+',
                         default=[10, 12, 14, 16, 18, 20, 22],
                         help='List of model dimensions to test')
     

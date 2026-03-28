@@ -1,0 +1,44 @@
+name: heads_sweep
+description: "Attention head count at fixed depth, varying dim (Experiment 3b)"
+
+# All dims must be divisible by max(heads)=8 since dim_head = dim // heads.
+# Capacity is re-run per head count because H may affect bits-per-parameter.
+
+defaults:
+  operation: "/"
+  train_fraction: 0.5
+  split_type: random
+  depth: 2
+  dropout: 0.2
+  lr: 0.001
+  beta1: 0.9
+  beta2: 0.98
+  batch_size: 512
+  max_epochs: 5000
+  primes: [113]
+  seeds: [42, 43, 44, 45, 46, 47, 48, 49, 50, 51]
+
+experiments:
+  # Re-measure C_model per head count — H may change bits-per-parameter
+  capacity:
+    type: capacity
+    weight_decay: 0.01
+    dropout: 0.0
+    heads: [1, 2, 4, 8]
+    dims: [8, 16, 24, 32, 40, 48, 56]
+    seeds: [42]
+
+  speed:
+    type: speed
+    weight_decay: 1.0
+    heads: [1, 2, 4, 8]
+    n_samples: auto
+    dims: [24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 256]
+
+  groks:
+    type: groks
+    weight_decay: 1.0
+    heads: [1, 2, 4, 8]
+    dim_ranges:
+      - {start: 24, end: 128, step: 8}
+      - {start: 136, end: 600, step: 24}

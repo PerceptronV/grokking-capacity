@@ -123,7 +123,8 @@ class BlockTorch(nn_torch.Module):
 
 
 class TransformerTorch(nn_torch.Module):
-    def __init__(self, depth, dim, heads, n_tokens, seq_len, dropout=0., pool='cls'):
+    def __init__(self, depth, dim, heads, n_tokens, seq_len, dropout=0., pool='cls',
+                 init_scale: float = 1.0):
         super().__init__()
         assert pool in {'cls', 'mean'}
         self.pool = pool
@@ -134,6 +135,11 @@ class TransformerTorch(nn_torch.Module):
         ])
         self.norm = RMSNormTorch(dim)
         self.out = nn_torch.Linear(dim, n_tokens, bias=False)
+
+        if init_scale != 1.0:
+            with torch.no_grad():
+                for param in self.parameters():
+                    param.mul_(init_scale)
 
     def forward(self, x):
         # x shape: (b, n)
@@ -192,6 +198,7 @@ def build_model(config, device='cpu'):
         n_tokens=config.p + 2,
         seq_len=4,
         dropout=config.dropout,
+        init_scale=getattr(config, 'init_scale', 1.0),
     ).to(device)
     config.param_count = sum(p.numel() for p in model.parameters() if p.requires_grad)
     return model

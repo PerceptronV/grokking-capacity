@@ -26,6 +26,7 @@ class ExperimentConfig:
     dropout: float = 0.2
     param_count: Optional[int] = None
     architecture_family: str = "transformer_gated"
+    init_scale: float = 1.0
 
     # Optimizer
     lr: float = 1e-3
@@ -72,6 +73,8 @@ class ExperimentConfig:
             parts.append(f"n{self.n_samples}")
         if self.train_fraction != 0.5:
             parts.append(f"tf{self.train_fraction}")
+        if self.init_scale != 1.0:
+            parts.append(f"is{self.init_scale}")
         return "_".join(parts)
 
 
@@ -112,6 +115,7 @@ def save_run(config: ExperimentConfig, results: dict, npz_path: str) -> str:
             "dropout": config.dropout,
             "param_count": config.param_count,
             "architecture_family": config.architecture_family,
+            "init_scale": config.init_scale,
         },
         "optimizer": {
             "lr": config.lr,

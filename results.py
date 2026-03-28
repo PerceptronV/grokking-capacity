@@ -62,10 +62,7 @@ class ResultsIndex:
         for entry in self._entries:
             match = True
             for key, expected in filters.items():
-                val, found = self._get_nested(entry, key)
-                if not found:
-                    match = False
-                    break
+                val, _ = self._get_nested(entry, key)  # val is None when not found
                 if callable(expected):
                     if not expected(val):
                         match = False
@@ -76,6 +73,10 @@ class ResultsIndex:
             if match:
                 results.append(entry)
         return results
+
+    def exists(self, **filters) -> bool:
+        """Return True if at least one entry matches all filters."""
+        return len(self.query(**filters)) > 0
 
     def load_traces(self, entry: dict) -> dict:
         """Load the npz numeric traces for a given entry dict."""

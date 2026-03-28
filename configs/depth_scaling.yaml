@@ -37,7 +37,7 @@ experiments:
   speed:
     type: speed
     weight_decay: 1.0
-    depth: [2, 4, 6, 8]
+    depth: [2, 3, 4, 6, 8, 10]
     n_samples: auto
     match_by: param_count
     param_count_targets: [5000, 10000, 20000, 50000, 100000, 200000, 500000]
@@ -45,6 +45,6 @@ experiments:
   groks:
     type: groks
     weight_decay: 1.0
-    depth: [2, 4, 6, 8]
+    depth: [2, 3, 4, 6, 8, 10]
     match_by: param_count
     param_count_targets: [5000, 10000, 20000, 50000, 100000, 200000, 500000]

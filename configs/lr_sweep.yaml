@@ -1,0 +1,31 @@
+name: lr_sweep
+description: "Learning rate sensitivity with matched lr between speed and groks (Experiment 1b)"
+
+defaults:
+  operation: "/"
+  train_fraction: 0.5
+  split_type: random
+  depth: 2
+  heads: 1
+  dropout: 0.2
+  weight_decay: 1.0
+  beta1: 0.9
+  beta2: 0.98
+  batch_size: 512
+  max_epochs: 5000
+  primes: [113]
+  seeds: [42, 43, 44, 45, 46, 47, 48, 49, 50, 51]
+
+experiments:
+  speed:
+    type: speed
+    lr: [0.0003, 0.001, 0.003]
+    n_samples: auto
+    dims: [20, 24, 28, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 200, 256]
+
+  groks:
+    type: groks
+    lr: [0.0003, 0.001, 0.003]
+    dim_ranges:
+      - {start: 20, end: 128, step: 4}
+      - {start: 130, end: 600, step: 20}

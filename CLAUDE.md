@@ -83,11 +83,25 @@ The paper's central claim is that grokking onset is predicted by the intersectio
 
 Every result lives under `data/{type}/` with:
 - **Directory**: `p{p}_op_{op}_seed{seed}[_split{split_type}]`
-- **Filename**: `{type}_dim{dim}_depth{depth}_heads{heads}_wd{wd}[_tf{tf}][_samples{n}].npz`
+- **Filename**: `{type}_dim{dim}_depth{depth}_heads{heads}_wd{wd}[_tf{tf}][_is{is}][_samples{n}].npz`
 
 `_op_safe()` maps operation symbols: `/`→`div`, `*`→`mul`, `+`→`add`, `-`→`sub`.
 
-The `_tf{tf}` suffix is only included when `train_fraction != 0.5`. Depth and heads are **always** present in filenames (never omitted when default).
+**Naming convention philosophy:** filenames are human-readable and encode the hyperparameters that identify a run. New hyperparameters follow the *optional suffix with default* pattern: the suffix is **omitted when the value equals the default** and included otherwise. This gives zero migration cost — existing files are untouched, and new runs at non-default values get a distinguishing suffix automatically.
+
+Current optional suffixes (all omitted at default):
+- `_tf{train_fraction}` — omitted when `train_fraction == 0.5`
+- `_is{init_scale}` — omitted when `init_scale == 1.0`
+
+Depth and heads are **always** present (never omitted even at default), because they define the architecture family rather than a hyperparameter choice.
+
+**Existence check philosophy:** all "does this run exist?" checks query `.meta.json` sidecars via `ResultsIndex.exists()`, not by reconstructing and checking filenames. This means adding a new hyperparameter requires only a one-line change to the query — no new filename generation logic and no migration branch. The `.meta.json` sidecar is the source of truth; the filename is for human readability only.
+
+For hyperparameters added after some runs were already completed (e.g. `init_scale`), legacy sidecars that predate the field are matched using a callable filter that treats `None` as the default:
+```python
+is_filter = (lambda x: x is None or x == init_scale) if init_scale == 1.0 else init_scale
+index.exists(..., init_scale=is_filter)
+```
 
 ## YAML config structure
 
@@ -97,6 +111,21 @@ Each config has `name`, `defaults`, and `experiments`. Experiments have a `type`
 
 `consts.py` has canonical hyperparameter defaults per experiment type. The groks default `weight_decay=1.0` differs from speed/capacity default `weight_decay=0.01` — this is a known historical confound that the `weight_decay_sweep` config corrects.
 
-## Existence checks (main.py)
+## Revision experiments
 
-Speed has a three-generation legacy chain: standard format → intermediate (pre-standardisation) → pre-migration path. The `_check_speed_exists`, `_check_groks_exists`, and `_check_capacity_exists` functions in `main.py` handle all generations so existing data is never redundantly re-run.
+Experiments are organised across three axes (hyperparameters, tasks, architectures). Priority refers to revision timeline (Week 1 is highest).
+
+| ID | Name | Description | Priority | Config |
+|----|------|-------------|----------|--------|
+| **1a** | Weight decay sweep | λ ∈ {0.1, 0.3, 1.0, 3.0} with matched weight decay between speed and groks — eliminates the historical confound | Week 1 / highest | `configs/weight_decay_sweep.yaml` |
+| **1b** | Learning rate sweep | η ∈ {3×10⁻⁴, 1×10⁻³, 3×10⁻³} with matched lr between speed and groks | Week 2 | `configs/lr_sweep.yaml` |
+| **1c** | Initialisation scale | init_scale ∈ {0.5, 1.0, 2.0} — scales all weights post-init | Week 3 | `configs/init_scale_sweep.yaml` |
+| **1d** | Training fraction sweep | α ∈ {0.3, 0.4, 0.5, 0.6, 0.7} at p ∈ {97, 113, 139} | Week 1 | `configs/alpha_sweep.yaml` |
+| **2a** | Modular addition | Full pipeline on `+` (mod p) | Week 1 / high | `configs/tasks.yaml` |
+| **2b** | Modular multiplication | Full pipeline on `*` (mod p) | Week 1 | `configs/tasks.yaml` |
+| **2c** | Modular subtraction | Full pipeline on `-` (mod p); T_mem reusable from 2a | Week 3 / low | `configs/subtraction.yaml` |
+| **2d** | Permutation composition | S₅ group — needs new task implementation | Ambitious / out of scope | — |
+| **3a** | Depth scaling | L_depth ∈ {2,3,4,6,8,10} at fixed heads=1, matched by param count | Week 2 / high | `configs/depth_scaling.yaml` |
+| **3b** | Attention heads | H ∈ {1,2,4,8} at fixed depth=2; dims must be multiples of 8 | Week 2 | `configs/heads_sweep.yaml` |
+| **3c** | Architectural variants | Gated FFN removal, RMSNorm→LayerNorm, RoPE→learned pos emb | Week 3 | — |
+| **3d** | MLP baseline | Replace Transformer with MLP; tests framework generality | Week 3 / ambitious | — |

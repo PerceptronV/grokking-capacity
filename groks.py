@@ -360,7 +360,8 @@ def save_individual_results(dim, train_acc, val_acc, param_count, args,
     
     # Save plot
     _tf_suffix = f'_tf{args.train_fraction}' if args.train_fraction != 0.5 else ''
-    plot_fname = os.path.join(args.plot_dir, f'grokking_dim{dim}_depth{args.depth}_heads{args.heads}_wd{args.weight_decay}{_tf_suffix}.pdf')
+    _is_suffix = f'_is{args.init_scale}' if args.init_scale != 1.0 else ''
+    plot_fname = os.path.join(args.plot_dir, f'grokking_dim{dim}_depth{args.depth}_heads{args.heads}_wd{args.weight_decay}{_tf_suffix}{_is_suffix}.pdf')
     plt.savefig(plot_fname, bbox_inches='tight')
     print(f"  Saved plot: {plot_fname}")
     plt.close()
@@ -397,7 +398,7 @@ def save_individual_results(dim, train_acc, val_acc, param_count, args,
             data_dict['baseline_path'] = baseline_path
     
     # Save raw data
-    data_fname = os.path.join(args.data_dir, f'grokking_dim{dim}_depth{args.depth}_heads{args.heads}_wd{args.weight_decay}{_tf_suffix}.npz')
+    data_fname = os.path.join(args.data_dir, f'grokking_dim{dim}_depth{args.depth}_heads{args.heads}_wd{args.weight_decay}{_tf_suffix}{_is_suffix}.npz')
     np.savez(data_fname, **data_dict)
     print(f"  Saved data: {data_fname}")
 
@@ -415,6 +416,7 @@ def save_individual_results(dim, train_acc, val_acc, param_count, args,
         heads=args.heads,
         dropout=args.dropout,
         param_count=param_count,
+        init_scale=args.init_scale,
         lr=args.lr,
         weight_decay=args.weight_decay,
         beta1=args.beta1,
@@ -441,7 +443,8 @@ def run_experiment(dim, args, baseline_model=None, baseline_path=None):
     
     # Check if results already exist
     _tf_suffix = f'_tf{args.train_fraction}' if args.train_fraction != 0.5 else ''
-    data_fname = os.path.join(args.data_dir, f'grokking_dim{dim}_depth{args.depth}_heads{args.heads}_wd{args.weight_decay}{_tf_suffix}.npz')
+    _is_suffix = f'_is{args.init_scale}' if args.init_scale != 1.0 else ''
+    data_fname = os.path.join(args.data_dir, f'grokking_dim{dim}_depth{args.depth}_heads{args.heads}_wd{args.weight_decay}{_tf_suffix}{_is_suffix}.npz')
     if os.path.exists(data_fname) and not args.force:
         print(f"Results already exist for dim={dim}, loading from {data_fname}")
         data = np.load(data_fname)
@@ -480,7 +483,8 @@ def run_experiment(dim, args, baseline_model=None, baseline_path=None):
         'heads': args.heads,
         'n_tokens': n_tokens,
         'seq_len': 4,
-        'dropout': args.dropout
+        'dropout': args.dropout,
+        'init_scale': args.init_scale,
     }
     
     device = get_device(args.device, args.cpu)
@@ -604,6 +608,8 @@ def main():
     parser.add_argument('--depth', type=int, default=2, help='depth')
     parser.add_argument('--heads', type=int, default=1, help='heads')
     parser.add_argument('--dropout', type=float, default=0.2, help='dropout')
+    parser.add_argument('--init-scale', type=float, default=1.0,
+                        help='Weight initialisation scale factor (default: 1.0, no change)')
     parser.add_argument('--dim-start', type=int, default=20, help='starting dimension')
     parser.add_argument('--dim-end', type=int, default=240, help='ending dimension')
     parser.add_argument('--dim-step', type=int, default=20, help='dimension step size')
