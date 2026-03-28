@@ -15,7 +15,7 @@ python main.py --config configs/weight_decay_sweep.yaml --dry-run
 python main.py --config configs/depth_scaling.yaml --force
 
 # Run a single experiment directly
-python groks.py --p 113 --seed 42 --dims 64 128 --op / --weight-decay 1.0 --depth 2 --heads 1
+python groks.py --p 113 --seed 42 --dims 64 128 --operation / --weight-decay 1.0 --depth 2 --heads 1
 python speed.py --p 113 --seed 42 --dims 64 --samples-start 6328 --samples-end 6328 --samples-steps 1 --weight-decay 1.0
 python capacity.py --p 113 --seed 42 --dims 10 12 14 --samples-start 1000 --samples-end 9300 --samples-steps 8
 ```
@@ -87,7 +87,7 @@ The paper's central claim is that grokking onset is predicted by the intersectio
 Every result lives under `data/{type}/` with:
 
 - **Directory**: `p{p}_op_{op}_seed{seed}[_split{split_type}]`
-- **Filename**: `{type}_dim{dim}_depth{depth}_heads{heads}_wd{wd}[_tf{tf}][_is{is}][_samples{n}].npz`
+- **Filename**: `{type}_dim{dim}_depth{depth}_heads{heads}_wd{wd}[_tf{tf}][_is{is}][_do{do}][_samples{n}].npz`
 
 `_op_safe()` maps operation symbols: `/`→`div`, `*`→`mul`, `+`→`add`, `-`→`sub`.
 
@@ -97,6 +97,7 @@ Current optional suffixes (all omitted at default):
 
 - `_tf{train_fraction}` — omitted when `train_fraction == 0.5`
 - `_is{init_scale}` — omitted when `init_scale == 1.0`
+- `_do{dropout}` — omitted when `dropout == 0.0` (capacity) or `dropout == 0.2` (speed, groks)
 
 Depth and heads are **always** present (never omitted even at default), because they define the architecture family rather than a hyperparameter choice.
 
@@ -115,7 +116,10 @@ Each config has `name`, `defaults`, and `experiments`. Experiments have a `type`
 
 ## Key constants and defaults
 
-`consts.py` has canonical hyperparameter defaults per experiment type. The groks default `weight_decay=1.0` differs from speed/capacity default `weight_decay=0.01` — this is a known historical confound that the `weight_decay_sweep` config corrects.
+`consts.py` has canonical hyperparameter defaults per experiment type. Two known asymmetries:
+
+- **Weight decay**: groks default `weight_decay=1.0` vs speed/capacity default `weight_decay=0.01` — historical confound corrected by `weight_decay_sweep`.
+- **Dropout**: capacity default `dropout=0.0` vs speed/groks default `dropout=0.2`. The constant `C = 2.16` in `consts.py` was measured at `dropout=0.0`; whether C is stable across dropout values is what `dropout_sweep` tests. The `_do` filename suffix uses per-type omission rules to preserve zero migration cost (see naming section above).
 
 ## Revision experiments
 
@@ -125,6 +129,7 @@ Experiments are organised across three axes (hyperparameters, tasks, architectur
 | ID     | Name                    | Description                                                                                                     | Priority                 | Config                            |
 | ------ | ----------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------ | --------------------------------- |
 | **1a** | Weight decay sweep      | λ ∈ {0.1, 0.3, 1.0, 3.0} with matched weight decay between speed and groks — eliminates the historical confound | Week 1 / highest         | `configs/weight_decay_sweep.yaml` |
+| **1a\*** | Dropout sweep         | do ∈ {0.0, 0.1, 0.2, 0.4} matched across capacity, speed, and groks — tests whether C depends on dropout       | Week 1                   | `configs/dropout_sweep.yaml`      |
 | **1b** | Learning rate sweep     | η ∈ {3×10⁻⁴, 1×10⁻³, 3×10⁻³} with matched lr between speed and groks                                            | Week 2                   | `configs/lr_sweep.yaml`           |
 | **1c** | Initialisation scale    | init_scale ∈ {0.5, 1.0, 2.0} — scales all weights post-init                                                     | Week 3                   | `configs/init_scale_sweep.yaml`   |
 | **1d** | Training fraction sweep | α ∈ {0.3, 0.4, 0.5, 0.6, 0.7} at p ∈ {97, 113, 139}                                                             | Week 1                   | `configs/alpha_sweep.yaml`        |

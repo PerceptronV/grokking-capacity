@@ -8,6 +8,7 @@ we can estimate learning speed in steps per bit.
 """
 
 import argparse
+from cli_args import add_model_args, add_optimizer_args, add_device_args, add_io_args
 import numpy as np
 import os
 from tqdm import tqdm
@@ -267,9 +268,10 @@ def save_results(results: Dict, args):
     os.makedirs(args.data_dir, exist_ok=True)
     
     _is_suffix = f'_is{args.init_scale}' if args.init_scale != 1.0 else ''
+    _do_suffix = f'_do{args.dropout}' if args.dropout != 0.2 else ''
     fname = os.path.join(
         args.data_dir,
-        f'speed_dim{results["dim"]}_depth{args.depth}_heads{args.heads}_wd{args.weight_decay}_samples{results["n_samples"]}{_is_suffix}.npz'
+        f'speed_dim{results["dim"]}_depth{args.depth}_heads{args.heads}_wd{args.weight_decay}_samples{results["n_samples"]}{_is_suffix}{_do_suffix}.npz'
     )
 
     np.savez(
@@ -336,9 +338,11 @@ def load_or_run_experiment(
     verbose: bool = True
 ) -> Dict:
     """Load existing results or run a new experiment."""
+    _is_suffix = f'_is{args.init_scale}' if args.init_scale != 1.0 else ''
+    _do_suffix = f'_do{args.dropout}' if args.dropout != 0.2 else ''
     fname = os.path.join(
         args.data_dir,
-        f'speed_dim{dim}_depth{args.depth}_heads{args.heads}_wd{args.weight_decay}_samples{n_samples}.npz'
+        f'speed_dim{dim}_depth{args.depth}_heads{args.heads}_wd{args.weight_decay}_samples{n_samples}{_is_suffix}{_do_suffix}.npz'
     )
 
     if os.path.exists(fname) and not force:
@@ -379,10 +383,13 @@ def main():
     parser = argparse.ArgumentParser(
         description='Measure learning speed (steps to memorisation) for different architectures'
     )
-    
-    # Data args
-    parser.add_argument('--p', type=int, default=97,
-                        help='Prime number (determines vocabulary size)')
+
+    add_model_args(parser, dims_default=[20, 24, 28], dropout_default=0.2)
+    add_optimizer_args(parser, weight_decay_default=0.01, epochs_default=5000)
+    add_device_args(parser)
+    add_io_args(parser, data_dir='data/speed', plot_dir='media/speed')
+
+    # Task context args (informational; speed uses random data)
     parser.add_argument('--operation', type=str, default='/',
                         choices=['*', '/', '+', '-'],
                         help='Operation this speed run is matched to (informational; speed uses random data)')
@@ -392,17 +399,6 @@ def main():
                         choices=['random', 'sequential', 'alternating'],
                         help='Split type (informational; passed through to sidecar)')
 
-    # Model args
-    parser.add_argument('--depth', type=int, default=2, help='Transformer depth')
-    parser.add_argument('--heads', type=int, default=1, help='Attention heads')
-    parser.add_argument('--dropout', type=float, default=0.2,
-                        help='Dropout (0.2 to match training)')
-    parser.add_argument('--init-scale', type=float, default=1.0,
-                        help='Weight initialisation scale factor (default: 1.0, no change)')
-    parser.add_argument('--dims', type=int, nargs='+',
-                        default=[20, 24, 28],
-                        help='List of model dimensions to test')
-    
     # Dataset size args
     parser.add_argument('--samples-start', type=int, default=100,
                         help='Starting dataset size')
@@ -410,39 +406,12 @@ def main():
                         help='Ending dataset size')
     parser.add_argument('--samples-steps', type=int, default=4,
                         help='Number of dataset sizes to test (log spaced)')
-    
-    # Optimizer args
-    parser.add_argument('--lr', type=float, default=1e-3, help='Learning rate')
-    parser.add_argument('--weight-decay', type=float, default=0.01, 
-                        help='Weight decay')
-    parser.add_argument('--beta1', type=float, default=0.9, help='Adam beta1')
-    parser.add_argument('--beta2', type=float, default=0.98, help='Adam beta2')
-    
+
     # Training args
-    parser.add_argument('-b', '--batch-size', type=int, default=512, 
-                        help='Batch size')
-    parser.add_argument('-e', '--epochs', type=int, default=5000, 
-                        help='Maximum epochs')
     parser.add_argument('--saturation-threshold', type=float, default=99.0,
                         help='Accuracy threshold to consider saturated (%%)')
     parser.add_argument('--patience', type=int, default=0,
                         help='Epochs to confirm saturation')
-    
-    # Output args
-    parser.add_argument('--data-dir', type=str, default='data/speed',
-                        help='Data output directory')
-    parser.add_argument('--plot-dir', type=str, default='media/speed',
-                        help='Plot output directory')
-    
-    # Misc args
-    parser.add_argument('--seed', type=int, default=42, help='Random seed')
-    parser.add_argument('--cpu', action='store_true', help='Force CPU only')
-    parser.add_argument('--device', type=str, default=None, 
-                        help='Device to use (e.g., "cuda:0", "cpu", "mps")')
-    parser.add_argument('--force', action='store_true',
-                        help='Force re-run even if results exist')
-    parser.add_argument('--no-show', action='store_true',
-                        help='Do not display plots (just save)')
     parser.add_argument('--rate', action='store_true',
                         help='Generate additional runs at n+k samples for rate estimation (dT/dS)')
     parser.add_argument('--rate-k', type=int, default=50,

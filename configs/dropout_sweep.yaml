@@ -1,0 +1,25 @@
+name: dropout_sweep
+description: "Dropout sensitivity with MATCHED dropout across capacity, speed, and groks — tests whether C depends on dropout and eliminates a potential confound (Experiment 1a*)"
+
+defaults:
+  operation: "/"
+  train_fraction: 0.5
+  split_type: random
+  depth: 2
+  heads: 1
+  weight_decay: 1.0
+  lr: 0.001
+  beta1: 0.9
+  beta2: 0.98
+  batch_size: 512
+  max_epochs: 5000
+  primes: [113]
+  seeds: [42]
+
+experiments:
+  capacity:
+    type: capacity
+    # Sweep dropout at the same values as speed/groks — tests whether C varies with dropout
+    dropout: [0.0, 0.1, 0.2, 0.4]
+    dims: [10, 12, 14, 16, 18, 20, 22]
+    seeds: [42]

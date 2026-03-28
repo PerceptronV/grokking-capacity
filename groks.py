@@ -12,6 +12,7 @@ allowing reconstruction of memorisation against other models/baselines.
 """
 
 import argparse
+from cli_args import add_model_args, add_optimizer_args, add_device_args, add_io_args
 import numpy as np
 import matplotlib.pyplot as plt
 import os
@@ -361,7 +362,8 @@ def save_individual_results(dim, train_acc, val_acc, param_count, args,
     # Save plot
     _tf_suffix = f'_tf{args.train_fraction}' if args.train_fraction != 0.5 else ''
     _is_suffix = f'_is{args.init_scale}' if args.init_scale != 1.0 else ''
-    plot_fname = os.path.join(args.plot_dir, f'grokking_dim{dim}_depth{args.depth}_heads{args.heads}_wd{args.weight_decay}{_tf_suffix}{_is_suffix}.pdf')
+    _do_suffix = f'_do{args.dropout}' if args.dropout != 0.2 else ''
+    plot_fname = os.path.join(args.plot_dir, f'grokking_dim{dim}_depth{args.depth}_heads{args.heads}_wd{args.weight_decay}{_tf_suffix}{_is_suffix}{_do_suffix}.pdf')
     plt.savefig(plot_fname, bbox_inches='tight')
     print(f"  Saved plot: {plot_fname}")
     plt.close()
@@ -377,7 +379,7 @@ def save_individual_results(dim, train_acc, val_acc, param_count, args,
         'epochs': args.epochs,
         'p': args.p,
         'n_tokens': args.p + 2,  # Store n_tokens explicitly
-        'op': args.op,
+        'op': args.operation,
         'train_fraction': args.train_fraction,
         'n_train': train_log_probs.shape[1] if train_log_probs is not None else 0,
         'n_val': val_log_probs.shape[1] if val_log_probs is not None else 0,
@@ -398,16 +400,16 @@ def save_individual_results(dim, train_acc, val_acc, param_count, args,
             data_dict['baseline_path'] = baseline_path
     
     # Save raw data
-    data_fname = os.path.join(args.data_dir, f'grokking_dim{dim}_depth{args.depth}_heads{args.heads}_wd{args.weight_decay}{_tf_suffix}{_is_suffix}.npz')
+    data_fname = os.path.join(args.data_dir, f'grokking_dim{dim}_depth{args.depth}_heads{args.heads}_wd{args.weight_decay}{_tf_suffix}{_is_suffix}{_do_suffix}.npz')
     np.savez(data_fname, **data_dict)
     print(f"  Saved data: {data_fname}")
 
-    n_full = args.p * (args.p - 1) if args.op == '/' else args.p * args.p
+    n_full = args.p * (args.p - 1) if args.operation == '/' else args.p * args.p
     n_train_actual = int(args.train_fraction * n_full)
     config = ExperimentConfig(
         experiment_type="groks",
         p=args.p,
-        operation=args.op,
+        operation=args.operation,
         train_fraction=args.train_fraction,
         split_type=args.split_type,
         n_samples=n_train_actual,
@@ -444,7 +446,8 @@ def run_experiment(dim, args, baseline_model=None, baseline_path=None):
     # Check if results already exist
     _tf_suffix = f'_tf{args.train_fraction}' if args.train_fraction != 0.5 else ''
     _is_suffix = f'_is{args.init_scale}' if args.init_scale != 1.0 else ''
-    data_fname = os.path.join(args.data_dir, f'grokking_dim{dim}_depth{args.depth}_heads{args.heads}_wd{args.weight_decay}{_tf_suffix}{_is_suffix}.npz')
+    _do_suffix = f'_do{args.dropout}' if args.dropout != 0.2 else ''
+    data_fname = os.path.join(args.data_dir, f'grokking_dim{dim}_depth{args.depth}_heads{args.heads}_wd{args.weight_decay}{_tf_suffix}{_is_suffix}{_do_suffix}.npz')
     if os.path.exists(data_fname) and not args.force:
         print(f"Results already exist for dim={dim}, loading from {data_fname}")
         data = np.load(data_fname)
@@ -470,7 +473,7 @@ def run_experiment(dim, args, baseline_model=None, baseline_path=None):
     
     # Prepare data
     Xtrain, Ttrain, Xtest, Ttest = grokking_data_torch(
-        args.p, op=args.op, split_type=args.split_type, 
+        args.p, op=args.operation, split_type=args.split_type,
         train_fraction=args.train_fraction, device='cpu'
     )
     
@@ -597,34 +600,25 @@ def compute_mem_t_from_log_probs(log_probs: np.ndarray, n_tokens: int) -> float:
 
 def main():
     parser = argparse.ArgumentParser(description='Run grokking experiments with varying model dimensions')
-    
-    # Data args
-    parser.add_argument('--p', type=int, default=97, help='prime number')
-    parser.add_argument('--op', type=str, default='/', help='operation', choices=['*', '/', '+', '-'])
+
+    add_model_args(parser, dims_default=None, dropout_default=0.2)
+    add_optimizer_args(parser, weight_decay_default=1.0, epochs_default=200)
+    add_device_args(parser)
+    add_io_args(parser, data_dir='data/groks', plot_dir='media/groks')
+
+    # Task args
+    parser.add_argument('--operation', type=str, default='/', help='operation',
+                        choices=['*', '/', '+', '-'])
     parser.add_argument('--train-fraction', type=float, default=0.5, help='train fraction')
-    parser.add_argument('--split-type', type=str, default='random', help='split type', choices=['random', 'sequential', 'alternating'])
-    
-    # Model args (dim will be varied)
-    parser.add_argument('--depth', type=int, default=2, help='depth')
-    parser.add_argument('--heads', type=int, default=1, help='heads')
-    parser.add_argument('--dropout', type=float, default=0.2, help='dropout')
-    parser.add_argument('--init-scale', type=float, default=1.0,
-                        help='Weight initialisation scale factor (default: 1.0, no change)')
+    parser.add_argument('--split-type', type=str, default='random', help='split type',
+                        choices=['random', 'sequential', 'alternating'])
+
+    # Dimension range args (alternative to --dims; overridden when --dims is provided)
     parser.add_argument('--dim-start', type=int, default=20, help='starting dimension')
     parser.add_argument('--dim-end', type=int, default=240, help='ending dimension')
     parser.add_argument('--dim-step', type=int, default=20, help='dimension step size')
-    parser.add_argument('--dims', type=int, nargs='+', default=None,
-                       help='Explicit list of model dimensions (overrides --dim-start/end/step when provided)')
-    
-    # Optimizer args
-    parser.add_argument('--lr', type=float, default=1e-3, help='learning rate')
-    parser.add_argument('--weight-decay', type=float, default=1, help='weight decay')
-    parser.add_argument('--beta1', type=float, default=0.9, help='beta1')
-    parser.add_argument('--beta2', type=float, default=0.98, help='beta2')
-    
+
     # Training args
-    parser.add_argument('-b', '--batch-size', type=int, default=512, help='batch size')
-    parser.add_argument('-e', '--epochs', type=int, default=200, help='number of epochs')
     parser.add_argument('--early-stopping-train', type=float, default=0.99,
                        help='stop training when train accuracy reaches this threshold (default: 0.99), if val accuracy is also reached, stop training')
     parser.add_argument('--early-stopping-val', type=float, default=0.99,
@@ -637,29 +631,18 @@ def main():
                        help='minimum validation accuracy improvement to reset patience (default: 1e-4)')
     parser.add_argument('--threshold-val', type=float, default=99.0,
                        help='validation accuracy threshold for grokking time plot (default: 99.0)')
-    parser.add_argument('--data-dir', type=str, default='data/groks', help='data output directory')
-    parser.add_argument('--plot-dir', type=str, default='media/groks', help='plot output directory')
-    
+
     # Memorisation tracking
     parser.add_argument('--ignore-memorisation', action='store_true',
                        help='ignore memorisation tracking and do not store memorisation data')
-    parser.add_argument('--baseline', type=str, default=None, 
+    parser.add_argument('--baseline', type=str, default=None,
                        help='Path to baseline model directory (e.g., "p97_seed42_splitrandom/dim24_depth2_heads1"). '
                             'When provided, computes unintended memorisation M_U at each epoch on training set.')
-    
-    # Misc args
-    parser.add_argument('--seed', type=int, default=42, help='random seed')
-    parser.add_argument('--cpu', action='store_true', help='use cpu only')
-    parser.add_argument('--device', type=str, default=None,
-                       help='device to use (e.g., "cuda:0", "cuda:1", "cpu", "mps"). Overrides --cpu flag if specified.')
-    parser.add_argument('--force', action='store_true', help='force re-run even if results exist')
-    parser.add_argument('--no-show', action='store_true',
-                       help='Do not display plots (just save)')
     
     args = parser.parse_args()
 
     # Set data and plot directories
-    _op_safe = args.op.replace('/', 'div').replace('*', 'mul').replace('+', 'add').replace('-', 'sub')
+    _op_safe = args.operation.replace('/', 'div').replace('*', 'mul').replace('+', 'add').replace('-', 'sub')
     signature = f'p{args.p}_op_{_op_safe}_seed{args.seed}_split{args.split_type}'
     args.data_dir = os.path.join(args.data_dir, signature)
     args.plot_dir = os.path.join(args.plot_dir, signature)

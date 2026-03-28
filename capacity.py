@@ -12,6 +12,7 @@ we empirically determine C using information theory:
 """
 
 import argparse
+from cli_args import add_model_args, add_optimizer_args, add_device_args, add_io_args
 import numpy as np
 import os
 from tqdm import tqdm
@@ -311,9 +312,10 @@ def save_results(results: Dict, args, signature: str):
     os.makedirs(args.data_dir, exist_ok=True)
     
     _is_suffix = f'_is{args.init_scale}' if args.init_scale != 1.0 else ''
+    _do_suffix = f'_do{args.dropout}' if args.dropout != 0.0 else ''
     fname = os.path.join(
         args.data_dir,
-        f'capacity_dim{results["dim"]}_depth{results["depth"]}_heads{results["heads"]}_wd{args.weight_decay}_samples{results["n_samples"]}{_is_suffix}.npz'
+        f'capacity_dim{results["dim"]}_depth{results["depth"]}_heads{results["heads"]}_wd{args.weight_decay}_samples{results["n_samples"]}{_is_suffix}{_do_suffix}.npz'
     )
 
     np.savez(
@@ -372,9 +374,11 @@ def load_or_run_experiment(
     dataset_type: str = 'random'
 ) -> Dict:
     """Load existing results or run a new experiment."""
+    _is_suffix = f'_is{args.init_scale}' if args.init_scale != 1.0 else ''
+    _do_suffix = f'_do{args.dropout}' if args.dropout != 0.0 else ''
     fname = os.path.join(
         args.data_dir,
-        f'capacity_dim{dim}_depth{args.depth}_heads{args.heads}_wd{args.weight_decay}_samples{n_samples}.npz'
+        f'capacity_dim{dim}_depth{args.depth}_heads{args.heads}_wd{args.weight_decay}_samples{n_samples}{_is_suffix}{_do_suffix}.npz'
     )
 
     if os.path.exists(fname) and not force:
@@ -410,22 +414,12 @@ def main():
     parser = argparse.ArgumentParser(
         description='Measure model information capacity (bits per parameter)'
     )
-    
-    # Data args
-    parser.add_argument('--p', type=int, default=97, 
-                        help='Prime number')
-    
-    # Model args
-    parser.add_argument('--depth', type=int, default=2, help='Transformer depth')
-    parser.add_argument('--heads', type=int, default=1, help='Attention heads')
-    parser.add_argument('--dropout', type=float, default=0.0,
-                        help='Dropout (typically 0 for memorisation)')
-    parser.add_argument('--init-scale', type=float, default=1.0,
-                        help='Weight initialisation scale factor (default: 1.0, no change)')
-    parser.add_argument('--dims', type=int, nargs='+',
-                        default=[10, 12, 14, 16, 18, 20, 22],
-                        help='List of model dimensions to test')
-    
+
+    add_model_args(parser, dims_default=[10, 12, 14, 16, 18, 20, 22], dropout_default=0.0)
+    add_optimizer_args(parser, weight_decay_default=0.01, epochs_default=5000)
+    add_device_args(parser)
+    add_io_args(parser, data_dir='data/capacity', plot_dir='media/capacity')
+
     # Dataset size args
     parser.add_argument('--samples-start', type=int, default=1000,
                         help='Starting dataset size')
@@ -436,39 +430,12 @@ def main():
     parser.add_argument('--dataset-type', type=str, default='random',
                         help='Type of dataset to use',
                         choices=['random', '+', '-', '*', '/'])
-    
-    # Optimizer args
-    parser.add_argument('--lr', type=float, default=1e-3, help='Learning rate')
-    parser.add_argument('--weight-decay', type=float, default=0.01, 
-                        help='Weight decay (lower for memorisation)')
-    parser.add_argument('--beta1', type=float, default=0.9, help='Adam beta1')
-    parser.add_argument('--beta2', type=float, default=0.98, help='Adam beta2')
-    
+
     # Training args
-    parser.add_argument('-b', '--batch-size', type=int, default=512, 
-                        help='Batch size')
-    parser.add_argument('-e', '--epochs', type=int, default=5000, 
-                        help='Maximum epochs')
     parser.add_argument('--patience', type=int, default=100,
                         help='Patience for early stopping (epochs without improvement)')
     parser.add_argument('--min-delta', type=float, default=1e-4,
                         help='Minimum loss improvement to reset patience')
-    
-    # Output args
-    parser.add_argument('--data-dir', type=str, default='data/capacity',
-                        help='Data output directory')
-    parser.add_argument('--plot-dir', type=str, default='media/capacity',
-                        help='Plot output directory')
-    
-    # Misc args
-    parser.add_argument('--seed', type=int, default=42, help='Random seed')
-    parser.add_argument('--cpu', action='store_true', help='Force CPU only')
-    parser.add_argument('--device', type=str, default=None, 
-                        help='device to use (e.g., "cuda:0", "cuda:1", "cpu", "mps"). Overrides --cpu flag if specified.')
-    parser.add_argument('--force', action='store_true', 
-                        help='Force re-run even if results exist')
-    parser.add_argument('--no-show', action='store_true',
-                        help='Do not display plots (just save)')
     
     args = parser.parse_args()
     
