@@ -1,5 +1,5 @@
-name: task_sweep
-description: "Modular addition (+) and multiplication (*) (Experiments 2a and 2b)"
+name: task_add_sweep
+description: "Modular addition (+) (Experiment 2a)"
 
 # NOTE: n_equiv differs between division (N_full = p*(p-1)) and other ops (N_full = p^2).
 # n_samples: auto computes the correct n_equiv per (p, operation, train_fraction).
@@ -18,9 +18,15 @@ defaults:
   batch_size: 512
   max_epochs: 5000
   primes: [97, 113, 139]
-  seeds: [42, 43, 44, 45, 46, 47, 48, 49, 50, 51]
+  seeds: [42, 43, 44]
 
 experiments:
+  capacity:
+    type: capacity
+    primes: [113]
+    dims: [10, 12, 14, 16, 18, 20, 22]
+    seeds: [42]
+
   speed_add:
     type: speed
     operation: "+"
@@ -31,8 +37,10 @@ experiments:
     type: groks
     operation: "+"
     dim_ranges:
-      - {start: 20, end: 128, step: 4}
-      - {start: 130, end: 600, step: 20}
+      - {start: 20, end: 32, step: 4}
+      - {start: 40, end: 64, step: 8}
+      - {start: 80, end: 128, step: 16}
+      - {start: 160, end: 256, step: 32}
 
   speed_mul:
     type: speed

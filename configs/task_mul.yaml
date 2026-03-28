@@ -1,40 +1,35 @@
-name: weight_decay_sweep
-description: "Weight decay sensitivity with MATCHED weight_decay between speed and groks (Experiment 1a)"
+name: task_mul_sweep
+description: "Modular multiplication (*) (Experiment 2b)"
+
+# NOTE: n_equiv differs between division (N_full = p*(p-1)) and other ops (N_full = p^2).
+# n_samples: auto computes the correct n_equiv per (p, operation, train_fraction).
+# Capacity experiments do not need to be re-run: they use random data independent of operation.
 
 defaults:
-  operation: "/"
   train_fraction: 0.5
   split_type: random
   depth: 2
   heads: 1
   dropout: 0.2
   lr: 0.001
+  weight_decay: 1.0
   beta1: 0.9
   beta2: 0.98
   batch_size: 512
   max_epochs: 5000
-  primes: [113]
+  primes: [97, 113, 139]
   seeds: [42, 43, 44]
 
 experiments:
-  capacity:
-    type: capacity
-    weight_decay: 1.0
-    dropout: 0.0
-    primes: [113]
-    dims: [10, 12, 14, 16, 18, 20, 22]
-    seeds: [42]
-
-  speed:
+  speed_mul:
     type: speed
-    # weight_decay swept jointly with groks — the confound is eliminated
-    weight_decay: [0.01, 0.1, 0.3, 1.0]
+    operation: "*"
     n_samples: auto
     dims: [20, 24, 28, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 200, 256]
 
-  groks:
+  groks_mul:
     type: groks
-    weight_decay: [0.01, 0.1, 0.3, 1.0]
+    operation: "*"
     dim_ranges:
       - {start: 20, end: 32, step: 4}
       - {start: 40, end: 64, step: 8}

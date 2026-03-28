@@ -21,7 +21,7 @@ defaults:
   batch_size: 512
   max_epochs: 5000
   primes: [113]
-  seeds: [42, 43, 44, 45, 46, 47, 48, 49, 50, 51]
+  seeds: [42, 43, 44]
 
 experiments:
   # Step 1: measure C_model for each depth
