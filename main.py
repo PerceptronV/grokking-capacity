@@ -331,36 +331,54 @@ def _run_batch(cmds: list, dry_run: bool, max_workers: int | None,
     failed = []
     cancelled = []
 
-    try:
-        with ThreadPoolExecutor(max_workers=n_workers) as executor:
-            futures = {}
-            for i, cmd in enumerate(cmds):
-                if _shutdown.is_set():
-                    break
-                dev = assignment[i % len(assignment)] if assignment else None
-                futures[executor.submit(_run_one, cmd, dev, lock)] = cmd
+    # Build one executor per device so that the per-GPU worker cap is enforced
+    # throughout the run, not just at the initial submission.  The single-pool
+    # approach assigned devices to jobs by index, so a fast GPU could free its
+    # threads and have them pick up jobs for other GPUs, breaking the cap.
+    if assignment:
+        unique_devs = list(dict.fromkeys(assignment))           # ordered, dedup
+        wpg = assignment.count(unique_devs[0])                  # workers per GPU
+        gpu_cmds: dict[int, list] = {d: [] for d in unique_devs}
+        for i, cmd in enumerate(cmds):
+            gpu_cmds[unique_devs[i % len(unique_devs)]].append(cmd)
+    else:
+        unique_devs = [None]
+        wpg = n_workers
+        gpu_cmds = {None: list(cmds)}
 
-            for fut in as_completed(futures):
+    try:
+        executors = {d: ThreadPoolExecutor(max_workers=wpg) for d in unique_devs}
+        futures: dict = {}
+        for dev, dev_cmds in gpu_cmds.items():
+            for cmd in dev_cmds:
                 if _shutdown.is_set():
-                    for f in futures:
-                        if not f.done():
-                            f.cancel()
-                            cancelled.append(futures[f])
                     break
-                cmd = futures[fut]
-                try:
-                    rc = fut.result()
-                    if rc == -1:
-                        cancelled.append(cmd)
-                    elif rc != 0:
-                        failed.append(cmd)
-                except Exception as e:
-                    with lock:
-                        print(f'Exception running {" ".join(cmd[:3])}: {e}')
+                futures[executors[dev].submit(_run_one, cmd, dev, lock)] = cmd
+
+        for fut in as_completed(futures):
+            if _shutdown.is_set():
+                for f in futures:
+                    if not f.done():
+                        f.cancel()
+                        cancelled.append(futures[f])
+                break
+            cmd = futures[fut]
+            try:
+                rc = fut.result()
+                if rc == -1:
+                    cancelled.append(cmd)
+                elif rc != 0:
                     failed.append(cmd)
+            except Exception as e:
+                with lock:
+                    print(f'Exception running {" ".join(cmd[:3])}: {e}')
+                failed.append(cmd)
     except KeyboardInterrupt:
         _shutdown.set()
         _kill_children()
+    finally:
+        for ex in executors.values():
+            ex.shutdown(wait=False)
 
     _kill_children()
 
