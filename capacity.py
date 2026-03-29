@@ -25,7 +25,6 @@ import torch.nn.functional as F
 
 from models import TransformerTorch
 from data import random_target_data_torch, grokking_data_torch
-from plotting import plot_capacity_curves, plot_capacity_estimation, estimate_capacity
 from experiment import ExperimentConfig, save_run
 from utils import get_device
 
@@ -307,7 +306,7 @@ def run_capacity_experiment(
     return results
 
 
-def save_results(results: Dict, args, signature: str):
+def save_results(results: Dict, args):
     """Save individual experiment results."""
     os.makedirs(args.data_dir, exist_ok=True)
     
@@ -402,31 +401,24 @@ def load_or_run_experiment(
     )
     
     # Save results
-    save_results(result, args, '')
+    save_results(result, args)
     
     return result
 
 
-# Plotting functions are now in plotting.py and imported at the top
-
-
 def main():
     parser = argparse.ArgumentParser(
-        description='Measure model information capacity (bits per parameter)'
+        description='Measure model capacity for a single (dim, n_samples) pair'
     )
 
-    add_model_args(parser, dims_default=[10, 12, 14, 16, 18, 20, 22], dropout_default=0.0)
+    add_model_args(parser, dropout_default=0.0)
     add_optimizer_args(parser, weight_decay_default=0.01, epochs_default=5000)
     add_device_args(parser)
-    add_io_args(parser, data_dir='data/capacity', plot_dir='media/capacity')
+    add_io_args(parser, data_dir='data/capacity')
 
-    # Dataset size args
-    parser.add_argument('--samples-start', type=int, default=1000,
-                        help='Starting dataset size')
-    parser.add_argument('--samples-end', type=int, default=9300,
-                        help='Ending dataset size')
-    parser.add_argument('--samples-steps', type=int, default=8,
-                        help='Number of dataset sizes to test (log spaced)')
+    # Dataset args
+    parser.add_argument('--n-samples', type=int, required=True,
+                        help='Dataset size')
     parser.add_argument('--dataset-type', type=str, default='random',
                         help='Type of dataset to use',
                         choices=['random', '+', '-', '*', '/'])
@@ -436,114 +428,33 @@ def main():
                         help='Patience for early stopping (epochs without improvement)')
     parser.add_argument('--min-delta', type=float, default=1e-4,
                         help='Minimum loss improvement to reset patience')
-    
+
     args = parser.parse_args()
-    
-    # Set seeds
+
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
-    
-    # Create output directories
-    symb_map = {
-        'random': 'random',
-        '+': 'add',
-        '-': 'sub',
-        '*': 'mul',
-        '/': 'div'
-    }
+
+    symb_map = {'random': 'random', '+': 'add', '-': 'sub', '*': 'mul', '/': 'div'}
     signature = f'p{args.p}_op_{symb_map[args.dataset_type]}_seed{args.seed}'
     args.data_dir = os.path.join(args.data_dir, signature)
-    args.plot_dir = os.path.join(args.plot_dir, signature)
-
     os.makedirs(args.data_dir, exist_ok=True)
-    os.makedirs(args.plot_dir, exist_ok=True)
-    
-    # Generate log-spaced dataset sizes
-    dataset_sizes = np.logspace(
-        np.log10(args.samples_start),
-        np.log10(args.samples_end),
-        args.samples_steps
-    ).astype(int)
-    dataset_sizes = np.unique(dataset_sizes)  # Remove duplicates
-    
-    print(f"Model dimensions: {args.dims}")
-    print(f"Dataset sizes: {list(dataset_sizes)}")
-    print(f"p: {args.p}")
-    print(f"Full vocab size: {args.p + 2}")
-    print(f"Max bits per example: {np.log2(args.p + 2):.2f}")
-    print()
-    
-    # Run experiments
-    all_results = {}
-    
-    for dim in args.dims:
-        print(f"\n{'='*60}")
-        print(f"Model dimension: {dim}")
-        print(f"{'='*60}")
-        
-        all_results[dim] = []
-        
-        for n_samples in dataset_sizes:
-            print(f"\n  Dataset size: {n_samples}")
-            
-            result = load_or_run_experiment(
-                n_samples=int(n_samples),
-                dim=dim,
-                args=args,
-                force=args.force,
-                verbose=True,
-                dataset_type=args.dataset_type
-            )
-            
-            all_results[dim].append(result)
-            
-            print(f"    Final accuracy: {result['final_acc']:.3f}")
-            print(f"    Bits per example: {result['final_bits_per_example']:.2f}")
-            print(f"    Total bits memorized: {result['total_bits_memorized']:.0f}")
-    
-    # Plot results
-    print("\n" + "="*60)
-    print("GENERATING PLOTS")
-    print("="*60)
-    
-    # Main capacity curves plot
-    curves_path = os.path.join(args.plot_dir, 'capacity_curves.pdf')
-    saturation_points = plot_capacity_curves(
-        all_results,
-        p=args.p,
-        save_path=curves_path,
-        show=not args.no_show
+
+    print(f"=== capacity  p={args.p} type={args.dataset_type} seed={args.seed} | "
+          f"dim={args.dim} n={args.n_samples} depth={args.depth} heads={args.heads} "
+          f"dropout={args.dropout} wd={args.weight_decay} lr={args.lr} ===")
+
+    result = load_or_run_experiment(
+        n_samples=args.n_samples,
+        dim=args.dim,
+        args=args,
+        force=args.force,
+        verbose=True,
+        dataset_type=args.dataset_type
     )
-    
-    # Capacity estimation plot
-    estimation_path = os.path.join(args.plot_dir, 'capacity_estimation.pdf')
-    C, intercept, r_squared = plot_capacity_estimation(
-        saturation_points,
-        save_path=estimation_path,
-        show=not args.no_show
-    )
-    
-    # Print summary
-    print("\n" + "="*60)
-    print("SUMMARY")
-    print("="*60)
-    
-    for dim in sorted(all_results.keys()):
-        results = all_results[dim]
-        param_count = results[0]['param_count']
-        max_bits = max(r['total_bits_memorized'] for r in results)
-        print(f"dim={dim:3d}: {param_count:8,} params, "
-              f"max bits memorized: {max_bits:,.0f}, "
-              f"bits/param: {max_bits/param_count:.2f}")
-    
-    print("="*60)
-    print("CAPACITY ESTIMATION")
-    print("="*60)
-    sign = '+' if intercept >= 0 else '−'
-    print(f"Linear fit: bits = {C:.2f} × params {sign} {abs(intercept):.0f}")
-    print(f"Capacity C: {C:.2f} bits/parameter")
-    print(f"Intercept: {intercept:.0f} bits")
-    print(f"R²: {r_squared:.3f}")
+
+    print(f"  final acc: {result['final_acc']:.3f}, "
+          f"bits/example: {result['final_bits_per_example']:.2f}, "
+          f"total bits: {result['total_bits_memorized']:.0f}")
 
 
 if __name__ == '__main__':

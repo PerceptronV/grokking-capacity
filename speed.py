@@ -24,12 +24,6 @@ from data import random_target_data_torch
 from experiment import ExperimentConfig, save_run
 from utils import get_device
 
-import matplotlib.pyplot as plt
-from plotting import (
-    plot_learning_speed_curves,
-    plot_speed_vs_model_size,
-    plot_combined_speed_analysis
-)
 
 
 def count_parameters(model: nn.Module) -> int:
@@ -381,183 +375,63 @@ def load_or_run_experiment(
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Measure learning speed (steps to memorisation) for different architectures'
+        description='Measure learning speed for a single (dim, n_samples) pair'
     )
 
-    add_model_args(parser, dims_default=[20, 24, 28], dropout_default=0.2)
+    add_model_args(parser, dropout_default=0.2)
     add_optimizer_args(parser, weight_decay_default=0.01, epochs_default=5000)
     add_device_args(parser)
-    add_io_args(parser, data_dir='data/speed', plot_dir='media/speed')
+    add_io_args(parser, data_dir='data/speed')
 
     # Task context args (informational; speed uses random data)
     parser.add_argument('--operation', type=str, default='/',
                         choices=['*', '/', '+', '-'],
-                        help='Operation this speed run is matched to (informational; speed uses random data)')
+                        help='Operation this speed run is matched to (informational)')
     parser.add_argument('--train-fraction', type=float, default=0.5,
-                        help='Training fraction of the grokking task this run is matched to (informational)')
+                        help='Training fraction this run is matched to (informational)')
     parser.add_argument('--split-type', type=str, default='random',
                         choices=['random', 'sequential', 'alternating'],
                         help='Split type (informational; passed through to sidecar)')
 
-    # Dataset size args
-    parser.add_argument('--samples-start', type=int, default=100,
-                        help='Starting dataset size')
-    parser.add_argument('--samples-end', type=int, default=1000,
-                        help='Ending dataset size')
-    parser.add_argument('--samples-steps', type=int, default=4,
-                        help='Number of dataset sizes to test (log spaced)')
+    # Dataset size
+    parser.add_argument('--n-samples', type=int, required=True,
+                        help='Dataset size')
 
     # Training args
     parser.add_argument('--saturation-threshold', type=float, default=99.0,
                         help='Accuracy threshold to consider saturated (%%)')
     parser.add_argument('--patience', type=int, default=0,
                         help='Epochs to confirm saturation')
-    parser.add_argument('--rate', action='store_true',
-                        help='Generate additional runs at n+k samples for rate estimation (dT/dS)')
-    parser.add_argument('--rate-k', type=int, default=50,
-                        help='Delta for rate estimation: measure at n and n+k samples (default: 10)')
-    
+
     args = parser.parse_args()
-    
-    # Set seeds
+
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
-    
-    # Create output directories with signature
+
     _op_safe = args.operation.replace('/', 'div').replace('*', 'mul').replace('+', 'add').replace('-', 'sub')
     signature = f'p{args.p}_op_{_op_safe}_seed{args.seed}'
     args.data_dir = os.path.join(args.data_dir, signature)
-    args.plot_dir = os.path.join(args.plot_dir, signature)
-    
     os.makedirs(args.data_dir, exist_ok=True)
-    os.makedirs(args.plot_dir, exist_ok=True)
-    
-    # Generate log-spaced dataset sizes
-    dataset_sizes = np.logspace(
-        np.log10(args.samples_start),
-        np.log10(args.samples_end),
-        args.samples_steps
-    ).astype(int)
-    dataset_sizes = np.unique(dataset_sizes)  # Remove duplicates
 
-    # If --rate is set, add n+k sizes for each n
-    if args.rate:
-        rate_sizes = dataset_sizes + args.rate_k
-        dataset_sizes = np.unique(np.concatenate([dataset_sizes, rate_sizes]))
-    
     n_tokens = args.p + 2
     bits_per_example = np.log2(n_tokens)
-    
-    print(f"Model dimensions: {args.dims}")
-    print(f"Dataset sizes: {list(dataset_sizes)}")
-    if args.rate:
-        print(f"Rate estimation: enabled (k={args.rate_k})")
-    print(f"p: {args.p}")
-    print(f"Full vocab size: {n_tokens}")
-    print(f"Bits per example: {bits_per_example:.2f}")
-    print(f"Saturation threshold: {args.saturation_threshold}%")
-    print()
-    
-    # Run experiments
-    all_results = {}
-    
-    for dim in args.dims:
-        print(f"\n{'='*60}")
-        print(f"Model dimension: {dim}")
-        print(f"{'='*60}")
-        
-        all_results[dim] = []
-        
-        for n_samples in dataset_sizes:
-            print(f"\n  Dataset size: {n_samples}")
-            
-            result = load_or_run_experiment(
-                n_samples=int(n_samples),
-                dim=dim,
-                args=args,
-                force=args.force,
-                verbose=True
-            )
-            
-            all_results[dim].append(result)
-            
-            dataset_bits = n_samples * bits_per_example
-            steps_per_bit = result['saturation_step'] / dataset_bits if dataset_bits > 0 else 0
-            
-            print(f"    Final accuracy: {result['final_acc']:.2f}%")
-            print(f"    Saturation steps: {result['saturation_step']:,}")
-            print(f"    Dataset bits: {dataset_bits:.0f}")
-            print(f"    Steps per bit: {steps_per_bit:.2f}")
-    
-    # Generate plots
-    print("\n" + "="*60)
-    print("GENERATING PLOTS")
-    print("="*60)
-    
-    # Main learning speed curves plot
-    curves_path = os.path.join(args.plot_dir, 'learning_speed_curves.pdf')
-    speed_estimates = plot_learning_speed_curves(
-        all_results,
-        p=args.p,
-        save_path=curves_path,
-        show=not args.no_show
+    print(f"=== speed  p={args.p} op={args.operation} seed={args.seed} | "
+          f"dim={args.dim} n={args.n_samples} depth={args.depth} heads={args.heads} "
+          f"dropout={args.dropout} wd={args.weight_decay} lr={args.lr} ===")
+
+    result = load_or_run_experiment(
+        n_samples=args.n_samples,
+        dim=args.dim,
+        args=args,
+        force=args.force,
+        verbose=True
     )
-    
-    # Speed vs model size plot
-    if speed_estimates:
-        speed_path = os.path.join(args.plot_dir, 'speed_vs_model_size.pdf')
-        b, log_a, r_squared = plot_speed_vs_model_size(
-            speed_estimates,
-            save_path=speed_path,
-            show=not args.no_show
-        )
-    
-    # Combined analysis plot
-    combined_path = os.path.join(args.plot_dir, 'speed_analysis_combined.pdf')
-    plot_combined_speed_analysis(
-        all_results,
-        p=args.p,
-        save_path=combined_path,
-        show=not args.no_show
-    )
-    
-    # Print summary
-    print("\n" + "="*60)
-    print("SUMMARY")
-    print("="*60)
-    
-    for dim in sorted(all_results.keys()):
-        results = all_results[dim]
-        param_count = results[0]['param_count']
-        
-        # Average steps per bit across dataset sizes
-        saturated = [r for r in results if r.get('saturated', True)]
-        if saturated:
-            avg_speed = np.mean([r['saturation_step'] / r['dataset_bits'] 
-                                for r in saturated if r['dataset_bits'] > 0])
-            print(f"dim={dim:3d}: {param_count:8,} params, "
-                  f"avg speed: {avg_speed:.2f} steps/bit")
-    
-    if speed_estimates:
-        print("\n" + "="*60)
-        print("LEARNING SPEED ESTIMATES (steps per bit)")
-        print("="*60)
-        
-        for param_count in sorted(speed_estimates.keys()):
-            slope, intercept, dim = speed_estimates[param_count]
-            print(f"dim={dim:3d}: {param_count:8,} params, "
-                  f"slope={slope:.2f} steps/bit, intercept={intercept:.0f} steps")
-        
-        if len(speed_estimates) >= 2:
-            print("\n" + "="*60)
-            print("SPEED SCALING")
-            print("="*60)
-            print(f"Power law exponent: {b:.3f}")
-            print(f"R²: {r_squared:.3f}")
-            if b < 0:
-                print(f"Larger models learn FASTER (fewer steps per bit)")
-            else:
-                print(f"Larger models learn SLOWER (more steps per bit)")
+
+    dataset_bits = args.n_samples * bits_per_example
+    steps_per_bit = result['saturation_step'] / dataset_bits if dataset_bits > 0 else 0
+    print(f"  final acc: {result['final_acc']:.2f}%, "
+          f"saturation steps: {result['saturation_step']:,}, "
+          f"steps/bit: {steps_per_bit:.2f}")
 
 
 if __name__ == '__main__':

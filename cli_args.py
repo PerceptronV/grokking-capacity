@@ -1,7 +1,7 @@
 """Shared argparse argument groups for capacity.py, speed.py, and groks.py."""
 
 
-def add_model_args(parser, *, dims_default, dropout_default):
+def add_model_args(parser, *, dropout_default):
     """Architecture hyperparameters shared across all experiment types."""
     parser.add_argument('--p', type=int, default=97,
                         help='Prime number (vocabulary size = p)')
@@ -11,8 +11,8 @@ def add_model_args(parser, *, dims_default, dropout_default):
                         help='Dropout rate')
     parser.add_argument('--init-scale', type=float, default=1.0,
                         help='Weight initialisation scale factor (default: 1.0, no change)')
-    parser.add_argument('--dims', type=int, nargs='+', default=dims_default,
-                        help='Model dimensions to run')
+    parser.add_argument('--dim', type=int, required=True,
+                        help='Model dimension')
 
 
 def add_optimizer_args(parser, *, weight_decay_default, epochs_default):
@@ -35,14 +35,10 @@ def add_device_args(parser):
                              'Overrides --cpu if specified.')
 
 
-def add_io_args(parser, *, data_dir, plot_dir):
+def add_io_args(parser, *, data_dir):
     """I/O and run-control flags shared across all experiment types."""
     parser.add_argument('--data-dir', type=str, default=data_dir,
                         help='Data output directory')
-    parser.add_argument('--plot-dir', type=str, default=plot_dir,
-                        help='Plot output directory')
     parser.add_argument('--seed', type=int, default=42, help='Random seed')
     parser.add_argument('--force', action='store_true',
                         help='Force re-run even if results exist')
-    parser.add_argument('--no-show', action='store_true',
-                        help='Do not display plots (just save)')

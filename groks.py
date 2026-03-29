@@ -14,7 +14,6 @@ allowing reconstruction of memorisation against other models/baselines.
 import argparse
 from cli_args import add_model_args, add_optimizer_args, add_device_args, add_io_args
 import numpy as np
-import matplotlib.pyplot as plt
 import os
 from tqdm import tqdm
 from typing import Dict, Optional, Tuple
@@ -26,7 +25,6 @@ import torch.nn.functional as F
 
 from models import TransformerTorch
 from data import grokking_data_torch
-from plotting import plot_combined_curves, plot_separate_curves, plot_grokking_time
 from utils import load_model, get_device
 from experiment import ExperimentConfig, save_run
 
@@ -318,56 +316,14 @@ class GrokkingTrainer:
         }
 
 
-def save_individual_results(dim, train_acc, val_acc, param_count, args,
-                           train_log_probs=None, val_log_probs=None,
-                           mem_t_trace=None, mem_u_trace=None, baseline_path=None):
-    """Save individual experiment results (plot and data).
-    
-    Args:
-        dim: Model dimension
-        train_acc: Training accuracy trace (epochs,)
-        val_acc: Validation accuracy trace (epochs,)
-        param_count: Number of model parameters
-        args: Command line arguments
-        train_log_probs: Log2 probs on training data at each epoch (epochs, n_train)
-        val_log_probs: Log2 probs on validation data at each epoch (epochs, n_val)
-        mem_t_trace: Total memorisation M_T at each epoch
-        mem_u_trace: Unintended memorisation M_U at each epoch (if baseline provided)
-        baseline_path: Path to baseline model (if provided)
-    """
-    os.makedirs(args.plot_dir, exist_ok=True)
-    
-    # Create individual plot
-    fig, ax = plt.subplots(figsize=(12, 8))
-    
-    ax.plot(train_acc, label='Training Accuracy', color='#1b9e77', linewidth=2, linestyle='-')
-    ax.plot(val_acc, label='Validation Accuracy', color='#d95f02', linewidth=2, linestyle='--')
-    
-    ax.set_xlabel('Epoch', fontsize=14)
-    ax.set_ylabel('Accuracy (%)', fontsize=14)
-    ax.set_title(f'Grokking Curve: dim={dim}, depth={args.depth}, heads={args.heads}\n'
-                 f'{param_count:,} parameters', fontsize=16, pad=20)
-    ax.legend(fontsize=12, loc='lower right')
-    ax.grid(True, alpha=0.3)
-    ax.tick_params(axis='both', which='major', labelsize=12)
-    ax.set_ylim([0, 105])
-    
-    # Add text annotation with final accuracies
-    textstr = f'Final Train Acc: {train_acc[-1]:.1f}%\nFinal Val Acc: {val_acc[-1]:.1f}%'
-    ax.text(0.02, 0.98, textstr, transform=ax.transAxes, fontsize=12,
-            verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
-    
-    plt.tight_layout()
-    
-    # Save plot
+def save_results(dim, train_acc, val_acc, param_count, args,
+                 train_log_probs=None, val_log_probs=None,
+                 mem_t_trace=None, mem_u_trace=None, baseline_path=None):
+    """Save experiment results (npz + meta.json sidecar)."""
+    os.makedirs(args.data_dir, exist_ok=True)
     _tf_suffix = f'_tf{args.train_fraction}' if args.train_fraction != 0.5 else ''
     _is_suffix = f'_is{args.init_scale}' if args.init_scale != 1.0 else ''
     _do_suffix = f'_do{args.dropout}' if args.dropout != 0.2 else ''
-    plot_fname = os.path.join(args.plot_dir, f'grokking_dim{dim}_depth{args.depth}_heads{args.heads}_wd{args.weight_decay}{_tf_suffix}{_is_suffix}{_do_suffix}.pdf')
-    plt.savefig(plot_fname, bbox_inches='tight')
-    print(f"  Saved plot: {plot_fname}")
-    plt.close()
-
     # Prepare data dict
     data_dict = {
         'train_acc': train_acc, 
@@ -538,10 +494,10 @@ def run_experiment(dim, args, baseline_model=None, baseline_path=None):
     mem_u_trace = results['mem_u_trace']
     
     # Save results
-    save_individual_results(dim, train_acc, val_acc, param_count, args,
-                           train_log_probs=train_log_probs, val_log_probs=val_log_probs,
-                           mem_t_trace=mem_t_trace, mem_u_trace=mem_u_trace,
-                           baseline_path=baseline_path)
+    save_results(dim, train_acc, val_acc, param_count, args,
+                 train_log_probs=train_log_probs, val_log_probs=val_log_probs,
+                 mem_t_trace=mem_t_trace, mem_u_trace=mem_u_trace,
+                 baseline_path=baseline_path)
     
     result = {
         'dim': dim,
@@ -550,33 +506,14 @@ def run_experiment(dim, args, baseline_model=None, baseline_path=None):
         'val_acc': val_acc,
         'train_log_probs': train_log_probs,
         'val_log_probs': val_log_probs,
-        'mem_t_trace': mem_t_trace
+        'mem_t_trace': mem_t_trace,
+        'model': model,
     }
     if mem_u_trace is not None:
         result['mem_u_trace'] = mem_u_trace
-    
+
     return result
 
-
-def plot_results(results, args):
-    """Plot overlaid grokking curves for all dimensions."""
-    os.makedirs(args.plot_dir, exist_ok=True)
-    
-    # Create separate subplots for validation and training using shared utility
-    fname_separate = os.path.join(args.plot_dir, f'grokking_vs_dimension_depth{args.depth}_heads{args.heads}.pdf')
-    plot_separate_curves(results,
-                        title_val='Grokking Curves vs. Model Dimension',
-                        title_train='Training Curves vs. Model Dimension',
-                        save_path=fname_separate, show=not args.no_show)
-
-    # Create a combined plot with both train and val on same axes using shared utility
-    fname_combined = os.path.join(args.plot_dir, f'grokking_combined_depth{args.depth}_heads{args.heads}.pdf')
-    plot_combined_curves(results, save_path=fname_combined, show=not args.no_show)
-
-    # Create grokking time plot using shared utility
-    fname = os.path.join(args.plot_dir, f'grokking_time_vs_params_{args.depth}-{args.heads}.pdf')
-    plot_grokking_time(results, threshold_val=args.threshold_val, max_epochs=args.epochs,
-                      save_path=fname, show=not args.no_show)
 
 
 def compute_mem_t_from_log_probs(log_probs: np.ndarray, n_tokens: int) -> float:
@@ -599,12 +536,12 @@ def compute_mem_t_from_log_probs(log_probs: np.ndarray, n_tokens: int) -> float:
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Run grokking experiments with varying model dimensions')
+    parser = argparse.ArgumentParser(description='Run a single grokking experiment')
 
-    add_model_args(parser, dims_default=None, dropout_default=0.2)
+    add_model_args(parser, dropout_default=0.2)
     add_optimizer_args(parser, weight_decay_default=1.0, epochs_default=200)
     add_device_args(parser)
-    add_io_args(parser, data_dir='data/groks', plot_dir='media/groks')
+    add_io_args(parser, data_dir='data/groks')
 
     # Task args
     parser.add_argument('--operation', type=str, default='/', help='operation',
@@ -613,91 +550,79 @@ def main():
     parser.add_argument('--split-type', type=str, default='random', help='split type',
                         choices=['random', 'sequential', 'alternating'])
 
-    # Dimension range args (alternative to --dims; overridden when --dims is provided)
-    parser.add_argument('--dim-start', type=int, default=20, help='starting dimension')
-    parser.add_argument('--dim-end', type=int, default=240, help='ending dimension')
-    parser.add_argument('--dim-step', type=int, default=20, help='dimension step size')
-
     # Training args
     parser.add_argument('--early-stopping-train', type=float, default=0.99,
-                       help='stop training when train accuracy reaches this threshold (default: 0.99), if val accuracy is also reached, stop training')
+                       help='stop when train acc reaches this threshold (if val also reached)')
     parser.add_argument('--early-stopping-val', type=float, default=0.99,
-                       help='stop training when val accuracy reaches this threshold (default: 0.99), if train accuracy is also reached, stop training')
+                       help='stop when val acc reaches this threshold (if train also reached)')
     parser.add_argument('--no-early-stopping', action='store_true',
                        help='disable early stopping and train for full epochs')
     parser.add_argument('--patience', type=int, default=-1,
-                       help='patience for early stopping (epochs without improvement). If negative, never stop early due to patience (default: -1)')
+                       help='patience for early stopping (negative = disabled)')
     parser.add_argument('--min-delta', type=float, default=1e-4,
-                       help='minimum validation accuracy improvement to reset patience (default: 1e-4)')
-    parser.add_argument('--threshold-val', type=float, default=99.0,
-                       help='validation accuracy threshold for grokking time plot (default: 99.0)')
+                       help='minimum validation accuracy improvement to reset patience')
 
     # Memorisation tracking
     parser.add_argument('--ignore-memorisation', action='store_true',
-                       help='ignore memorisation tracking and do not store memorisation data')
+                       help='skip memorisation tracking (faster, no log_probs stored)')
     parser.add_argument('--baseline', type=str, default=None,
-                       help='Path to baseline model directory (e.g., "p97_seed42_splitrandom/dim24_depth2_heads1"). '
-                            'When provided, computes unintended memorisation M_U at each epoch on training set.')
-    
+                       help='Path to baseline model .pt file for M_U computation')
+
+    # Model saving
+    parser.add_argument('--save-model', action='store_true',
+                       help='Save model weights to data/models/{signature}/')
+
     args = parser.parse_args()
 
-    # Set data and plot directories
     _op_safe = args.operation.replace('/', 'div').replace('*', 'mul').replace('+', 'add').replace('-', 'sub')
     signature = f'p{args.p}_op_{_op_safe}_seed{args.seed}_split{args.split_type}'
     args.data_dir = os.path.join(args.data_dir, signature)
-    args.plot_dir = os.path.join(args.plot_dir, signature)
-
     os.makedirs(args.data_dir, exist_ok=True)
-    os.makedirs(args.plot_dir, exist_ok=True)
-    
+
     # Load baseline model if provided
     baseline_model = None
     baseline_path = None
     if args.baseline:
         baseline_path = args.baseline
-        # Construct full path to model file
-        model_file = os.path.join('data/single', baseline_path, 'model.pt')
-        if not os.path.exists(model_file):
-            print(f"Error: Baseline model not found at {model_file}")
+        if not os.path.exists(baseline_path):
+            print(f"Error: Baseline model not found at {baseline_path}")
             return
-        
-        print(f"\nLoading baseline model from: {model_file}")
+        print(f"\nLoading baseline model from: {baseline_path}")
         device = get_device(args.device, args.cpu)
-        baseline_model, baseline_metadata = load_model(model_file, device=device)
+        baseline_model, baseline_metadata = load_model(baseline_path, device=device)
         print(f"Baseline model loaded: {baseline_metadata['param_count']:,} parameters")
-    
+
     n_tokens = args.p + 2
-    
-    # Generate dimension values
-    if args.dims is not None:
-        dims = args.dims
-    else:
-        dims = list(range(args.dim_start, args.dim_end + 1, args.dim_step))
-    print(f"Running experiments with dimensions: {dims}")
-    print(f"Prime p={args.p}, n_tokens={n_tokens}, max bits per sample = log_2({n_tokens}) = {np.log2(n_tokens):.2f}")
-    
-    # Run experiments
-    results = []
-    for dim in dims:
-        result = run_experiment(dim, args, baseline_model=baseline_model, baseline_path=baseline_path)
-        results.append(result)
-    
-    # Plot results
-    plot_results(results, args)
-    
-    # Print summary
-    print("\n" + "="*60)
-    print("SUMMARY")
-    print("="*60)
-    for result in results:
-        summary_str = (f"dim={result['dim']:3d}: {result['param_count']:8,} params, "
-                      f"final train acc={result['train_acc'][-1]:.1f}%, "
-                      f"final val acc={result['val_acc'][-1]:.1f}%")
-        if 'mem_t_trace' in result:
-            summary_str += f", final M_T={result['mem_t_trace'][-1]:.1f} bits"
-        if 'mem_u_trace' in result:
-            summary_str += f", final M_U={result['mem_u_trace'][-1]:.1f} bits"
-        print(summary_str)
+    print(f"=== groks  p={args.p} op={args.operation} seed={args.seed} | "
+          f"dim={args.dim} depth={args.depth} heads={args.heads} "
+          f"dropout={args.dropout} wd={args.weight_decay} lr={args.lr} ===")
+
+    result = run_experiment(args.dim, args, baseline_model=baseline_model, baseline_path=baseline_path)
+
+    if args.save_model and 'model' in result:
+        model_dir = os.path.join('data/models', signature)
+        os.makedirs(model_dir, exist_ok=True)
+        _tf_suffix = f'_tf{args.train_fraction}' if args.train_fraction != 0.5 else ''
+        _is_suffix = f'_is{args.init_scale}' if args.init_scale != 1.0 else ''
+        _do_suffix = f'_do{args.dropout}' if args.dropout != 0.2 else ''
+        model_path = os.path.join(
+            model_dir,
+            f'model_dim{args.dim}_depth{args.depth}_heads{args.heads}_wd{args.weight_decay}{_tf_suffix}{_is_suffix}{_do_suffix}.pt'
+        )
+        torch.save({'model_state_dict': result['model'].state_dict(),
+                    'dim': args.dim, 'depth': args.depth, 'heads': args.heads,
+                    'dropout': args.dropout, 'p': args.p, 'param_count': result['param_count']},
+                   model_path)
+        print(f"  Saved model: {model_path}")
+
+    summary_str = (f"dim={result['dim']:3d}: {result['param_count']:8,} params, "
+                   f"final train acc={result['train_acc'][-1]:.1f}%, "
+                   f"final val acc={result['val_acc'][-1]:.1f}%")
+    if 'mem_t_trace' in result:
+        summary_str += f", final M_T={result['mem_t_trace'][-1]:.1f} bits"
+    if 'mem_u_trace' in result:
+        summary_str += f", final M_U={result['mem_u_trace'][-1]:.1f} bits"
+    print(summary_str)
 
 
 if __name__ == '__main__':

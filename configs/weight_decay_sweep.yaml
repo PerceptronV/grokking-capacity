@@ -23,6 +23,7 @@ experiments:
     dropout: 0.0
     primes: [113]
     dims: [10, 12, 14, 16, 18, 20, 22]
+    n_samples: [1000, 1374, 1891, 2601, 3576, 4917, 6761, 9300]
     seeds: [42]
 
   speed:

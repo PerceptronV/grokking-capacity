@@ -134,6 +134,16 @@ def _check_groks_exists(index: ResultsIndex, p: int, seed: int, dim: int, depth:
                         train_fraction=train_fraction, init_scale=is_filter)
 
 
+def _check_capacity_exists(index: ResultsIndex, p: int, seed: int, dim: int, n_samples: int,
+                            operation: str = 'random', weight_decay: float = None,
+                            depth: int = 2, heads: int = 1, init_scale: float = 1.0) -> bool:
+    is_filter = (lambda x: x is None or x == init_scale) if init_scale == 1.0 else init_scale
+    return index.exists(experiment_type="capacity", p=p, seed=seed, dim=dim,
+                        n_samples=n_samples, operation=operation,
+                        weight_decay=weight_decay, depth=depth, heads=heads,
+                        init_scale=is_filter)
+
+
 # ---------------------------------------------------------------------------
 # Command builders
 # ---------------------------------------------------------------------------
@@ -144,10 +154,8 @@ def build_speed_cmd(cfg: dict, p: int, seed: int, dim: int, n_samples: int,
         sys.executable, 'speed.py',
         '--p', str(p),
         '--seed', str(seed),
-        '--dims', str(dim),
-        '--samples-start', str(n_samples),
-        '--samples-end', str(n_samples),
-        '--samples-steps', '1',
+        '--dim', str(dim),
+        '--n-samples', str(n_samples),
         '--operation', str(cfg.get('operation', '/')),
         '--train-fraction', str(cfg.get('train_fraction', 0.5)),
         '--split-type', str(cfg.get('split_type', 'random')),
@@ -161,20 +169,19 @@ def build_speed_cmd(cfg: dict, p: int, seed: int, dim: int, n_samples: int,
         '--batch-size', str(cfg.get('batch_size', 512)),
         '--beta1', str(cfg.get('beta1', 0.9)),
         '--beta2', str(cfg.get('beta2', 0.98)),
-        '--no-show',
     ]
     if force:
         cmd.append('--force')
     return cmd
 
 
-def build_groks_cmd(cfg: dict, p: int, seed: int, dims: list,
+def build_groks_cmd(cfg: dict, p: int, seed: int, dim: int,
                     force: bool = False) -> list:
     cmd = [
         sys.executable, 'groks.py',
         '--p', str(p),
         '--seed', str(seed),
-        '--dims', *[str(d) for d in dims],
+        '--dim', str(dim),
         '--operation', str(cfg.get('operation', '/')),
         '--train-fraction', str(cfg.get('train_fraction', 0.5)),
         '--split-type', str(cfg.get('split_type', 'random')),
@@ -189,24 +196,20 @@ def build_groks_cmd(cfg: dict, p: int, seed: int, dims: list,
         '--beta1', str(cfg.get('beta1', 0.9)),
         '--beta2', str(cfg.get('beta2', 0.98)),
         '--ignore-memorisation',
-        '--no-show',
     ]
     if force:
         cmd.append('--force')
     return cmd
 
 
-def build_capacity_cmd(cfg: dict, p: int, seed: int, dims: list,
-                       n_samples_start: int, n_samples_end: int, n_samples_steps: int,
+def build_capacity_cmd(cfg: dict, p: int, seed: int, dim: int, n_samples: int,
                        force: bool = False) -> list:
     cmd = [
         sys.executable, 'capacity.py',
         '--p', str(p),
         '--seed', str(seed),
-        '--dims', *[str(d) for d in dims],
-        '--samples-start', str(n_samples_start),
-        '--samples-end', str(n_samples_end),
-        '--samples-steps', str(n_samples_steps),
+        '--dim', str(dim),
+        '--n-samples', str(n_samples),
         '--dataset-type', str(cfg.get('operation', 'random')),
         '--weight-decay', str(cfg.get('weight_decay', 0.01)),
         '--lr', str(cfg.get('lr', 1e-3)),
@@ -218,7 +221,6 @@ def build_capacity_cmd(cfg: dict, p: int, seed: int, dims: list,
         '--batch-size', str(cfg.get('batch_size', 512)),
         '--beta1', str(cfg.get('beta1', 0.9)),
         '--beta2', str(cfg.get('beta2', 0.98)),
-        '--no-show',
     ]
     if force:
         cmd.append('--force')
@@ -524,6 +526,7 @@ def run_suite(yaml_path: str, dry_run: bool = False, force: bool = False,
                         depth = cfg.get('depth', 2)
                         heads = cfg.get('heads', 1)
                         init_scale = cfg.get('init_scale', 1.0)
+                        rate_k = cfg.get('rate_k', 0)
                         for dim in dims:
                             if not force and n_samples is not None and \
                                _check_speed_exists(index, p, seed, dim, n_samples,
@@ -532,9 +535,20 @@ def run_suite(yaml_path: str, dry_run: bool = False, force: bool = False,
                                                    init_scale=init_scale):
                                 print(f"  Skip (exists): speed p={p} seed={seed} "
                                       f"dim={dim} n={n_samples} wd={wd} depth={depth}")
-                                continue
-                            pending_cmds.append(
-                                build_speed_cmd(cfg, p, seed, dim, n_samples, force=force))
+                            else:
+                                pending_cmds.append(
+                                    build_speed_cmd(cfg, p, seed, dim, n_samples, force=force))
+                            if rate_k > 0:
+                                n_rate = n_samples + rate_k
+                                if not force and _check_speed_exists(
+                                        index, p, seed, dim, n_rate,
+                                        operation=operation, weight_decay=wd,
+                                        depth=depth, heads=heads, init_scale=init_scale):
+                                    print(f"  Skip (exists): speed p={p} seed={seed} "
+                                          f"dim={dim} n={n_rate} (rate) wd={wd}")
+                                else:
+                                    pending_cmds.append(
+                                        build_speed_cmd(cfg, p, seed, dim, n_rate, force=force))
 
                     elif exp_type == 'groks':
                         depth = cfg.get('depth', 2)
@@ -544,31 +558,36 @@ def run_suite(yaml_path: str, dry_run: bool = False, force: bool = False,
                         operation = cfg.get('operation', '/')
                         tf = cfg.get('train_fraction', 0.5)
                         init_scale = cfg.get('init_scale', 1.0)
-                        pending_dims = dims
-                        if not force:
-                            pending_dims = [
-                                d for d in dims
-                                if not _check_groks_exists(index, p, seed, d, depth, heads,
-                                                           split_type, operation=operation,
-                                                           weight_decay=wd,
-                                                           train_fraction=tf,
-                                                           init_scale=init_scale)
-                            ]
-                            skipped = len(dims) - len(pending_dims)
-                            if skipped:
+                        for dim in dims:
+                            if not force and _check_groks_exists(
+                                    index, p, seed, dim, depth, heads,
+                                    split_type, operation=operation,
+                                    weight_decay=wd, train_fraction=tf,
+                                    init_scale=init_scale):
                                 print(f"  Skip (exists): groks p={p} seed={seed} "
-                                      f"wd={wd} — {skipped} dims already done")
-                        if pending_dims:
+                                      f"dim={dim} wd={wd}")
+                                continue
                             pending_cmds.append(
-                                build_groks_cmd(cfg, p, seed, pending_dims, force=force))
+                                build_groks_cmd(cfg, p, seed, dim, force=force))
 
                     elif exp_type == 'capacity':
-                        n_start = cfg.get('samples_start', 1000)
-                        n_end = cfg.get('samples_end', 9300)
-                        n_steps = cfg.get('samples_steps', 8)
-                        pending_cmds.append(
-                            build_capacity_cmd(cfg, p, seed, dims,
-                                               n_start, n_end, n_steps, force=force))
+                        n_samples_list = _iter_list(cfg, 'n_samples')
+                        wd = cfg.get('weight_decay')
+                        operation = cfg.get('operation', 'random')
+                        depth = cfg.get('depth', 2)
+                        heads = cfg.get('heads', 1)
+                        init_scale = cfg.get('init_scale', 1.0)
+                        for dim in dims:
+                            for n in n_samples_list:
+                                if not force and _check_capacity_exists(
+                                        index, p, seed, dim, n,
+                                        operation=operation, weight_decay=wd,
+                                        depth=depth, heads=heads, init_scale=init_scale):
+                                    print(f"  Skip (exists): capacity p={p} seed={seed} "
+                                          f"dim={dim} n={n}")
+                                    continue
+                                pending_cmds.append(
+                                    build_capacity_cmd(cfg, p, seed, dim, n, force=force))
 
         if num_nodes > 1 and pending_cmds:
             pending_cmds = [

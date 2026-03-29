@@ -22,4 +22,5 @@ experiments:
     # Sweep dropout at the same values as speed/groks — tests whether C varies with dropout
     dropout: [0.0, 0.1, 0.2, 0.4]
     dims: [10, 12, 14, 16, 18, 20, 22]
+    n_samples: [1000, 1374, 1891, 2601, 3576, 4917, 6761, 9300]
     seeds: [42]
