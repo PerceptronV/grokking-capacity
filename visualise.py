@@ -52,6 +52,14 @@ from utils import compute_dataset_size_bits
 import consts
 from results import ResultsIndex
 from matching import load_match_table
+from cli_args import (
+    add_vis_output_args,
+    add_vis_file_selection_args,
+    add_vis_model_filter_args,
+    add_vis_optimizer_filter_args,
+    add_vis_task_args,
+    add_vis_dim_args,
+)
 
 
 def list_results(data_dir, pattern='grokking_dim*.npz'):
@@ -253,29 +261,344 @@ def compute_saturation_epoch_from_trace(
     return None  # Never reached threshold
 
 
+def _legacy_filter(value, default):
+    """Return a filter that accepts None (legacy records) or the exact value when value==default.
+
+    This is used for backward compat with .meta.json sidecars that predate a field:
+    e.g. legacy groks entries may not have 'operation' stored, which is treated as '/'.
+    """
+    if value == default:
+        return lambda x: x is None or x == value
+    return value
+
+
+def _add_filter(filters, key, value):
+    """Add key=value to filters dict only if value is not None (optional filter)."""
+    if value is not None:
+        filters[key] = value
+
+
+def _nested_get(d, key):
+    """Recursively search for key in nested dict d, returning value or None."""
+    if key in d:
+        return d[key]
+    for v in d.values():
+        if isinstance(v, dict):
+            result = _nested_get(v, key)
+            if result is not None:
+                return result
+    return None
+
+
+def _build_groks_filters(args, p):
+    """Build ResultsIndex query filters for grokking experiments."""
+    filters = {
+        'experiment_type': 'groks',
+        'p': p,
+        'depth': args.depth,
+        'heads': args.heads,
+        'seed': args.seed,
+        'operation': _legacy_filter(args.op, '/'),
+        'train_fraction': _legacy_filter(args.training_fraction, 0.5),
+    }
+    _add_filter(filters, 'weight_decay', getattr(args, 'weight_decay', None))
+    _add_filter(filters, 'dropout', getattr(args, 'dropout', None))
+    _add_filter(filters, 'init_scale', getattr(args, 'init_scale', None))
+    return filters
+
+
+def _build_speed_filters(args):
+    """Build ResultsIndex query filters for speed experiments (without p)."""
+    filters = {
+        'experiment_type': 'speed',
+        'depth': getattr(args, 'depth', 2),
+        'heads': getattr(args, 'heads', 1),
+        'operation': _legacy_filter(getattr(args, 'op', '/'), '/'),
+        'train_fraction': _legacy_filter(getattr(args, 'training_fraction', 0.5), 0.5),
+    }
+    _add_filter(filters, 'weight_decay', getattr(args, 'weight_decay', None))
+    _add_filter(filters, 'dropout', getattr(args, 'dropout', None))
+    return filters
+
+
+def _build_capacity_filters(args, p):
+    """Build ResultsIndex query filters for capacity experiments."""
+    op = getattr(args, 'op', 'random')
+    filters = {
+        'experiment_type': 'capacity',
+        'p': p,
+        'seed': args.seed,
+        'depth': getattr(args, 'depth', 2),
+        'heads': getattr(args, 'heads', 1),
+    }
+    # For capacity, operation='random' is the default; legacy entries may not have it
+    if op != 'random':
+        filters['operation'] = op
+    _add_filter(filters, 'dropout', getattr(args, 'dropout', None))
+    _add_filter(filters, 'weight_decay', getattr(args, 'weight_decay', None))
+    return filters
+
+
+def _apply_dim_filter(entries, args, index):
+    """Post-filter entries by --dims or --dims-start/end/step."""
+    if args.dims:
+        dims_set = set(args.dims)
+        return [e for e in entries if _nested_get(e, 'dim') in dims_set]
+    if getattr(args, 'dims_start', None) is not None and getattr(args, 'dims_end', None) is not None:
+        step = getattr(args, 'dims_step', None) or 1
+        dims_range = set(range(args.dims_start, args.dims_end + 1, step))
+        return [e for e in entries if _nested_get(e, 'dim') in dims_range]
+    return entries
+
+
+def _load_groks_results(args, p, index=None):
+    """Load grokking results using ResultsIndex (or --files/--pattern fallback).
+
+    Returns list of result dicts:
+        {train_acc, val_acc, dim, param_count, mem_t_trace (opt), mem_u_trace (opt), mem_trace (opt)}
+    """
+    results = []
+
+    # --files: explicit file list, bypass index
+    if getattr(args, 'files', None):
+        for fname in args.files:
+            if not os.path.exists(fname):
+                print(f"Warning: File not found: {fname}")
+                continue
+            data = np.load(fname, allow_pickle=True)
+            result = {
+                'train_acc': data['train_acc'],
+                'val_acc': data['val_acc'],
+                'dim': int(data['dim']),
+                'param_count': int(data['param_count']),
+            }
+            if 'mem_t_trace' in data:
+                result['mem_t_trace'] = data['mem_t_trace']
+            if 'mem_u_trace' in data:
+                result['mem_u_trace'] = data['mem_u_trace']
+                result['mem_trace'] = data['mem_u_trace']
+            elif 'mem_trace' in data:
+                result['mem_u_trace'] = data['mem_trace']
+                result['mem_trace'] = data['mem_trace']
+            results.append(result)
+        return sorted(results, key=lambda r: r['dim'])
+
+    # --pattern: glob fallback
+    if getattr(args, 'pattern', None):
+        data_dir_sig = os.path.join(args.data_dir, f'p{p}_seed{args.seed}_split{getattr(args, "split_type", "random")}')
+        pattern_path = os.path.join(data_dir_sig, args.pattern)
+        for fname in sorted(glob(pattern_path), key=extract_dim):
+            if not os.path.exists(fname):
+                continue
+            data = np.load(fname, allow_pickle=True)
+            result = {
+                'train_acc': data['train_acc'],
+                'val_acc': data['val_acc'],
+                'dim': int(data['dim']),
+                'param_count': int(data['param_count']),
+            }
+            if 'mem_t_trace' in data:
+                result['mem_t_trace'] = data['mem_t_trace']
+            if 'mem_u_trace' in data:
+                result['mem_u_trace'] = data['mem_u_trace']
+                result['mem_trace'] = data['mem_u_trace']
+            elif 'mem_trace' in data:
+                result['mem_u_trace'] = data['mem_trace']
+                result['mem_trace'] = data['mem_trace']
+            results.append(result)
+        return results
+
+    # Default: use ResultsIndex
+    if index is None:
+        index = ResultsIndex(args.data_dir)
+
+    entries = index.query(**_build_groks_filters(args, p))
+    entries = _apply_dim_filter(entries, args, index)
+    entries = sorted(entries, key=lambda e: _nested_get(e, 'dim') or 0)
+
+    if not entries:
+        return []
+
+    print(f"Found {len(entries)} entries in index for p={p}, depth={args.depth}, heads={args.heads}, seed={args.seed}")
+
+    for entry in entries:
+        traces = index.load_traces(entry)
+        result = {
+            'train_acc': traces['train_acc'],
+            'val_acc': traces['val_acc'],
+            'dim': _nested_get(entry, 'dim'),
+            'param_count': _nested_get(entry, 'param_count'),
+        }
+        if 'mem_t_trace' in traces:
+            result['mem_t_trace'] = traces['mem_t_trace']
+        if 'mem_u_trace' in traces:
+            result['mem_u_trace'] = traces['mem_u_trace']
+            result['mem_trace'] = traces['mem_u_trace']
+        elif 'mem_trace' in traces:
+            result['mem_u_trace'] = traces['mem_trace']
+            result['mem_trace'] = traces['mem_trace']
+        results.append(result)
+
+    return results
+
+
+def _load_capacity_results(args, index=None):
+    """Load capacity results using ResultsIndex (or --files/--pattern fallback).
+
+    Returns list of result dicts with: file, dim, n_samples, param_count, depth, heads,
+                                        final_acc, bits_per_example, total_bits
+    """
+    p = args.p[0] if isinstance(args.p, list) else args.p
+    results = []
+
+    if getattr(args, 'files', None):
+        fnames = args.files
+    elif getattr(args, 'pattern', None):
+        pattern_path = os.path.join(args.data_dir, args.pattern)
+        fnames = sorted(glob(pattern_path), key=lambda f: (extract_dim(f), extract_samples(f)))
+    else:
+        fnames = None
+
+    if fnames is not None:
+        for fname in fnames:
+            if not os.path.exists(fname):
+                print(f"Warning: File not found: {fname}")
+                continue
+            data = np.load(fname, allow_pickle=True)
+            results.append({
+                'file': fname,
+                'dim': int(data['dim']),
+                'n_samples': int(data['n_samples']),
+                'param_count': int(data['param_count']),
+                'depth': int(data['depth']),
+                'heads': int(data['heads']),
+                'final_acc': float(data['final_acc']),
+                'bits_per_example': float(data['final_bits_per_example']),
+                'total_bits': float(data['total_bits_memorized'])
+            })
+        return sorted(results, key=lambda r: (r['dim'], r['n_samples']))
+
+    # Default: use ResultsIndex
+    if index is None:
+        index = ResultsIndex(args.data_dir)
+
+    entries = index.query(**_build_capacity_filters(args, p))
+
+    if getattr(args, 'dims', None):
+        dims_set = set(args.dims)
+        entries = [e for e in entries if _nested_get(e, 'dim') in dims_set]
+    if getattr(args, 'samples', None):
+        samples_set = set(args.samples)
+        entries = [e for e in entries if _nested_get(e, 'n_samples') in samples_set]
+
+    entries = sorted(entries, key=lambda e: (_nested_get(e, 'dim') or 0, _nested_get(e, 'n_samples') or 0))
+
+    if not entries:
+        return []
+
+    print(f"Found {len(entries)} capacity entries in index for p={p}, depth={getattr(args,'depth',2)}, heads={getattr(args,'heads',1)}, seed={args.seed}")
+
+    for entry in entries:
+        traces = index.load_traces(entry)
+        results.append({
+            'file': entry.get('_npz_path', ''),
+            'dim': _nested_get(entry, 'dim'),
+            'n_samples': _nested_get(entry, 'n_samples'),
+            'param_count': _nested_get(entry, 'param_count'),
+            'depth': _nested_get(entry, 'depth') or 2,
+            'heads': _nested_get(entry, 'heads') or 1,
+            'final_acc': float(traces.get('final_acc', 0)),
+            'bits_per_example': float(traces.get('final_bits_per_example', 0)),
+            'total_bits': float(traces.get('total_bits_memorized', 0)),
+        })
+
+    return results
+
+
+def _load_speed_results_for_prime(p, index, speed_filters, batch_size=512, saturation_threshold=99.0, n_samples_filter=None):
+    """Load speed results for one prime using ResultsIndex.
+
+    Returns dict mapping dim -> list of result dicts (same structure as old load_speed_results).
+    """
+    filters = dict(speed_filters)
+    filters['p'] = p
+    if n_samples_filter is not None:
+        filters['n_samples'] = n_samples_filter
+
+    entries = index.query(**filters)
+
+    all_results = {}
+    for entry in entries:
+        traces = index.load_traces(entry)
+        dim = _nested_get(entry, 'dim')
+        n_samples = _nested_get(entry, 'n_samples')
+        param_count = _nested_get(entry, 'param_count')
+        dataset_bits = _nested_get(entry, 'dataset_bits') or float(traces.get('dataset_bits', 0))
+
+        if n_samples is None:
+            continue
+        steps_per_epoch = (n_samples + batch_size - 1) // batch_size
+
+        saturation_epoch = None
+        if 'train_acc_trace' in traces:
+            saturation_epoch = compute_saturation_epoch_from_trace(
+                traces['train_acc_trace'], saturation_threshold,
+                steps_per_epoch, traces.get('steps_trace')
+            )
+
+        result = {
+            'n_samples': n_samples,
+            'dim': dim,
+            'depth': _nested_get(entry, 'depth') or 2,
+            'heads': _nested_get(entry, 'heads') or 1,
+            'param_count': param_count,
+            'p': p,
+            'saturation_epoch': saturation_epoch,
+            'final_acc': float(traces.get('final_acc', 0)),
+            'dataset_bits': dataset_bits,
+            'saturated': saturation_epoch is not None,
+        }
+        # also include train_acc_trace for plotting
+        if 'train_acc_trace' in traces:
+            result['train_acc_trace'] = traces['train_acc_trace']
+        if 'steps_trace' in traces:
+            result['steps_trace'] = traces['steps_trace']
+
+        if dim not in all_results:
+            all_results[dim] = []
+        all_results[dim].append(result)
+
+    return all_results
+
+
 def groks(args):
     # Ensure args.p is a list and use only the first prime
-    primes = args.p if isinstance(args.p, list) else [args.p]
-    p = primes[0]
+    primes_list = args.p if isinstance(args.p, list) else [args.p]
+    p = primes_list[0]
 
-    if len(primes) > 1:
+    if len(primes_list) > 1:
         print("Warning: groks command only uses the first prime. For multi-prime analysis, use 'primes' command.")
 
-    # Set data and plot directories
-    signature = f'p{p}_seed{args.seed}_split{args.split_type}'
-    data_dir = os.path.join(args.data_dir, signature)
-    plot_dir = os.path.join(args.plot_dir, signature)
-
-    print(f'Using signature {signature}')
+    plot_dir = os.path.join(args.plot_dir, f'p{p}_seed{args.seed}')
+    print(f'Prime: p={p}, seed={args.seed}, depth={args.depth}, heads={args.heads}')
 
     # Determine show/save settings
     show = not args.no_show
-    
+
     if args.list:
-        # Use default pattern when none is provided
-        pattern = args.pattern or 'grokking_dim*.npz'
-        list_results(data_dir, pattern)
-    
+        index = ResultsIndex(args.data_dir)
+        entries = index.query(**_build_groks_filters(args, p))
+        print(f"\nFound {len(entries)} grokking results:")
+        print("="*80)
+        for e in sorted(entries, key=lambda e: _nested_get(e, 'dim') or 0):
+            dim = _nested_get(e, 'dim')
+            pc = _nested_get(e, 'param_count')
+            wd = _nested_get(e, 'weight_decay')
+            do = _nested_get(e, 'dropout')
+            seed = _nested_get(e, 'seed')
+            print(f"  dim={dim:3d}  params={pc:8,}  wd={wd}  dropout={do}  seed={seed}")
+        print("="*80)
+
     if args.plot:
         # Check if --show-mem is also provided
         if args.show_mem:
@@ -298,7 +621,7 @@ def groks(args):
             # Legacy support for old 'mem_trace' field (was M_U)
             elif 'mem_trace' in data:
                 result['mem_u_trace'] = data['mem_trace']
-            
+
             save_path = None
             if args.save:
                 os.makedirs(plot_dir, exist_ok=True)
@@ -307,79 +630,36 @@ def groks(args):
             plot_grokking_with_memorization(result, save_path=save_path, show=show)
         else:
             plot_result(args.plot)
-    
-    files = set()
 
-    if args.files:
-        files.update(args.files)
+    # Load data
+    index = ResultsIndex(args.data_dir)
+    results = _load_groks_results(args, p, index)
 
-    if args.all:
-        pattern = os.path.join(data_dir, f'grokking_dim*_depth{args.depth}_heads{args.heads}.npz')
-        files.update(glob(pattern))
-
-    if args.pattern:
-        pattern = os.path.join(data_dir, args.pattern)
-        files.update(glob(pattern))
-    
-    if args.dims:
-        files.update([os.path.join(data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz') 
-                      for d in args.dims])
-    
-    if args.dims_start and args.dims_end:
-        dims = list(range(args.dims_start, args.dims_end + 1, args.dims_step))
-        files.update([os.path.join(data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz') 
-                      for d in dims])
-    
-    files = sorted(files, key=extract_dim)
-
-    if not files:
-        print("No files found. Use --list to see available results, or --all to select all.")
+    if not results:
+        print("No results found matching the current filters.")
+        print("  Try adjusting --weight-decay, --dropout, --depth, --heads, or --data-dir.")
+        print("  Use --list to see what's available.")
         return
-    
+
     # Calculate number of parameters to lower bound capacity of model to memorise all training data
     n, size = compute_dataset_size_bits(p, args.op, args.training_fraction)
     threshold_params = size / consts.C
-    
-    print(f"Found {len(files)} files to analyze:")
-    for f in files:
-        print(f"  - {os.path.basename(f)}")
+
+    print(f"Found {len(results)} results to analyze:")
+    for r in results:
+        print(f"  - dim={r['dim']:3d}  params={r['param_count']:8,}")
 
     # Create plot directory if saving
     if args.save:
         os.makedirs(plot_dir, exist_ok=True)
-    
-    # Load data with memorisation traces
-    results = []
-    for fname in files:
-        if not os.path.exists(fname):
-            print(f"Warning: File not found: {fname}")
-            continue
-        data = np.load(fname)
-        result = {
-            'train_acc': data['train_acc'],
-            'val_acc': data['val_acc'],
-            'dim': int(data['dim']),
-            'param_count': int(data['param_count'])
-        }
-        # Load both M_T and M_U traces
-        if 'mem_t_trace' in data:
-            result['mem_t_trace'] = data['mem_t_trace']
-        if 'mem_u_trace' in data:
-            result['mem_u_trace'] = data['mem_u_trace']
-            result['mem_trace'] = data['mem_u_trace']
-        # Legacy support for old 'mem_trace' field (was M_U)
-        elif 'mem_trace' in data:
-            result['mem_u_trace'] = data['mem_trace']
-            result['mem_trace'] = data['mem_trace']
-        results.append(result)
 
     # Handle --show-mem when used standalone (without --plot)
     if args.show_mem:
-        print(f"\nPlotting memorisation curves for {len(files)} results...")
+        print(f"\nPlotting memorisation curves for {len(results)} results...")
         # Filter results with memorisation data (M_T or M_U)
         results_with_mem_t = [r for r in results if 'mem_t_trace' in r]
         results_with_mem_u = [r for r in results if 'mem_u_trace' in r]
-        
+
         if not results_with_mem_t and not results_with_mem_u:
             print("No memorisation data found in selected files.")
             print("Run experiments with updated groks.py to get M_T data.")
@@ -408,26 +688,25 @@ def groks(args):
                                                  save_path=save_path, show=show)
 
     if args.separate:
-        print(f"Plotting separate curves for {len(files)} results...")
+        print(f"Plotting separate curves for {len(results)} results...")
         save_path = os.path.join(plot_dir, f'grokking_separate_p{p}.pdf') if args.save else None
         plot_separate_curves(results, save_path=save_path, show=show)
         # Check if we should overlay memorisation
         if args.show_mem:
-            print(f"Plotting separate curves with memorisation for {len(files)} results...")
+            print(f"Plotting separate curves with memorisation for {len(results)} results...")
             save_path = os.path.join(plot_dir, f'grokking_separate_mem_p{p}.pdf') if args.save else None
             plot_separate_curves_with_memorization(results, save_path=save_path, show=show)
 
     if args.combined:
-        print(f"Plotting combined curves for {len(files)} results...")
+        print(f"Plotting combined curves for {len(results)} results...")
         save_path = os.path.join(plot_dir, f'grokking_combined_p{p}.pdf') if args.save else None
         plot_combined_curves(results, save_path=save_path, show=show)
 
     if args.delay:
         # Standard delay plot
-
         save_path = os.path.join(plot_dir, f'grokking_delay_p{p}.pdf') if args.save else None
-        plot_grokking_delay(files, threshold_train=args.threshold_train, threshold_val=args.threshold_val,
-                            save_path=save_path, show=show, threshold_params=threshold_params)
+        plot_delay_util(results, threshold_train=args.threshold_train, threshold_val=args.threshold_val,
+                        save_path=save_path, show=show, threshold_params=threshold_params)
         # Check if we should also plot delay vs memorisation
         if args.show_mem:
             # Plot delay vs memorisation
@@ -458,92 +737,45 @@ def groks(args):
 
     if args.time:
         save_path = os.path.join(plot_dir, f'grokking_time_p{p}.pdf') if args.save else None
-        plot_grokking_time(files, threshold_val=args.threshold_val, save_path=save_path, show=show)
-    
+        plot_time_util(results, threshold_val=args.threshold_val, save_path=save_path, show=show)
+
     if args.speed:
         # Calculate dataset size
         n, size = compute_dataset_size_bits(p, args.op, args.training_fraction)
         threshold_params = size / consts.C
 
-        # Load speed data
+        # Load speed data using ResultsIndex
+        speed_index = ResultsIndex(args.data_dir)
+        speed_filters = _build_speed_filters(args)
+        speed_filters['p'] = p
+        speed_filters['n_samples'] = lambda x: x is not None and abs(x - n) <= 1
+        speed_entries = speed_index.query(**speed_filters)
+
         speed_data = []
-        speed_signature = f'p{p}_seed{args.seed}'
-        speed_dir = os.path.join('data/speed', speed_signature)
+        for entry in speed_entries:
+            traces = speed_index.load_traces(entry)
+            n_samples = _nested_get(entry, 'n_samples')
+            param_count = _nested_get(entry, 'param_count')
+            if n_samples is None:
+                continue
+            steps_per_epoch = (n_samples + args.batch_size - 1) // args.batch_size
+            saturation_epoch = None
+            if 'train_acc_trace' in traces:
+                saturation_epoch = compute_saturation_epoch_from_trace(
+                    traces['train_acc_trace'], args.saturation_threshold,
+                    steps_per_epoch, traces.get('steps_trace')
+                )
+            if saturation_epoch is not None:
+                speed_data.append({
+                    'dim': _nested_get(entry, 'dim'),
+                    'param_count': param_count,
+                    'saturation_epoch': saturation_epoch,
+                    'n_samples': n_samples,
+                    'saturated': True
+                })
 
-        print(f"Expecting speed data with {n} samples for p={p}, training fraction={args.training_fraction}.")
-
-        # First try to load with matching seed
-        if os.path.exists(speed_dir):
-            speed_files_list = glob(os.path.join(speed_dir, 'speed_dim*.npz'))
-            if speed_files_list:
-                for sf in speed_files_list:
-                    data = np.load(sf)
-                    if int(data['n_samples']) in (int(n), int(n) - 1, int(n) + 1):  # allow rounding errors
-                        n_samples_speed = int(data['n_samples'])
-                        steps_per_epoch = (n_samples_speed + args.batch_size - 1) // args.batch_size
-
-                        # Compute saturation epoch dynamically from train accuracy trace
-                        saturation_epoch = None
-                        if 'train_acc_trace' in data:
-                            acc_trace = data['train_acc_trace']
-                            steps_trace = data['steps_trace'] if 'steps_trace' in data else None
-                            saturation_epoch = compute_saturation_epoch_from_trace(
-                                acc_trace, args.saturation_threshold, steps_per_epoch, steps_trace
-                            )
-
-                        if saturation_epoch is not None:
-                            speed_data.append({
-                                'dim': int(data['dim']),
-                                'param_count': int(data['param_count']),
-                                'saturation_epoch': saturation_epoch,
-                                'n_samples': n_samples_speed,
-                                'saturated': True
-                            })
-                print(f"Loaded {len(speed_data)} saturated speed experiments from {speed_dir} (matching seed)")
-
-        # If no matching seed found, search for any available seed with same p
         if not speed_data:
-            speed_base_dir = os.path.join('data/speed')
-            if os.path.exists(speed_base_dir):
-                # Find all directories matching p{p}_seed*
-                pattern_re = re.compile(rf'^p{p}_seed\d+$')
-                available_dirs = [d for d in os.listdir(speed_base_dir)
-                                 if pattern_re.match(d) and os.path.isdir(os.path.join(speed_base_dir, d))]
-
-                if available_dirs:
-                    # Sort to get consistent behavior (prefer lower seed numbers as fallback)
-                    available_dirs = sorted(available_dirs, key=lambda x: int(re.search(r'seed(\d+)', x).group(1)))
-                    fallback_dir = os.path.join(speed_base_dir, available_dirs[0])
-
-                    speed_files_list = glob(os.path.join(fallback_dir, 'speed_dim*.npz'))
-                    for sf in speed_files_list:
-                        data = np.load(sf)
-                        if int(data['n_samples']) in (int(n), int(n) - 1, int(n) + 1):  # allow rounding errors
-                            n_samples_speed = int(data['n_samples'])
-                            steps_per_epoch = (n_samples_speed + args.batch_size - 1) // args.batch_size
-
-                            # Compute saturation epoch dynamically from train accuracy trace
-                            saturation_epoch = None
-                            if 'train_acc_trace' in data:
-                                acc_trace = data['train_acc_trace']
-                                steps_trace = data['steps_trace'] if 'steps_trace' in data else None
-                                saturation_epoch = compute_saturation_epoch_from_trace(
-                                    acc_trace, args.saturation_threshold, steps_per_epoch, steps_trace
-                                )
-
-                            if saturation_epoch is not None:
-                                speed_data.append({
-                                    'dim': int(data['dim']),
-                                    'param_count': int(data['param_count']),
-                                    'saturation_epoch': saturation_epoch,
-                                    'n_samples': n_samples_speed,
-                                    'saturated': True
-                                })
-                    print(f"Loaded {len(speed_data)} saturated speed experiments from {fallback_dir} (fallback seed)")
-                else:
-                    print(f"Warning: No speed data found for p={p} with any seed for size {n}")
-            else:
-                print(f"Warning: Speed data directory not found at {speed_base_dir}")
+            print(f"Warning: No speed data found for p={p} with n_samples≈{n}")
 
         # Plot the speed-grok intersect graph
         save_path = os.path.join(plot_dir, f'delay_with_speed_p{p}.pdf') if args.save else None
@@ -662,85 +894,44 @@ def plot_capacity_result(result_file: str):
 
 def capacity(args):
     """Handle capacity subcommand."""
-    symb_map = {
-        'random': 'random',
-        '+': 'add',
-        '-': 'sub',
-        '*': 'mul',
-        '/': 'div'
-    }
-    signature = f'p{args.p}_seed{args.seed}_ds{symb_map[args.dataset_type]}'
-    data_dir = os.path.join(args.data_dir, signature)
-    plot_dir = os.path.join(args.plot_dir, signature)
-    
-    print(f'Data directory: {data_dir}')
+    p = args.p[0] if isinstance(args.p, list) else args.p
+
+    plot_dir = os.path.join(args.plot_dir, f'p{p}_seed{args.seed}')
+    print(f'Data directory: {args.data_dir}')
     print(f'Plot directory: {plot_dir}')
-    
+
     # List results
     if args.list:
-        # Use default pattern when none is provided
-        pattern = args.pattern or 'capacity_dim*.npz'
-        list_capacity_results(data_dir, pattern)
+        index = ResultsIndex(args.data_dir)
+        entries = index.query(**_build_capacity_filters(args, p))
+        print(f"\nFound {len(entries)} capacity results:")
+        print("="*80)
+        for e in sorted(entries, key=lambda e: (_nested_get(e,'dim') or 0, _nested_get(e,'n_samples') or 0)):
+            dim = _nested_get(e, 'dim')
+            ns = _nested_get(e, 'n_samples')
+            pc = _nested_get(e, 'param_count')
+            print(f"  dim={dim:3d}  n_samples={ns:6d}  params={pc:8,}")
+        print("="*80)
         return
-    
+
     # Plot single result
     if args.plot:
         plot_capacity_result(args.plot)
         return
-    
-    # Collect files based on selection criteria
-    files = set()
-    
-    if args.files:
-        files.update(args.files)
-    
-    if args.all:
-        pattern = os.path.join(data_dir, 'capacity_dim*.npz')
-        files.update(glob(pattern))
-    
-    if args.pattern:
-        pattern = os.path.join(data_dir, args.pattern)
-        files.update(glob(pattern))
-    
-    if args.dims:
-        for d in args.dims:
-            pattern = os.path.join(data_dir, f'capacity_dim{d}_samples*.npz')
-            files.update(glob(pattern))
-    
-    if args.samples:
-        for s in args.samples:
-            pattern = os.path.join(data_dir, f'capacity_dim*_samples{s}.npz')
-            files.update(glob(pattern))
-    
-    files = sorted(files, key=lambda f: (extract_dim(f), extract_samples(f)))
-    
-    if not files:
-        print("No files found. Use --list to see available results, or --all to select all.")
+
+    # Load results
+    index = ResultsIndex(args.data_dir)
+    results = _load_capacity_results(args, index)
+
+    if not results:
+        print("No capacity results found matching the current filters.")
+        print("  Try adjusting --depth, --heads, --dropout, --weight-decay, or --data-dir.")
         return
-    
-    print(f"\nFound {len(files)} files to analyze:")
-    for f in files:
-        print(f"  - {os.path.basename(f)}")
-    
-    # Load all results
-    results = []
-    for fname in files:
-        if not os.path.exists(fname):
-            print(f"Warning: File not found: {fname}")
-            continue
-        data = np.load(fname)
-        results.append({
-            'file': fname,
-            'dim': int(data['dim']),
-            'n_samples': int(data['n_samples']),
-            'param_count': int(data['param_count']),
-            'depth': int(data['depth']),
-            'heads': int(data['heads']),
-            'final_acc': float(data['final_acc']),
-            'bits_per_example': float(data['final_bits_per_example']),
-            'total_bits': float(data['total_bits_memorized'])
-        })
-    
+
+    print(f"\nFound {len(results)} results to analyze:")
+    for r in results:
+        print(f"  - dim={r['dim']:3d}  n_samples={r['n_samples']:6d}  params={r['param_count']:8,}")
+
     # Group by dimension for curves plot
     all_results = {}
     for r in results:
@@ -748,7 +939,7 @@ def capacity(args):
         if dim not in all_results:
             all_results[dim] = []
         all_results[dim].append(r)
-    
+
     # Generate requested plots
     os.makedirs(plot_dir, exist_ok=True)
     
@@ -756,7 +947,7 @@ def capacity(args):
         print("\nPlotting capacity curves (Morris et al. style)...")
         save_path = os.path.join(plot_dir, 'capacity_curves.pdf') if args.save else None
         saturation_points = plot_capacity_curves(
-            all_results, p=args.p, save_path=save_path, show=not args.no_show
+            all_results, p=p, save_path=save_path, show=not args.no_show
         )
         
         # Also plot estimation if we have enough points
@@ -803,198 +994,55 @@ def capacity(args):
 # Speed Experiment Visualization Functions
 # =============================================================================
 
-def list_speed_results(data_dir: str, pattern: str = 'speed_dim*.npz') -> List[Dict]:
-    """List all saved speed experiment results."""
-    files = sorted(glob(os.path.join(data_dir, pattern)))
-
-    if not files:
-        print(f"No results found matching pattern: {pattern}")
-        return []
-
-    print(f"\nFound {len(files)} speed result files:")
-    print("="*80)
-
-    results = []
-    for i, fname in enumerate(files):
-        data = np.load(fname)
-        dim = int(data['dim'])
-        n_samples = int(data['n_samples'])
-        param_count = int(data['param_count'])
-        depth = int(data['depth'])
-        heads = int(data['heads'])
-        saturation_step = int(data['saturation_step'])
-        final_acc = float(data['final_acc'])
-
-        results.append({
-            'file': fname,
-            'dim': dim,
-            'n_samples': n_samples,
-            'param_count': param_count,
-            'depth': depth,
-            'heads': heads,
-            'saturation_step': saturation_step,
-            'final_acc': final_acc,
-            'data': data
-        })
-
-        print(f"{i:2d}. {os.path.basename(fname)}")
-        print(f"    dim={dim:3d}, samples={n_samples:6d}, params={param_count:8,}")
-        print(f"    Saturation step={saturation_step:6d}, Acc={final_acc:.1f}%")
-
-    print("="*80)
-    return results
-
-
-def collect_speed_files(data_dir: str, args) -> List[str]:
-    """Collect speed experiment files based on args selection criteria."""
-    files = set()
-
-    if args.files:
-        files.update(args.files)
-
-    if args.all:
-        pattern = os.path.join(data_dir, 'speed_dim*.npz')
-        files.update(glob(pattern))
-
-    if args.pattern:
-        pattern = os.path.join(data_dir, args.pattern)
-        files.update(glob(pattern))
-
-    if args.dims:
-        for d in args.dims:
-            pattern = os.path.join(data_dir, f'speed_dim{d}_samples*.npz')
-            files.update(glob(pattern))
-
-    return sorted(files, key=lambda f: (extract_dim(f), extract_samples(f)))
-
-
-def load_speed_results(files: List[str], p: int, batch_size: int = 512, saturation_threshold: float = 99.0) -> Dict[int, List[Dict]]:
-    """Load speed experiment results from files and group by dimension.
-    
-    Args:
-        files: List of .npz file paths to load
-        p: Prime number
-        batch_size: Batch size used in experiments (for converting steps to epochs)
-        saturation_threshold: Accuracy threshold (0-100) to define saturation
-    
-    Returns:
-        Dictionary mapping dimension to list of result dictionaries
-    """
-    all_results = {}
-    for fname in files:
-        if not os.path.exists(fname):
-            print(f"Warning: File not found: {fname}")
-            continue
-        data = np.load(fname)
-
-        dim = int(data['dim'])
-        n_samples = int(data['n_samples'])
-        steps_per_epoch = (n_samples + batch_size - 1) // batch_size
-
-        # Compute saturation epoch dynamically from train accuracy trace
-        saturation_epoch = None
-        if 'train_acc_trace' in data:
-            acc_trace = data['train_acc_trace']
-            steps_trace = data['steps_trace'] if 'steps_trace' in data else None
-            saturation_epoch = compute_saturation_epoch_from_trace(
-                acc_trace, saturation_threshold, steps_per_epoch, steps_trace
-            )
-
-        result = {
-            'n_samples': n_samples,
-            'dim': dim,
-            'depth': int(data['depth']),
-            'heads': int(data['heads']),
-            'param_count': int(data['param_count']),
-            'p': p,
-            'saturation_epoch': saturation_epoch,
-            'final_acc': float(data['final_acc']),
-            'dataset_bits': float(data['dataset_bits']),
-            'saturated': saturation_epoch is not None
-        }
-
-        if dim not in all_results:
-            all_results[dim] = []
-        all_results[dim].append(result)
-
-    return all_results
-
-
 def speed(args):
     """Handle speed subcommand."""
     # Ensure args.p is a list
-    primes = args.p if isinstance(args.p, list) else [args.p]
+    primes_list = args.p if isinstance(args.p, list) else [args.p]
     show = not args.no_show
 
-    # List results for each prime
+    index = ResultsIndex(args.data_dir)
+    speed_filters = _build_speed_filters(args)
+
+    # List results
     if args.list:
-        pattern = args.pattern or 'speed_dim*.npz'
-        for p in primes:
-            signature = f'p{p}_seed{args.seed}'
-            data_dir = os.path.join(args.data_dir, signature)
+        for p in primes_list:
+            all_results = _load_speed_results_for_prime(p, index, speed_filters,
+                                                         args.batch_size, args.saturation_threshold)
             print(f'\n{"="*80}')
-            print(f'Prime p={p}, Data directory: {data_dir}')
+            print(f'Prime p={p}')
             print(f'{"="*80}')
-            list_speed_results(data_dir, pattern)
+            if not all_results:
+                print("No speed results found.")
+                continue
+            for dim in sorted(all_results.keys()):
+                for r in all_results[dim]:
+                    print(f"  dim={dim:3d}  n_samples={r['n_samples']:6d}  params={r['param_count']:8,}  sat_epoch={r['saturation_epoch']}")
         return
 
     # For --fraction mode, collect data from all primes to plot together
     if args.fraction:
+        print("\nDeprecation notice: 'speed --fraction' will be removed. Use 'primes --speed' instead (supports seed aggregation).")
         print("\nPlotting saturation time vs capacity fraction (separate line for each prime)...")
 
         # Collect data from all primes, keyed by (p, dim)
         combined_results = {}
-        for p in primes:
-            signature = f'p{p}_seed{args.seed}'
-            data_dir = os.path.join(args.data_dir, signature)
-
-            files = collect_speed_files(data_dir, args)
-            if not files:
+        for p in primes_list:
+            all_results = _load_speed_results_for_prime(p, index, speed_filters,
+                                                         args.batch_size, args.saturation_threshold)
+            if not all_results:
                 print(f"Warning: No files found for p={p}")
                 continue
 
-            print(f"\nLoading data for p={p}: {len(files)} files")
+            print(f"\nLoaded {sum(len(v) for v in all_results.values())} results for p={p}")
 
-            # Load results for this prime
-            for fname in files:
-                if not os.path.exists(fname):
-                    continue
-                data = np.load(fname)
-                dim = int(data['dim'])
-                n_samples = int(data['n_samples'])
-                steps_per_epoch = (n_samples + args.batch_size - 1) // args.batch_size
-
-                # Compute saturation epoch dynamically from train accuracy trace
-                saturation_epoch = None
-                if 'train_acc_trace' in data:
-                    acc_trace = data['train_acc_trace']
-                    steps_trace = data['steps_trace'] if 'steps_trace' in data else None
-                    saturation_epoch = compute_saturation_epoch_from_trace(
-                        acc_trace, args.saturation_threshold, steps_per_epoch, steps_trace
-                    )
-
-                # Skip if saturation threshold was never reached
-                if saturation_epoch is None:
-                    continue
-
-                result = {
-                    'n_samples': n_samples,
-                    'dim': dim,
-                    'depth': int(data['depth']),
-                    'heads': int(data['heads']),
-                    'param_count': int(data['param_count']),
-                    'p': p,
-                    'saturation_epoch': saturation_epoch,
-                    'final_acc': float(data['final_acc']),
-                    'dataset_bits': float(data['dataset_bits']),
-                    'saturated': saturation_epoch is not None
-                }
-
-                # Key by (p, dim) - each prime gets its own color/line in the plot
-                key = (p, dim)
-                if key not in combined_results:
-                    combined_results[key] = []
-                combined_results[key].append(result)
+            for dim, dim_results in all_results.items():
+                for result in dim_results:
+                    if result.get('saturation_epoch') is None:
+                        continue
+                    key = (p, dim)
+                    if key not in combined_results:
+                        combined_results[key] = []
+                    combined_results[key].append(result)
 
         if not combined_results:
             print("No data found for any prime")
@@ -1022,33 +1070,27 @@ def speed(args):
         return
 
     # For other modes (--curves, --rate, --combined, --summary), process each prime separately
-    for p in primes:
-        signature = f'p{p}_seed{args.seed}'
-        data_dir = os.path.join(args.data_dir, signature)
-        plot_dir = os.path.join(args.plot_dir, signature)
+    for p in primes_list:
+        plot_dir_p = os.path.join(args.plot_dir, f'p{p}')
 
         print(f'\n{"="*80}')
         print(f'Processing prime p={p}')
-        print(f'Data directory: {data_dir}')
-        print(f'Plot directory: {plot_dir}')
         print(f'{"="*80}')
 
-        # Collect and load files
-        files = collect_speed_files(data_dir, args)
+        # Load results
+        all_results = _load_speed_results_for_prime(p, index, speed_filters,
+                                                     args.batch_size, args.saturation_threshold)
 
-        if not files:
-            print("No files found. Use --list to see available results, or --all to select all.")
+        if not all_results:
+            print("No speed results found for this prime with the current filters.")
+            print("  Try adjusting --weight-decay, --dropout, --depth, --heads, or --data-dir.")
             continue
 
-        print(f"\nFound {len(files)} files to analyze:")
-        for f in files:
-            print(f"  - {os.path.basename(f)}")
-
-        # Load all results and group by dimension
-        all_results = load_speed_results(files, p, args.batch_size, args.saturation_threshold)
+        print(f"Found {sum(len(v) for v in all_results.values())} results across {len(all_results)} dimensions")
 
         # Generate requested plots
-        os.makedirs(plot_dir, exist_ok=True)
+        os.makedirs(plot_dir_p, exist_ok=True)
+        plot_dir = plot_dir_p  # for save_path generation below
 
         if args.curves:
             print(f"\nPlotting learning speed curves for p={p}...")
@@ -1146,122 +1188,98 @@ def speed(args):
 # Primes Experiment Visualization Functions
 # =============================================================================
 
-def find_all_seeds_for_prime(p_prime, data_dir, split_type):
-    """
-    Find all available seeds for a given prime in the data directory.
+def aggregate_grokking_results_across_seeds(
+    p_prime: int,
+    index,
+    filters: dict,
+    threshold_train: float = 99.0,
+    threshold_val: float = 99.0,
+    saturation_threshold: float = 99.0,
+    use_min_delay: bool = False,
+    dims=None,
+) -> list:
+    """Load and aggregate grokking results across all seeds for a given prime.
+
+    Uses ResultsIndex to find all entries matching (p_prime, **filters).
+    Seeds are implicit in the query results — no directory scanning needed.
 
     Returns:
-        List of seed numbers found
+        List of aggregated results, one per (dim, param_count). Each contains:
+            delay, train_epoch, val_epoch, epochs_to_grok, dim, param_count, n_seeds
     """
-    pattern_re = re.compile(rf'^p{p_prime}_seed(\d+)_split{split_type}$')
-    if not os.path.exists(data_dir):
+    query_filters = dict(filters)
+    query_filters['p'] = p_prime
+    entries = index.query(experiment_type='groks', **{k: v for k, v in query_filters.items() if k != 'experiment_type'})
+
+    if not entries:
         return []
 
-    available_dirs = [d for d in os.listdir(data_dir)
-                     if pattern_re.match(d) and os.path.isdir(os.path.join(data_dir, d))]
+    if dims is not None:
+        dims_set = set(dims)
+        entries = [e for e in entries if _nested_get(e, 'dim') in dims_set]
 
-    # Extract seed numbers and sort
-    seeds = sorted([int(re.search(r'seed(\d+)', d).group(1)) for d in available_dirs])
-    return seeds
-
-
-def aggregate_grokking_results_across_seeds(p_prime, data_dir, split_type, file_pattern_func, threshold_train=99.0, threshold_val=99.0, saturation_threshold=99.0, use_min_delay=False):
-    """
-    Load and aggregate grokking results across all available seeds for a given prime.
-
-    Args:
-        p_prime: Prime number
-        data_dir: Base data directory
-        split_type: Split type (random, sequential, alternating)
-        file_pattern_func: Function that takes (prime_data_dir) and returns list of files to load
-        threshold_train: Training accuracy threshold (for delay calculation)
-        threshold_val: Validation accuracy threshold (for delay calculation)
-        saturation_threshold: Accuracy threshold for grokking speed curve (epochs_to_grok)
-        use_min_delay: If True, use minimum delay; if False, use average delay (default)
-
-    Returns:
-        List of aggregated results, one per dim/config. Each result contains:
-            - delay: aggregated grokking delay (min or avg depending on use_min_delay)
-            - train_epoch, val_epoch: epochs from the corresponding seed
-            - epochs_to_grok: averaged epochs for val_acc to reach saturation_threshold
-            - dim: dimension
-            - param_count: parameter count
-            - n_seeds: number of seeds with valid delays
-    """
-    seeds = find_all_seeds_for_prime(p_prime, data_dir, split_type)
-
-    if not seeds:
-        return []
-
-    print(f"  Found {len(seeds)} seed(s) for p={p_prime}: {seeds}")
+    seeds_seen = set()
+    for e in entries:
+        s = _nested_get(e, 'seed')
+        if s is not None:
+            seeds_seen.add(s)
+    if seeds_seen:
+        print(f"  Found {len(entries)} entries across {len(seeds_seen)} seed(s) for p={p_prime}: {sorted(seeds_seen)}")
+    else:
+        print(f"  Found {len(entries)} entries for p={p_prime}")
 
     # Collect delays and epoch info by (dim, param_count) key
     delays_by_config = {}
 
-    for seed in seeds:
-        prime_signature = f'p{p_prime}_seed{seed}_split{split_type}'
-        prime_data_dir = os.path.join(data_dir, prime_signature)
+    for entry in entries:
+        traces = index.load_traces(entry)
+        dim = _nested_get(entry, 'dim')
+        param_count = _nested_get(entry, 'param_count')
+        key = (dim, param_count)
 
-        # Get files for this seed
-        prime_files = file_pattern_func(prime_data_dir)
+        # Calculate delay for this entry
+        train_epoch, val_epoch, delay = calculate_grokking_delay(
+            traces['train_acc'], traces['val_acc'], threshold_train, threshold_val
+        )
 
-        # Load results for this seed
-        for fname in prime_files:
-            if not os.path.exists(fname):
-                continue
-            data = np.load(fname)
-            dim = int(data['dim'])
-            param_count = int(data['param_count'])
-            key = (dim, param_count)
+        # Calculate epochs_to_grok using saturation_threshold (for the speed curve)
+        epochs_to_grok = None
+        val_acc = traces['val_acc']
+        for epoch, acc in enumerate(val_acc):
+            if acc >= saturation_threshold:
+                epochs_to_grok = epoch
+                break
 
-            # Calculate delay for this seed (using threshold_train and threshold_val)
-            train_epoch, val_epoch, delay = calculate_grokking_delay(
-                data['train_acc'], data['val_acc'], threshold_train, threshold_val
-            )
+        if key not in delays_by_config:
+            delays_by_config[key] = {
+                'results': [],
+                'dim': dim,
+                'param_count': param_count
+            }
 
-            # Calculate epochs_to_grok using saturation_threshold (for the speed curve)
-            epochs_to_grok = None
-            val_acc = data['val_acc']
-            for epoch, acc in enumerate(val_acc):
-                if acc >= saturation_threshold:
-                    epochs_to_grok = epoch
-                    break
-
-            if key not in delays_by_config:
-                delays_by_config[key] = {
-                    'results': [],
-                    'dim': dim,
-                    'param_count': param_count
-                }
-
-            if delay is not None:
-                delays_by_config[key]['results'].append({
-                    'delay': delay,
-                    'train_epoch': train_epoch,
-                    'val_epoch': val_epoch,
-                    'epochs_to_grok': epochs_to_grok
-                })
+        if delay is not None:
+            delays_by_config[key]['results'].append({
+                'delay': delay,
+                'train_epoch': train_epoch,
+                'val_epoch': val_epoch,
+                'epochs_to_grok': epochs_to_grok
+            })
 
     # Aggregate delays across seeds
     aggregated_results = []
     for key, data in delays_by_config.items():
-        if data['results']:  # Only include configs where at least one seed had valid delay
+        if data['results']:  # Only include configs where at least one entry had valid delay
             delays = [r['delay'] for r in data['results']]
 
             if use_min_delay:
-                # Use minimum delay (best case)
                 aggregated_delay = min(delays)
-                # Find the seed with minimum delay
                 best_idx = delays.index(aggregated_delay)
                 selected_result = data['results'][best_idx]
             else:
-                # Use average delay (typical case)
                 aggregated_delay = np.mean(delays)
-                # Find the seed with delay closest to the mean (most representative)
                 closest_idx = np.argmin([abs(d - aggregated_delay) for d in delays])
                 selected_result = data['results'][closest_idx]
 
-            # Average epochs_to_grok across seeds (only include seeds where it was computed)
             epochs_to_grok_values = [r['epochs_to_grok'] for r in data['results'] if r['epochs_to_grok'] is not None]
             avg_epochs_to_grok = float(np.mean(epochs_to_grok_values)) if epochs_to_grok_values else None
 
@@ -1278,95 +1296,154 @@ def aggregate_grokking_results_across_seeds(p_prime, data_dir, split_type, file_
     return aggregated_results
 
 
-def aggregate_speed_results_across_seeds(p_prime, n_prime, batch_size: int = 512, saturation_threshold: float = 99.0):
-    """
-    Load and aggregate speed results across all available seeds for a given prime.
+def aggregate_speed_results_across_seeds(
+    p_prime: int,
+    n_prime: int,
+    index,
+    filters: dict,
+    batch_size: int = 512,
+    saturation_threshold: float = 99.0,
+) -> list:
+    """Load and aggregate speed results across all seeds for a given prime.
 
-    Args:
-        p_prime: Prime number
-        n_prime: Expected number of samples
-        batch_size: Batch size used in experiments (for converting steps to epochs)
-        saturation_threshold: Accuracy threshold (0-100) to define saturation
+    Uses ResultsIndex. Filters by n_samples within ±1 of n_prime.
 
     Returns:
-        List of aggregated speed results
+        List of aggregated results per (dim, param_count):
+            {dim, param_count, saturation_epoch (mean), n_samples, saturated, n_seeds}
     """
-    speed_base_dir = 'data/speed'
-    if not os.path.exists(speed_base_dir):
+    # Filter by n_samples with ±1 tolerance (rounding)
+    n_filter = lambda x: x is not None and abs(x - n_prime) <= 1
+
+    query_filters = dict(filters)
+    query_filters['p'] = p_prime
+    query_filters['n_samples'] = n_filter
+    # Remove experiment_type from filters if present (we add it explicitly)
+    query_filters.pop('experiment_type', None)
+
+    entries = index.query(experiment_type='speed', **query_filters)
+
+    if not entries:
         return []
 
-    # Find all directories matching p{p_prime}_seed*
-    pattern_re = re.compile(rf'^p{p_prime}_seed(\d+)$')
-    available_dirs = [d for d in os.listdir(speed_base_dir)
-                     if pattern_re.match(d) and os.path.isdir(os.path.join(speed_base_dir, d))]
+    seeds_seen = set()
+    for e in entries:
+        s = _nested_get(e, 'seed')
+        if s is not None:
+            seeds_seen.add(s)
+    print(f"  Found {len(entries)} speed entries across {len(seeds_seen)} seed(s) for p={p_prime} (n≈{n_prime})")
 
-    if not available_dirs:
-        return []
-
-    # Sort to get consistent behavior
-    available_dirs = sorted(available_dirs, key=lambda x: int(re.search(r'seed(\d+)', x).group(1)))
-    seeds = [int(re.search(r'seed(\d+)', d).group(1)) for d in available_dirs]
-
-    print(f"  Found {len(seeds)} seed(s) for speed data p={p_prime}: {seeds}")
-
-    # Collect results by (dim, param_count) key
+    # Collect saturation epochs by (dim, param_count) key
     results_by_config = {}
 
-    for seed_dir in available_dirs:
-        speed_dir = os.path.join(speed_base_dir, seed_dir)
-        speed_files_list = glob(os.path.join(speed_dir, 'speed_dim*.npz'))
+    for entry in entries:
+        traces = index.load_traces(entry)
+        dim = _nested_get(entry, 'dim')
+        n_samples = _nested_get(entry, 'n_samples')
+        param_count = _nested_get(entry, 'param_count')
+        dataset_bits = _nested_get(entry, 'dataset_bits') or float(traces.get('dataset_bits', 0))
 
-        for sf in speed_files_list:
-            data = np.load(sf)
-            # Only include if n_samples matches (with tolerance for rounding)
-            if int(data['n_samples']) not in (int(n_prime), int(n_prime) - 1, int(n_prime) + 1):
-                continue
+        if n_samples is None:
+            continue
+        steps_per_epoch = (n_samples + batch_size - 1) // batch_size
 
-            dim = int(data['dim'])
-            param_count = int(data['param_count'])
-            n_samples = int(data['n_samples'])
-            steps_per_epoch = (n_samples + batch_size - 1) // batch_size
+        saturation_epoch = None
+        if 'train_acc_trace' in traces:
+            saturation_epoch = compute_saturation_epoch_from_trace(
+                traces['train_acc_trace'], saturation_threshold,
+                steps_per_epoch, traces.get('steps_trace')
+            )
 
-            # Compute saturation epoch dynamically from train accuracy trace
-            saturation_epoch = None
-            if 'train_acc_trace' in data:
-                acc_trace = data['train_acc_trace']
-                steps_trace = data['steps_trace'] if 'steps_trace' in data else None
-                saturation_epoch = compute_saturation_epoch_from_trace(
-                    acc_trace, saturation_threshold, steps_per_epoch, steps_trace
-                )
+        if saturation_epoch is None:
+            continue
 
-            # Skip if saturation threshold never reached
-            if saturation_epoch is None:
-                continue
+        key = (dim, param_count)
+        if key not in results_by_config:
+            results_by_config[key] = {
+                'saturation_epochs': [],
+                'dim': dim,
+                'param_count': param_count,
+                'n_samples': n_samples,
+                'dataset_bits': dataset_bits,
+            }
+        results_by_config[key]['saturation_epochs'].append(saturation_epoch)
 
-            key = (dim, param_count)
-
-            if key not in results_by_config:
-                results_by_config[key] = {
-                    'saturation_epochs': [],
-                    'dim': dim,
-                    'param_count': param_count,
-                    'n_samples': n_samples
-                }
-
-            results_by_config[key]['saturation_epochs'].append(saturation_epoch)
-
-    # Average saturation epochs across seeds
     aggregated_results = []
     for key, data in results_by_config.items():
         saturation_epoch = float(np.mean(data['saturation_epochs']))
-
         aggregated_results.append({
             'dim': data['dim'],
             'param_count': data['param_count'],
             'saturation_epoch': saturation_epoch,
             'n_samples': data['n_samples'],
+            'dataset_bits': data['dataset_bits'],
             'saturated': True,
             'n_seeds': len(data['saturation_epochs'])
         })
 
     return aggregated_results
+
+
+def _is_prime(n: int) -> bool:
+    if n < 2:
+        return False
+    if n == 2:
+        return True
+    if n % 2 == 0:
+        return False
+    for i in range(3, int(n ** 0.5) + 1, 2):
+        if n % i == 0:
+            return False
+    return True
+
+
+def _resolve_primes(args) -> list:
+    """Return sorted list of primes to analyse from --p or --min-prime/--max-prime.
+
+    When --p is given, returns it directly. Otherwise generates all primes in
+    [--min-prime, --max-prime] and filters to those with matching groks data.
+    With --match-table: filters against entries in the match table by (op, train_fraction).
+    Without --match-table: queries ResultsIndex for groks experiments matching
+    (op, train_fraction, depth, heads).
+    """
+    if args.p:
+        return sorted(args.p if isinstance(args.p, list) else [args.p])
+
+    candidates = [n for n in range(args.min_prime, args.max_prime + 1) if _is_prime(n)]
+
+    op = getattr(args, 'op', '/')
+    tf = getattr(args, 'training_fraction', 0.5)
+
+    if getattr(args, 'match_table', None):
+        matches = load_match_table(args.match_table)
+        valid_p = {
+            m['p'] for m in matches
+            if m.get('operation') == op
+            and abs(m.get('train_fraction', tf) - tf) < 1e-9
+        }
+    else:
+        index = ResultsIndex(getattr(args, 'data_dir', 'data'))
+        depth = getattr(args, 'depth', 2)
+        heads = getattr(args, 'heads', 1)
+        # Legacy entries may omit operation (implying '/') or train_fraction (implying 0.5)
+        op_filter = (lambda x: x is None or x == op) if op == '/' else op
+        tf_filter = (lambda x: x is None or x == tf) if tf == 0.5 else tf
+        entries = index.query(
+            experiment_type='groks',
+            operation=op_filter,
+            train_fraction=tf_filter,
+            depth=depth,
+            heads=heads,
+        )
+        valid_p = set()
+        for e in entries:
+            p_val, found = index._get_nested(e, 'p')
+            if found and p_val is not None:
+                valid_p.add(p_val)
+
+    found = sorted(p for p in candidates if p in valid_p)
+    print(f"Auto-detected {len(found)} primes in [{args.min_prime}, {args.max_prime}]: {found}")
+    return found
 
 
 def _primes_from_match_table(args):
@@ -1383,7 +1460,7 @@ def _primes_from_match_table(args):
     import numpy as np
 
     matches = load_match_table(args.match_table)
-    index = ResultsIndex(args.index_dir)
+    index = ResultsIndex(args.data_dir)
 
     show = not args.no_show
     plot_dir = args.plot_dir
@@ -1428,8 +1505,13 @@ def _primes_from_match_table(args):
 
     primes_list = sorted(set(list(groks_data.keys()) + list(speed_data.keys())))
     if args.p:
-        filter_p = args.p if isinstance(args.p, list) else [args.p]
+        filter_p = set(args.p if isinstance(args.p, list) else [args.p])
         primes_list = [p for p in primes_list if p in filter_p]
+    elif getattr(args, 'min_prime', None) is not None:
+        primes_list = [p for p in primes_list
+                       if args.min_prime <= p <= args.max_prime]
+        print(f"Auto-detected {len(primes_list)} primes in "
+              f"[{args.min_prime}, {args.max_prime}]: {primes_list}")
 
     print(f"Match table loaded: {len(matches)} pairs across {len(primes_list)} primes")
 
@@ -1498,13 +1580,27 @@ def primes(args):
         _primes_from_match_table(args)
         return
 
-    # Ensure args.p is a list
-    primes_list = args.p if isinstance(args.p, list) else [args.p]
+    if not args.p and (getattr(args, 'min_prime', None) is None
+                       or getattr(args, 'max_prime', None) is None):
+        raise SystemExit("error: specify either --p or both --min-prime and --max-prime")
+
+    primes_list = _resolve_primes(args)
 
     if len(primes_list) < 2:
         print("Warning: primes command works best with multiple primes (--p p1 p2 p3 ...)")
 
     show = not args.no_show
+
+    # Build ResultsIndex and shared filters once for all analysis modes
+    index = ResultsIndex(args.data_dir)
+    filters = {
+        'operation': _legacy_filter(getattr(args, 'op', '/'), '/'),
+        'train_fraction': _legacy_filter(getattr(args, 'training_fraction', 0.5), 0.5),
+        'depth': getattr(args, 'depth', 2),
+        'heads': getattr(args, 'heads', 1),
+    }
+    _add_filter(filters, 'weight_decay', getattr(args, 'weight_decay', None))
+    _add_filter(filters, 'dropout', getattr(args, 'dropout', None))
 
     # Create plot directory
     plot_dir = args.plot_dir
@@ -1524,27 +1620,11 @@ def primes(args):
             # Calculate dataset size for this prime
             n_prime, size_prime = compute_dataset_size_bits(p_prime, args.op, args.training_fraction)
 
-            # Define file pattern function for aggregation
-            def get_files_for_prime(prime_data_dir):
-                if args.pattern:
-                    pattern = os.path.join(prime_data_dir, args.pattern)
-                    return sorted(glob(pattern), key=extract_dim)
-                elif args.dims:
-                    return [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
-                           for d in args.dims]
-                elif args.dims_start and args.dims_end:
-                    dims = list(range(args.dims_start, args.dims_end + 1, args.dims_step))
-                    return [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
-                           for d in dims]
-                else:
-                    # Default: load all files
-                    pattern = os.path.join(prime_data_dir, f'grokking_dim*_depth{args.depth}_heads{args.heads}.npz')
-                    return sorted(glob(pattern), key=extract_dim)
-
             # Aggregate grokking results across all seeds (computes minimum delay per config)
             prime_results = aggregate_grokking_results_across_seeds(
-                p_prime, args.data_dir, args.split_type, get_files_for_prime,
-                args.threshold_train, args.threshold_val, args.saturation_threshold, use_min_delay=True
+                p_prime, index, filters,
+                args.threshold_train, args.threshold_val, args.saturation_threshold,
+                use_min_delay=True, dims=getattr(args, 'dims', None)
             )
 
             if not prime_results:
@@ -1644,39 +1724,37 @@ def primes(args):
             all_speed_epochs = []
             
             for p in primes_list:
-                speed_base_dir = 'data/speed'
-                if not os.path.exists(speed_base_dir):
-                    continue
-                
-                pattern_re = re.compile(rf'^p{p}_seed(\d+)$')
-                available_dirs = [d for d in os.listdir(speed_base_dir)
-                                 if pattern_re.match(d) and os.path.isdir(os.path.join(speed_base_dir, d))]
-                
-                for seed_dir in available_dirs:
-                    speed_dir = os.path.join(speed_base_dir, seed_dir)
-                    speed_files = glob(os.path.join(speed_dir, 'speed_dim*.npz'))
-                    
-                    for fname in speed_files:
-                        data = np.load(fname)
-                        n_samples = int(data['n_samples'])
-                        param_count = int(data['param_count'])
-                        steps_per_epoch = (n_samples + args.batch_size - 1) // args.batch_size
-                        
-                        # Compute saturation epoch dynamically
-                        saturation_epoch = None
-                        if 'train_acc_trace' in data:
-                            acc_trace = data['train_acc_trace']
-                            steps_trace = data['steps_trace'] if 'steps_trace' in data else None
-                            saturation_epoch = compute_saturation_epoch_from_trace(
-                                acc_trace, args.saturation_threshold, steps_per_epoch, steps_trace
-                            )
-                        
-                        if saturation_epoch is not None:
-                            S = float(data['dataset_bits'])
-                            P = param_count
-                            f = S / (consts.C * P)
-                            all_speed_f.append(f)
-                            all_speed_epochs.append(saturation_epoch)
+                speed_fit_entries = index.query(
+                    experiment_type='speed', p=p,
+                    **{k: v for k, v in filters.items() if k != 'experiment_type'}
+                )
+                for entry in speed_fit_entries:
+                    traces = index.load_traces(entry)
+                    if traces is None:
+                        continue
+                    n_samples = int(_nested_get(entry, 'n_samples') or 0)
+                    param_count = int(_nested_get(entry, 'param_count') or 0)
+                    if n_samples == 0 or param_count == 0:
+                        continue
+                    steps_per_epoch = (n_samples + args.batch_size - 1) // args.batch_size
+
+                    # Compute saturation epoch dynamically
+                    saturation_epoch = None
+                    acc_trace = traces.get('train_acc_trace')
+                    if acc_trace is not None:
+                        steps_trace = traces.get('steps_trace')
+                        saturation_epoch = compute_saturation_epoch_from_trace(
+                            acc_trace, args.saturation_threshold, steps_per_epoch, steps_trace
+                        )
+
+                    if saturation_epoch is not None:
+                        S = float(_nested_get(entry, 'dataset_bits') or 0)
+                        if S == 0:
+                            continue
+                        P = param_count
+                        f = S / (consts.C * P)
+                        all_speed_f.append(f)
+                        all_speed_epochs.append(saturation_epoch)
             
             if len(all_speed_f) >= 2:
                 all_speed_f = np.array(all_speed_f)
@@ -1718,27 +1796,12 @@ def primes(args):
             n_prime, size_prime = compute_dataset_size_bits(p_prime, args.op, args.training_fraction)
             threshold_params_prime = size_prime / consts.C
 
-            # Define file pattern function for aggregation
-            def get_files_for_prime(prime_data_dir):
-                if args.pattern:
-                    pattern = os.path.join(prime_data_dir, args.pattern)
-                    return sorted(glob(pattern), key=extract_dim)
-                elif args.dims:
-                    return [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
-                           for d in args.dims]
-                elif args.dims_start and args.dims_end:
-                    dims = list(range(args.dims_start, args.dims_end + 1, args.dims_step))
-                    return [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
-                           for d in dims]
-                else:
-                    pattern = os.path.join(prime_data_dir, f'grokking_dim*_depth{args.depth}_heads{args.heads}.npz')
-                    return sorted(glob(pattern), key=extract_dim)
-
             # Aggregate grokking results across all seeds (computes minimum delay per config)
             # Using minimum ensures critical param is where ALL seeds grok for that param count and above
             prime_results = aggregate_grokking_results_across_seeds(
-                p_prime, args.data_dir, args.split_type, get_files_for_prime,
-                args.threshold_train, args.threshold_val, args.saturation_threshold, use_min_delay=True
+                p_prime, index, filters,
+                args.threshold_train, args.threshold_val, args.saturation_threshold,
+                use_min_delay=True, dims=getattr(args, 'dims', None)
             )
 
             if not prime_results:
@@ -1812,7 +1875,7 @@ def primes(args):
             
             elif args.prime_fit:
                 # Fit per-prime exponential model from speed data
-                speed_data_raw = aggregate_speed_results_across_seeds(p_prime, n_prime, args.batch_size, args.saturation_threshold)
+                speed_data_raw = aggregate_speed_results_across_seeds(p_prime, n_prime, index, filters, args.batch_size, args.saturation_threshold)
                 
                 if speed_data_raw and len(speed_data_raw) >= 2:
                     speed_params_arr = np.array([sp['param_count'] for sp in speed_data_raw if sp.get('saturation_epoch')])
@@ -1861,7 +1924,7 @@ def primes(args):
             else:
                 # Aggregate actual speed data across all seeds (default behavior)
                 print(f"Expecting speed data with {n_prime} samples for p={p_prime}, training fraction={args.training_fraction}.")
-                speed_data = aggregate_speed_results_across_seeds(p_prime, n_prime, args.batch_size, args.saturation_threshold)
+                speed_data = aggregate_speed_results_across_seeds(p_prime, n_prime, index, filters, args.batch_size, args.saturation_threshold)
 
             if not speed_data:
                 print(f"Warning: No speed data found for p={p_prime}")
@@ -1951,92 +2014,85 @@ def primes(args):
         for p in primes_list:
             print(f"\nLoading speed data for p={p} (aggregating across all seeds)")
 
-            # Find all available seeds for this prime
-            speed_base_dir = 'data/speed'
-            if not os.path.exists(speed_base_dir):
-                print(f"Warning: Speed data directory not found at {speed_base_dir}")
-                continue
+            # Query all speed entries for this prime through the index
+            speed_entries = index.query(
+                experiment_type='speed', p=p,
+                **{k: v for k, v in filters.items() if k != 'experiment_type'}
+            )
 
-            pattern_re = re.compile(rf'^p{p}_seed(\d+)$')
-            available_dirs = [d for d in os.listdir(speed_base_dir)
-                             if pattern_re.match(d) and os.path.isdir(os.path.join(speed_base_dir, d))]
-
-            if not available_dirs:
+            if not speed_entries:
                 print(f"Warning: No speed data found for p={p}")
                 continue
 
-            # Sort to get consistent behavior
-            available_dirs = sorted(available_dirs, key=lambda x: int(re.search(r'seed(\d+)', x).group(1)))
-            seeds = [int(re.search(r'seed(\d+)', d).group(1)) for d in available_dirs]
-            print(f"  Found {len(seeds)} seed(s) for p={p}: {seeds}")
+            seeds_seen = sorted(set(int(_nested_get(e, 'seed') or 0) for e in speed_entries))
+            print(f"  Found data across {len(seeds_seen)} seed(s) for p={p}: {seeds_seen}")
 
             # Collect results by (dim, n_samples, param_count) key for averaging
             results_by_config = {}
 
-            for seed_dir in available_dirs:
-                speed_dir = os.path.join(speed_base_dir, seed_dir)
-                speed_files = glob(os.path.join(speed_dir, 'speed_dim*.npz'))
+            for entry in speed_entries:
+                traces = index.load_traces(entry)
+                if traces is None:
+                    continue
 
-                for fname in speed_files:
-                    if not os.path.exists(fname):
-                        continue
-                    data = np.load(fname)
+                dim = int(_nested_get(entry, 'dim') or 0)
+                n_samples = int(_nested_get(entry, 'n_samples') or 0)
+                param_count = int(_nested_get(entry, 'param_count') or 0)
+                if dim == 0 or n_samples == 0 or param_count == 0:
+                    continue
+                steps_per_epoch = (n_samples + args.batch_size - 1) // args.batch_size
 
-                    dim = int(data['dim'])
-                    n_samples = int(data['n_samples'])
-                    param_count = int(data['param_count'])
-                    steps_per_epoch = (n_samples + args.batch_size - 1) // args.batch_size
+                # Compute saturation epoch dynamically from train accuracy trace
+                saturation_epoch = None
+                acc_trace = traces.get('train_acc_trace')
+                if acc_trace is not None:
+                    steps_trace = traces.get('steps_trace')
+                    saturation_epoch = compute_saturation_epoch_from_trace(
+                        acc_trace, args.saturation_threshold, steps_per_epoch, steps_trace
+                    )
 
-                    # Compute saturation epoch dynamically from train accuracy trace
-                    saturation_epoch = None
-                    if 'train_acc_trace' in data:
-                        acc_trace = data['train_acc_trace']
-                        steps_trace = data['steps_trace'] if 'steps_trace' in data else None
-                        saturation_epoch = compute_saturation_epoch_from_trace(
-                            acc_trace, args.saturation_threshold, steps_per_epoch, steps_trace
-                        )
+                # Skip if saturation threshold never reached
+                if saturation_epoch is None:
+                    continue
 
-                    # Skip if saturation threshold never reached
-                    if saturation_epoch is None:
-                        continue
+                key = (dim, n_samples, param_count)
 
-                    key = (dim, n_samples, param_count)
+                if key not in results_by_config:
+                    results_by_config[key] = {
+                        'n_samples': n_samples,
+                        'dim': dim,
+                        'depth': int(_nested_get(entry, 'depth') or 0),
+                        'heads': int(_nested_get(entry, 'heads') or 0),
+                        'param_count': param_count,
+                        'p': p,
+                        'saturation_epochs': [],
+                        'final_accs': [],
+                        'dataset_bits': float(_nested_get(entry, 'dataset_bits') or 0)
+                    }
 
-                    if key not in results_by_config:
-                        results_by_config[key] = {
-                            'n_samples': n_samples,
-                            'dim': dim,
-                            'depth': int(data['depth']),
-                            'heads': int(data['heads']),
-                            'param_count': param_count,
-                            'p': p,
-                            'saturation_epochs': [],
-                            'final_accs': [],
-                            'dataset_bits': float(data['dataset_bits'])
-                        }
-
-                    results_by_config[key]['saturation_epochs'].append(saturation_epoch)
-                    results_by_config[key]['final_accs'].append(float(data['final_acc']))
+                results_by_config[key]['saturation_epochs'].append(saturation_epoch)
+                final_acc = traces.get('final_acc')
+                results_by_config[key]['final_accs'].append(float(final_acc) if final_acc is not None else 0.0)
 
             # Average saturation epochs across seeds and add to combined results
-            for key, data in results_by_config.items():
-                saturation_epoch = float(np.mean(data['saturation_epochs']))
+            for key, rdata in results_by_config.items():
+                saturation_epoch = float(np.mean(rdata['saturation_epochs']))
 
                 result = {
-                    'n_samples': data['n_samples'],
-                    'dim': data['dim'],
-                    'depth': data['depth'],
-                    'heads': data['heads'],
-                    'param_count': data['param_count'],
-                    'p': data['p'],
+                    'n_samples': rdata['n_samples'],
+                    'dim': rdata['dim'],
+                    'depth': rdata['depth'],
+                    'heads': rdata['heads'],
+                    'param_count': rdata['param_count'],
+                    'p': rdata['p'],
                     'saturation_epoch': saturation_epoch,
-                    'final_acc': float(np.mean(data['final_accs'])),
-                    'dataset_bits': data['dataset_bits'],
+                    'final_acc': float(np.mean(rdata['final_accs'])),
+                    'dataset_bits': rdata['dataset_bits'],
                     'saturated': True
                 }
 
                 # Key by (p, dim) - each prime gets its own color/line in the plot
-                combined_key = (p, data['dim'])
+                combined_key = (p, rdata['dim'])
                 if combined_key not in combined_results:
                     combined_results[combined_key] = []
                 combined_results[combined_key].append(result)
@@ -2104,26 +2160,11 @@ def primes(args):
             # Calculate dataset size for this prime
             n_prime, size_prime = compute_dataset_size_bits(p_prime, args.op, args.training_fraction)
 
-            # Define file pattern function for aggregation
-            def get_files_for_prime(prime_data_dir):
-                if args.pattern:
-                    pattern = os.path.join(prime_data_dir, args.pattern)
-                    return sorted(glob(pattern), key=extract_dim)
-                elif args.dims:
-                    return [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
-                           for d in args.dims]
-                elif args.dims_start and args.dims_end:
-                    dims = list(range(args.dims_start, args.dims_end + 1, args.dims_step))
-                    return [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
-                           for d in dims]
-                else:
-                    pattern = os.path.join(prime_data_dir, f'grokking_dim*_depth{args.depth}_heads{args.heads}.npz')
-                    return sorted(glob(pattern), key=extract_dim)
-
             # Aggregate grokking results across all seeds (computes minimum delay per config)
             prime_results = aggregate_grokking_results_across_seeds(
-                p_prime, args.data_dir, args.split_type, get_files_for_prime,
-                args.threshold_train, args.threshold_val, args.saturation_threshold, use_min_delay=True
+                p_prime, index, filters,
+                args.threshold_train, args.threshold_val, args.saturation_threshold,
+                use_min_delay=True, dims=getattr(args, 'dims', None)
             )
 
             if not prime_results:
@@ -2182,7 +2223,7 @@ def primes(args):
         
         for p_prime in primes_list:
             n_prime, size_prime = compute_dataset_size_bits(p_prime, args.op, args.training_fraction)
-            speed_data_temp = aggregate_speed_results_across_seeds(p_prime, n_prime, args.batch_size, args.saturation_threshold)
+            speed_data_temp = aggregate_speed_results_across_seeds(p_prime, n_prime, index, filters, args.batch_size, args.saturation_threshold)
             
             for sp in speed_data_temp:
                 if sp.get('saturation_epoch') is not None and sp['saturation_epoch'] > 0:
@@ -2220,26 +2261,11 @@ def primes(args):
             # Calculate dataset size for this prime
             n_prime, size_prime = compute_dataset_size_bits(p_prime, args.op, args.training_fraction)
 
-            # Define file pattern function for aggregation
-            def get_files_for_prime(prime_data_dir):
-                if args.pattern:
-                    pattern = os.path.join(prime_data_dir, args.pattern)
-                    return sorted(glob(pattern), key=extract_dim)
-                elif args.dims:
-                    return [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
-                           for d in args.dims]
-                elif args.dims_start and args.dims_end:
-                    dims = list(range(args.dims_start, args.dims_end + 1, args.dims_step))
-                    return [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
-                           for d in dims]
-                else:
-                    pattern = os.path.join(prime_data_dir, f'grokking_dim*_depth{args.depth}_heads{args.heads}.npz')
-                    return sorted(glob(pattern), key=extract_dim)
-
             # Aggregate grokking results across all seeds
             prime_results = aggregate_grokking_results_across_seeds(
-                p_prime, args.data_dir, args.split_type, get_files_for_prime,
-                args.threshold_train, args.threshold_val, args.saturation_threshold, use_min_delay=True
+                p_prime, index, filters,
+                args.threshold_train, args.threshold_val, args.saturation_threshold,
+                use_min_delay=True, dims=getattr(args, 'dims', None)
             )
 
             if not prime_results:
@@ -2254,7 +2280,7 @@ def primes(args):
                     continue
 
             # Get speed data (memorisation speed)
-            speed_data = aggregate_speed_results_across_seeds(p_prime, n_prime, args.batch_size, args.saturation_threshold)
+            speed_data = aggregate_speed_results_across_seeds(p_prime, n_prime, index, filters, args.batch_size, args.saturation_threshold)
 
             # Compute empirical critical params (first param size where min delay > 0 for all larger params)
             delay_data = sorted(prime_results, key=lambda x: x['param_count'])
@@ -2696,7 +2722,7 @@ is roughly constant across primes, supporting that hypothesis.
 
         for p_prime in primes_list:
             n_prime, size_prime = compute_dataset_size_bits(p_prime, args.op, args.training_fraction)
-            speed_data_temp = aggregate_speed_results_across_seeds(p_prime, n_prime, args.batch_size, args.saturation_threshold)
+            speed_data_temp = aggregate_speed_results_across_seeds(p_prime, n_prime, index, filters, args.batch_size, args.saturation_threshold)
 
             for sp in speed_data_temp:
                 if sp.get('saturation_epoch') is not None and sp['saturation_epoch'] > 0:
@@ -2732,24 +2758,10 @@ is roughly constant across primes, supporting that hypothesis.
 
             n_prime, size_prime = compute_dataset_size_bits(p_prime, args.op, args.training_fraction)
 
-            def get_files_for_prime(prime_data_dir):
-                if args.pattern:
-                    pattern = os.path.join(prime_data_dir, args.pattern)
-                    return sorted(glob(pattern), key=extract_dim)
-                elif args.dims:
-                    return [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
-                           for d in args.dims]
-                elif args.dims_start and args.dims_end:
-                    dims = list(range(args.dims_start, args.dims_end + 1, args.dims_step))
-                    return [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
-                           for d in dims]
-                else:
-                    pattern = os.path.join(prime_data_dir, f'grokking_dim*_depth{args.depth}_heads{args.heads}.npz')
-                    return sorted(glob(pattern), key=extract_dim)
-
             prime_results = aggregate_grokking_results_across_seeds(
-                p_prime, args.data_dir, args.split_type, get_files_for_prime,
-                args.threshold_train, args.threshold_val, args.saturation_threshold, use_min_delay=True
+                p_prime, index, filters,
+                args.threshold_train, args.threshold_val, args.saturation_threshold,
+                use_min_delay=True, dims=getattr(args, 'dims', None)
             )
 
             if not prime_results:
@@ -2762,7 +2774,7 @@ is roughly constant across primes, supporting that hypothesis.
                     print(f"  Warning: No results found for p={p_prime} with dim <= {args.max_dim}")
                     continue
 
-            speed_data = aggregate_speed_results_across_seeds(p_prime, n_prime, args.batch_size, args.saturation_threshold)
+            speed_data = aggregate_speed_results_across_seeds(p_prime, n_prime, index, filters, args.batch_size, args.saturation_threshold)
 
             # Compute empirical critical params
             delay_data = sorted(prime_results, key=lambda x: x['param_count'])
@@ -3224,7 +3236,7 @@ is roughly constant across primes, supporting that hypothesis.
 
         for p_prime in primes_list:
             n_prime, size_prime = compute_dataset_size_bits(p_prime, args.op, args.training_fraction)
-            speed_data_temp = aggregate_speed_results_across_seeds(p_prime, n_prime, args.batch_size, args.saturation_threshold)
+            speed_data_temp = aggregate_speed_results_across_seeds(p_prime, n_prime, index, filters, args.batch_size, args.saturation_threshold)
 
             for sp in speed_data_temp:
                 if sp.get('saturation_epoch') is not None and sp['saturation_epoch'] > 0:
@@ -3248,24 +3260,10 @@ is roughly constant across primes, supporting that hypothesis.
         for p_prime in primes_list:
             n_prime, size_prime = compute_dataset_size_bits(p_prime, args.op, args.training_fraction)
 
-            def get_files_for_prime(prime_data_dir):
-                if args.pattern:
-                    pattern = os.path.join(prime_data_dir, args.pattern)
-                    return sorted(glob(pattern), key=extract_dim)
-                elif args.dims:
-                    return [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
-                           for d in args.dims]
-                elif args.dims_start and args.dims_end:
-                    dims = list(range(args.dims_start, args.dims_end + 1, args.dims_step))
-                    return [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
-                           for d in dims]
-                else:
-                    pattern = os.path.join(prime_data_dir, f'grokking_dim*_depth{args.depth}_heads{args.heads}.npz')
-                    return sorted(glob(pattern), key=extract_dim)
-
             prime_results = aggregate_grokking_results_across_seeds(
-                p_prime, args.data_dir, args.split_type, get_files_for_prime,
-                args.threshold_train, args.threshold_val, args.saturation_threshold, use_min_delay=True
+                p_prime, index, filters,
+                args.threshold_train, args.threshold_val, args.saturation_threshold,
+                use_min_delay=True, dims=getattr(args, 'dims', None)
             )
 
             if not prime_results:
@@ -3276,7 +3274,7 @@ is roughly constant across primes, supporting that hypothesis.
                 if not prime_results:
                     continue
 
-            speed_data = aggregate_speed_results_across_seeds(p_prime, n_prime, args.batch_size, args.saturation_threshold)
+            speed_data = aggregate_speed_results_across_seeds(p_prime, n_prime, index, filters, args.batch_size, args.saturation_threshold)
 
             # Compute empirical critical params
             delay_data = sorted(prime_results, key=lambda x: x['param_count'])
@@ -3692,24 +3690,10 @@ is roughly constant across primes, supporting that hypothesis.
         for p_prime in primes_list:
             n_prime, size_prime = compute_dataset_size_bits(p_prime, args.op, args.training_fraction)
 
-            def get_files_for_prime(prime_data_dir):
-                if args.pattern:
-                    pattern = os.path.join(prime_data_dir, args.pattern)
-                    return sorted(glob(pattern), key=extract_dim)
-                elif args.dims:
-                    return [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
-                           for d in args.dims]
-                elif args.dims_start and args.dims_end:
-                    dims = list(range(args.dims_start, args.dims_end + 1, args.dims_step))
-                    return [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
-                           for d in dims]
-                else:
-                    pattern = os.path.join(prime_data_dir, f'grokking_dim*_depth{args.depth}_heads{args.heads}.npz')
-                    return sorted(glob(pattern), key=extract_dim)
-
             prime_results = aggregate_grokking_results_across_seeds(
-                p_prime, args.data_dir, args.split_type, get_files_for_prime,
-                args.threshold_train, args.threshold_val, args.saturation_threshold, use_min_delay=True
+                p_prime, index, filters,
+                args.threshold_train, args.threshold_val, args.saturation_threshold,
+                use_min_delay=True, dims=getattr(args, 'dims', None)
             )
 
             if not prime_results:
@@ -3718,7 +3702,7 @@ is roughly constant across primes, supporting that hypothesis.
             if args.max_dim is not None:
                 prime_results = [r for r in prime_results if r['dim'] <= args.max_dim]
 
-            speed_data = aggregate_speed_results_across_seeds(p_prime, n_prime, args.batch_size, args.saturation_threshold)
+            speed_data = aggregate_speed_results_across_seeds(p_prime, n_prime, index, filters, args.batch_size, args.saturation_threshold)
 
             for result in prime_results:
                 if result.get('epochs_to_grok') is not None and result['epochs_to_grok'] > 0:
@@ -3738,24 +3722,10 @@ is roughly constant across primes, supporting that hypothesis.
         for p_prime in primes_list:
             n_prime, size_prime = compute_dataset_size_bits(p_prime, args.op, args.training_fraction)
 
-            def get_files_for_prime(prime_data_dir):
-                if args.pattern:
-                    pattern = os.path.join(prime_data_dir, args.pattern)
-                    return sorted(glob(pattern), key=extract_dim)
-                elif args.dims:
-                    return [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
-                           for d in args.dims]
-                elif args.dims_start and args.dims_end:
-                    dims = list(range(args.dims_start, args.dims_end + 1, args.dims_step))
-                    return [os.path.join(prime_data_dir, f'grokking_dim{d}_depth{args.depth}_heads{args.heads}.npz')
-                           for d in dims]
-                else:
-                    pattern = os.path.join(prime_data_dir, f'grokking_dim*_depth{args.depth}_heads{args.heads}.npz')
-                    return sorted(glob(pattern), key=extract_dim)
-
             prime_results = aggregate_grokking_results_across_seeds(
-                p_prime, args.data_dir, args.split_type, get_files_for_prime,
-                args.threshold_train, args.threshold_val, args.saturation_threshold, use_min_delay=True
+                p_prime, index, filters,
+                args.threshold_train, args.threshold_val, args.saturation_threshold,
+                use_min_delay=True, dims=getattr(args, 'dims', None)
             )
 
             if not prime_results:
@@ -3766,7 +3736,7 @@ is roughly constant across primes, supporting that hypothesis.
                 if not prime_results:
                     continue
 
-            speed_data = aggregate_speed_results_across_seeds(p_prime, n_prime, args.batch_size, args.saturation_threshold)
+            speed_data = aggregate_speed_results_across_seeds(p_prime, n_prime, index, filters, args.batch_size, args.saturation_threshold)
 
             # Compute critical params
             delay_data = sorted(prime_results, key=lambda x: x['param_count'])
@@ -4104,10 +4074,10 @@ def main():
 Examples:
   # List all grokking results
   python visualise.py groks --list
-  
+
   # Plot capacity curves for all experiments
   python visualise.py capacity --all --curves
-  
+
   # Get capacity summary
   python visualise.py capacity --all --summary
 """
@@ -4125,34 +4095,18 @@ Examples:
     grok_subparser = subparsers.add_parser('groks', help='Grokking experiments')
     grok_subparser.set_defaults(func=groks)
 
-    grok_subparser.add_argument('--seed', type=int, default=42, help='training seed')
-    grok_subparser.add_argument('--training-fraction', type=float, default=0.5, help='training fraction')
-    grok_subparser.add_argument('--op', type=str, default='/', help='operation', choices=['*', '/', '+', '-'])
-    grok_subparser.add_argument('--split-type', type=str, default='random', help='split type', choices=['random', 'sequential', 'alternating'])
-    grok_subparser.add_argument('--p', nargs='+', type=int, default=[97],
-                       help='Prime number. Only the first prime is used. For multi-prime analysis, use the "primes" command.')
-    grok_subparser.add_argument('--data-dir', type=str, default='data/groks', help='data directory')
-    grok_subparser.add_argument('--plot-dir', type=str, default='media/groks', help='plot directory')
+    add_vis_output_args(grok_subparser, plot_dir_default='media/groks')
+    add_vis_file_selection_args(grok_subparser)
+    add_vis_model_filter_args(grok_subparser)
+    add_vis_optimizer_filter_args(grok_subparser)
+    add_vis_task_args(grok_subparser, op_default='/')
+    add_vis_dim_args(grok_subparser)
 
-    # Actions to perform
-    grok_subparser.add_argument('--list', action='store_true', 
-                       help='List all available results')
+    grok_subparser.add_argument('--split-type', type=str, default='random',
+                       help='Split type (default: random)',
+                       choices=['random', 'sequential', 'alternating'])
     grok_subparser.add_argument('--plot', type=str,
                        help='Plot a specific result file')
-    grok_subparser.add_argument('--files', nargs='+',
-                       help='Compare multiple result files')
-    grok_subparser.add_argument('--pattern', type=str,
-                       help='Pattern to match result files')
-    grok_subparser.add_argument('--dims', nargs='+', type=int,
-                       help='Compare specific dimensions (e.g., --dims 20 40 60)')
-    grok_subparser.add_argument('--dims-start', type=int, default=None,
-                       help='Starting dimension for dimension comparison')
-    grok_subparser.add_argument('--dims-end', type=int, default=None,
-                       help='Ending dimension for dimension comparison')
-    grok_subparser.add_argument('--dims-step', type=int, default=None,
-                       help='Step size for dimension comparison')
-    grok_subparser.add_argument('--all', action='store_true',
-                       help='Compare all available results (combined plot)')
     grok_subparser.add_argument('--combined', action='store_true',
                        help='Compare all available results (combined plot)')
     grok_subparser.add_argument('--separate', action='store_true',
@@ -4181,92 +4135,59 @@ Examples:
     grok_subparser.add_argument('--threshold-val', type=float, default=97.0,
                        help='Accuracy threshold for validation (default: 97.0)')
     grok_subparser.add_argument('--delay-threshold', type=float, default=0.5,
-                       help='Minimum delay to include in critical capacity fit (default: 1.0)')
+                       help='Minimum delay to include in critical capacity fit (default: 0.5)')
     grok_subparser.add_argument('--saturation-threshold', type=float, default=99.0,
                        help='Accuracy threshold for determining saturation epoch in speed experiments (default: 99.0)')
-    grok_subparser.add_argument('--depth', type=int, default=2,
-                       help='Depth for dimension comparison')
-    grok_subparser.add_argument('--heads', type=int, default=1,
-                       help='Heads for dimension comparison')
-    
-    # Output options
-    grok_subparser.add_argument('--save', action='store_true',
-                       help='Save plots to plot-dir')
-    grok_subparser.add_argument('--no-show', action='store_true',
-                       help='Do not display plots (only save)')
-    
+
     # =========================================================================
     # Capacity subparser
     # =========================================================================
     cap_subparser = subparsers.add_parser(
-        'capacity', 
+        'capacity',
         help='Model capacity (memorisation) experiments',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
   # List all capacity results
   python visualise.py capacity --list
-  
+
   # Plot Morris et al. style capacity curves
   python visualise.py capacity --all --curves
-  
+
   # Plot and save curves
   python visualise.py capacity --all --curves --save
-  
+
   # Get summary statistics
   python visualise.py capacity --all --summary
-  
+
   # Filter by model dimension
   python visualise.py capacity --dims 20 40 80 --curves
-  
+
   # Plot single experiment
   python visualise.py capacity --plot data/capacity/capacity_dim40_samples1000.npz
 """
     )
     cap_subparser.set_defaults(func=capacity)
-    
-    # Directory configuration
-    cap_subparser.add_argument('--data-dir', type=str, default='data/capacity',
-                               help='Data directory (default: data/capacity)')
-    cap_subparser.add_argument('--plot-dir', type=str, default='media/capacity',
-                               help='Plot output directory (default: media/capacity)')
-    cap_subparser.add_argument('--p', type=int, default=97,
-                               help='Prime number (default: 97)')
-    cap_subparser.add_argument('--seed', type=int, default=42,
-                               help='Training seed (default: 42)')
+
+    add_vis_output_args(cap_subparser, plot_dir_default='media/capacity')
+    add_vis_file_selection_args(cap_subparser)
+    add_vis_model_filter_args(cap_subparser)
+    add_vis_optimizer_filter_args(cap_subparser)
+    add_vis_dim_args(cap_subparser)
+
     cap_subparser.add_argument('--dataset-type', type=str, default='random',
                                help='Dataset type (default: random)',
                                choices=['random', '+', '-', '*', '/'])
-    
-    # File selection
-    cap_subparser.add_argument('--list', action='store_true',
-                               help='List all available capacity results')
     cap_subparser.add_argument('--plot', type=str, metavar='FILE',
                                help='Plot training curves for a specific result file')
-    cap_subparser.add_argument('--files', nargs='+', metavar='FILE',
-                               help='Analyze specific result files')
-    cap_subparser.add_argument('--pattern', type=str,
-                               help='Glob pattern to match result files')
-    cap_subparser.add_argument('--all', action='store_true',
-                               help='Select all available results')
-    cap_subparser.add_argument('--dims', nargs='+', type=int, metavar='DIM',
-                               help='Filter by model dimensions (e.g., --dims 20 40 80)')
     cap_subparser.add_argument('--samples', nargs='+', type=int, metavar='N',
                                help='Filter by dataset sizes (e.g., --samples 100 1000)')
-    
-    # Plot types
     cap_subparser.add_argument('--curves', action='store_true',
                                help='Plot memorisation vs dataset size curves (Morris et al. style)')
     cap_subparser.add_argument('--accuracy', action='store_true',
                                help='Plot bits memorized vs training accuracy')
     cap_subparser.add_argument('--summary', action='store_true',
                                help='Print summary statistics and capacity estimate')
-    
-    # Output options
-    cap_subparser.add_argument('--save', action='store_true',
-                               help='Save plots to plot-dir')
-    cap_subparser.add_argument('--no-show', action='store_true',
-                               help='Do not display plots (only save)')
 
     # =========================================================================
     # Speed subparser
@@ -4298,29 +4219,13 @@ Examples:
     )
     speed_subparser.set_defaults(func=speed)
 
-    # Directory configuration
-    speed_subparser.add_argument('--data-dir', type=str, default='data/speed',
-                                 help='Data directory (default: data/speed)')
-    speed_subparser.add_argument('--plot-dir', type=str, default='media/speed',
-                                 help='Plot output directory (default: media/speed)')
-    speed_subparser.add_argument('--p', nargs='+', type=int, default=[97],
-                                 help='Prime number(s) (default: 97). Can specify multiple primes.')
-    speed_subparser.add_argument('--seed', type=int, default=42,
-                                 help='Random seed (default: 42)')
+    add_vis_output_args(speed_subparser, plot_dir_default='media/speed')
+    add_vis_file_selection_args(speed_subparser)
+    add_vis_model_filter_args(speed_subparser)
+    add_vis_optimizer_filter_args(speed_subparser)
+    add_vis_task_args(speed_subparser, op_default='/')
+    add_vis_dim_args(speed_subparser)
 
-    # File selection
-    speed_subparser.add_argument('--list', action='store_true',
-                                 help='List all available speed results')
-    speed_subparser.add_argument('--files', nargs='+', metavar='FILE',
-                                 help='Analyze specific result files')
-    speed_subparser.add_argument('--pattern', type=str,
-                                 help='Glob pattern to match result files')
-    speed_subparser.add_argument('--all', action='store_true',
-                                 help='Select all available results')
-    speed_subparser.add_argument('--dims', nargs='+', type=int, metavar='DIM',
-                                 help='Filter by model dimensions (e.g., --dims 20 28 32)')
-
-    # Plot types
     speed_subparser.add_argument('--curves', action='store_true',
                                  help='Plot learning speed curves (steps to saturation vs dataset size)')
     speed_subparser.add_argument('--combined', action='store_true',
@@ -4337,12 +4242,6 @@ Examples:
                                  help='Accuracy threshold for determining saturation epoch (default: 99.0)')
     speed_subparser.add_argument('--summary', action='store_true',
                                  help='Print summary statistics')
-
-    # Output options
-    speed_subparser.add_argument('--save', action='store_true',
-                                 help='Save plots to plot-dir')
-    speed_subparser.add_argument('--no-show', action='store_true',
-                                 help='Do not display plots (only save)')
 
     # =========================================================================
     # Primes subparser
@@ -4368,51 +4267,36 @@ Examples:
     )
     primes_subparser.set_defaults(func=primes)
 
-    # Directory configuration
-    primes_subparser.add_argument('--data-dir', type=str, default='data/groks',
-                                   help='Data directory (default: data/groks)')
-    primes_subparser.add_argument('--plot-dir', type=str, default='media/primes',
-                                   help='Plot output directory (default: media/primes)')
-    primes_subparser.add_argument('--p', nargs='+', type=int, required=True,
-                                   help='Prime numbers (required, e.g., --p 97 113 127)')
+    add_vis_output_args(primes_subparser, plot_dir_default='media/primes')
+    add_vis_model_filter_args(primes_subparser)
+    add_vis_optimizer_filter_args(primes_subparser)
+    add_vis_task_args(primes_subparser, op_default='/')
+    add_vis_dim_args(primes_subparser)
+
+    primes_subparser.add_argument('--p', nargs='+', type=int, default=None,
+                                   help='Prime numbers (e.g., --p 97 113 127). '
+                                        'Mutually exclusive with --min-prime/--max-prime.')
+    primes_subparser.add_argument('--min-prime', type=int, default=None,
+                                   help='Lower bound for prime auto-detection (inclusive). '
+                                        'Use with --max-prime instead of --p.')
+    primes_subparser.add_argument('--max-prime', type=int, default=None,
+                                   help='Upper bound for prime auto-detection (inclusive). '
+                                        'Use with --min-prime instead of --p.')
     primes_subparser.add_argument('--seed', type=int, default=42,
                                    help='Training seed (default: 42)')
-    primes_subparser.add_argument('--training-fraction', type=float, default=0.5,
-                                   help='Training fraction (default: 0.5)')
-    primes_subparser.add_argument('--op', type=str, default='/',
-                                   help='Operation (default: /)', choices=['*', '/', '+', '-'])
     primes_subparser.add_argument('--split-type', type=str, default='random',
-                                   help='Split type (default: random)', choices=['random', 'sequential', 'alternating'])
-
-    # File selection
+                                   help='Split type (default: random)',
+                                   choices=['random', 'sequential', 'alternating'])
     primes_subparser.add_argument('--pattern', type=str,
                                    help='Glob pattern to match result files')
-    primes_subparser.add_argument('--dims', nargs='+', type=int, metavar='DIM',
-                                   help='Filter by model dimensions (e.g., --dims 20 40 80)')
-    primes_subparser.add_argument('--dims-start', type=int, default=None,
-                                   help='Starting dimension for dimension comparison')
-    primes_subparser.add_argument('--dims-end', type=int, default=None,
-                                   help='Ending dimension for dimension comparison')
-    primes_subparser.add_argument('--dims-step', type=int, default=None,
-                                   help='Step size for dimension comparison')
     primes_subparser.add_argument('--max-dim', type=int, default=None,
-                                   help='Maximum dimension to consider when computing empirical grokking point (useful when speed data only exists for smaller models)')
-
-    # Model architecture
-    primes_subparser.add_argument('--depth', type=int, default=2,
-                                   help='Model depth (default: 2)')
-    primes_subparser.add_argument('--heads', type=int, default=1,
-                                   help='Number of attention heads (default: 1)')
-
-    # Match-table loading (alternative to glob-based file discovery)
+                                   help='Maximum dimension to consider when computing empirical grokking point '
+                                        '(useful when speed data only exists for smaller models)')
     primes_subparser.add_argument('--match-table', type=str, default=None,
                                    help='Path to a match table JSON produced by run_config.py or '
                                         'scripts/migrate_legacy_data.py. When provided, loads paired '
                                         '(groks, speed) data from the match table instead of using '
                                         'glob-based file discovery.')
-    primes_subparser.add_argument('--index-dir', type=str, default='data',
-                                   help='Base directory for ResultsIndex scan (default: data). '
-                                        'Used together with --match-table to locate .npz files.')
 
     # Analysis modes (mutually exclusive)
     analysis_group = primes_subparser.add_mutually_exclusive_group(required=True)
@@ -4441,7 +4325,8 @@ Examples:
     primes_subparser.add_argument('--delay-threshold', type=float, default=0.5,
                                    help='Minimum delay to include in critical capacity fit (default: 0.5)')
     primes_subparser.add_argument('--saturation-threshold', type=float, default=99.0,
-                                   help='Accuracy threshold for determining saturation epoch in speed experiments (default: 99.0, only used for --speed and --groks)')
+                                   help='Accuracy threshold for determining saturation epoch in speed experiments '
+                                        '(default: 99.0, only used for --speed and --groks)')
     primes_subparser.add_argument('--batch-size', type=int, default=512,
                                    help='Batch size used in grokking experiments (default: 512, only used for --speed)')
     primes_subparser.add_argument('--predicted-speed', action='store_true',
@@ -4450,12 +4335,6 @@ Examples:
                                    help='For --groks: also compute and plot intersection using global exponential fit across all primes')
     primes_subparser.add_argument('--prime-fit', action='store_true',
                                    help='For --groks: also compute and plot intersection using per-prime exponential fit')
-
-    # Output options
-    primes_subparser.add_argument('--save', action='store_true',
-                                   help='Save plots to plot-dir')
-    primes_subparser.add_argument('--no-show', action='store_true',
-                                   help='Do not display plots (only save)')
 
     # Run the appropriate function based on the subparser
     args = parser.parse_args()

@@ -126,20 +126,20 @@ Each config has `name`, `defaults`, and `experiments`. Experiments have a `type`
 Experiments are organised across three axes (hyperparameters, tasks, architectures). Priority refers to revision timeline (Week 1 is highest).
 
 
-| ID      | Name                    | Description                                                                                                     | Priority                 | Config                            |
-| ------- | ----------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------ | --------------------------------- |
-| **1a**  | Weight decay sweep      | λ ∈ {0.1, 0.3, 1.0, 3.0} with matched weight decay between speed and groks — eliminates the historical confound | Week 1 / highest         | `configs/weight_decay_sweep.yaml` |
-| **1a*** | Dropout sweep           | do ∈ {0.0, 0.1, 0.2, 0.4} matched across capacity, speed, and groks — tests whether C depends on dropout        | Week 1                   | `configs/dropout_sweep.yaml`      |
-| **1b**  | Learning rate sweep     | η ∈ {3×10⁻⁴, 1×10⁻³, 3×10⁻³} with matched lr between speed and groks                                            | Week 2                   | `configs/lr_sweep.yaml`           |
-| **1c**  | Initialisation scale    | init_scale ∈ {0.5, 1.0, 2.0} — scales all weights post-init                                                     | Week 3                   | `configs/init_scale_sweep.yaml`   |
-| **1d**  | Training fraction sweep | α ∈ {0.3, 0.4, 0.5, 0.6, 0.7} at p ∈ {97, 113, 139}                                                             | Week 1                   | `configs/alpha_sweep.yaml`        |
-| **2a**  | Modular addition        | Full pipeline on `+` (mod p)                                                                                    | Week 1 / high            | `configs/task_add.yaml`           |
-| **2b**  | Modular multiplication  | Full pipeline on `*` (mod p)                                                                                    | Week 1                   | `configs/task_mul.yaml`           |
-| **2c**  | Modular subtraction     | Full pipeline on `-` (mod p); T_mem reusable from 2a                                                            | Week 3 / low             | `configs/subtraction.yaml`        |
-| **2d**  | Permutation composition | S₅ group — needs new task implementation                                                                        | Ambitious / out of scope | —                                 |
-| **3a**  | Depth scaling           | L_depth ∈ {2,3,4,6,8,10} at fixed heads=1, matched by param count                                               | Week 2 / high            | `configs/depth_scaling.yaml`      |
-| **3b**  | Attention heads         | H ∈ {1,2,4,8} at fixed depth=2; dims must be multiples of 8                                                     | Week 2                   | `configs/heads_sweep.yaml`        |
-| **3c**  | Architectural variants  | Gated FFN removal, RMSNorm→LayerNorm, RoPE→learned pos emb                                                      | Week 3                   | —                                 |
-| **3d**  | MLP baseline            | Replace Transformer with MLP; tests framework generality                                                        | Week 3 / ambitious       | —                                 |
+| ID      | Name                      | Description                                                                                                     | Priority                 | Config                            |
+| ------- | ------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------ | --------------------------------- |
+| **1a**  | Weight decay sweep ✅      | λ ∈ {0.1, 0.3, 1.0, 3.0} with matched weight decay between speed and groks — eliminates the historical confound | Week 1 / highest         | `configs/weight_decay_sweep.yaml` |
+| **1a*** | Dropout sweep             | do ∈ {0.0, 0.1, 0.2, 0.4} matched across capacity, speed, and groks — tests whether C depends on dropout        | Week 1                   | `configs/dropout_sweep.yaml`      |
+| **1b**  | Learning rate sweep       | η ∈ {3×10⁻⁴, 1×10⁻³, 3×10⁻³} with matched lr between speed and groks                                            | Week 2                   | `configs/lr_sweep.yaml`           |
+| **1c**  | Initialisation scale      | init_scale ∈ {0.5, 1.0, 2.0} — scales all weights post-init                                                     | Week 3                   | `configs/init_scale_sweep.yaml`   |
+| **1d**  | Training fraction sweep ✅ | α ∈ {0.3, 0.4, 0.5, 0.6, 0.7} at p ∈ {97, 113, 139}                                                             | Week 1                   | `configs/alpha_sweep.yaml`        |
+| **2a**  | Modular addition ✅        | Full pipeline on `+` (mod p)                                                                                    | Week 1 / high            | `configs/task_add.yaml`           |
+| **2b**  | Modular multiplication    | Full pipeline on `*` (mod p)                                                                                    | Week 1                   | `configs/task_mul.yaml`           |
+| **2c**  | Modular subtraction       | Full pipeline on `-` (mod p); T_mem reusable from 2a                                                            | Week 3 / low             | `configs/subtraction.yaml`        |
+| **2d**  | Permutation composition   | S₅ group — needs new task implementation                                                                        | Ambitious / out of scope | —                                 |
+| **3a**  | Depth scaling ✅           | L_depth ∈ {2,3,4,6,8,10} at fixed heads=1, matched by param count                                               | Week 2 / high            | `configs/depth_scaling.yaml`      |
+| **3b**  | Attention heads           | H ∈ {1,2,4,8} at fixed depth=2; dims must be multiples of 8                                                     | Week 2                   | `configs/heads_sweep.yaml`        |
+| **3c**  | Architectural variants    | Gated FFN removal, RMSNorm→LayerNorm, RoPE→learned pos emb                                                      | Week 3                   | —                                 |
+| **3d**  | MLP baseline              | Replace Transformer with MLP; tests framework generality                                                        | Week 3 / ambitious       | —                                 |
 
 
