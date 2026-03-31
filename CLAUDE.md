@@ -110,6 +110,19 @@ is_filter = (lambda x: x is None or x == init_scale) if init_scale == 1.0 else i
 index.exists(..., init_scale=is_filter)
 ```
 
+## Visualiser filter defaults
+
+`visualise.py` subcommands default `--weight-decay`, `--dropout`, and `--init-scale` to the canonical values from `consts.py` for each experiment type, so omitting them filters to the original baseline experiments:
+
+| Subcommand  | `--weight-decay` | `--dropout` | `--init-scale` |
+| ----------- | ---------------- | ----------- | -------------- |
+| `groks`     | 1.0              | 0.2         | 1.0            |
+| `capacity`  | 0.01             | 0.0         | 1.0            |
+| `speed`     | 0.01             | 0.2         | 1.0            |
+| `primes`    | 1.0              | 0.2         | 1.0            |
+
+Pass explicit values to override, e.g. `--weight-decay 0.1 0.3 1.0 3.0` on `primes` to overlay all weight-decay sweep results.
+
 ## YAML config structure
 
 Each config has `name`, `defaults`, and `experiments`. Experiments have a `type` field (`groks`, `speed`, `capacity`). List-valued keys (except `seeds`, `primes`, `dims`, `dim_ranges`, `param_count_targets`, `match_by`, `n_samples`, `type`) are Cartesian-producted. `n_samples: auto` resolves to `n_equiv` for the given `(p, operation, train_fraction)`. `match_by: param_count` with `param_count_targets` selects dims by nearest param count rather than by explicit dim list.

@@ -337,6 +337,7 @@ def _build_capacity_filters(args, p):
         filters['operation'] = op
     _add_filter(filters, 'dropout', getattr(args, 'dropout', None))
     _add_filter(filters, 'weight_decay', getattr(args, 'weight_decay', None))
+    _add_filter(filters, 'init_scale', getattr(args, 'init_scale', None))
     return filters
 
 
@@ -4128,6 +4129,149 @@ is roughly constant across primes, supporting that hypothesis.
         print("  --ccv:         Curve-based CV comparing intersection vs full curve embeddings")
 
 
+def hyper(args):
+    """Plot empirical and predicted grokking parameter count vs a swept hyperparameter."""
+    index = ResultsIndex(args.data_dir)
+    show = not args.no_show
+    os.makedirs(args.plot_dir, exist_ok=True)
+
+    hyper_name = args.hyper
+    p = args.p
+
+    # Base filters — everything except the swept hyperparameter
+    base_filters = {
+        'operation': _legacy_filter(args.op, '/'),
+        'depth': args.depth,
+        'heads': args.heads,
+        'p': p,
+    }
+    if hyper_name != 'train_fraction':
+        base_filters['train_fraction'] = _legacy_filter(args.training_fraction, 0.5)
+
+    fixed_hypers = {
+        'weight_decay': getattr(args, 'weight_decay', None),
+        'dropout':      getattr(args, 'dropout', None),
+        'init_scale':   getattr(args, 'init_scale', None),
+        'lr':           getattr(args, 'lr', None),
+    }
+    for key, val in fixed_hypers.items():
+        if key != hyper_name and val is not None:
+            base_filters[key] = val
+
+    # Discover all values of the swept hyperparameter from groks entries
+    candidate_entries = index.query(experiment_type='groks', **base_filters)
+    hyper_values = sorted(set(
+        _nested_get(e, hyper_name)
+        for e in candidate_entries
+        if _nested_get(e, hyper_name) is not None
+    ))
+
+    if not hyper_values:
+        print(f"No groks results found for any value of '{hyper_name}' with p={p}")
+        return
+
+    print(f"\nFound {len(hyper_values)} values of {hyper_name}: {hyper_values}")
+
+    base_n_prime, _ = compute_dataset_size_bits(p, args.op, args.training_fraction)
+
+    points = []
+    for hval in hyper_values:
+        print(f"\n{'='*60}")
+        print(f"{hyper_name} = {hval}")
+
+        hval_filters = dict(base_filters)
+        hval_filters[hyper_name] = hval
+
+        n_prime, _ = (
+            compute_dataset_size_bits(p, args.op, hval)
+            if hyper_name == 'train_fraction'
+            else (base_n_prime, None)
+        )
+
+        prime_results = aggregate_grokking_results_across_seeds(
+            p, index, hval_filters,
+            args.threshold_train, args.threshold_val, args.saturation_threshold,
+            use_min_delay=True,
+        )
+        if not prime_results:
+            print(f"  No grokking results")
+            continue
+
+        if args.min_dim is not None:
+            prime_results = [r for r in prime_results if r['dim'] >= args.min_dim]
+        if args.max_dim is not None:
+            prime_results = [r for r in prime_results if r['dim'] <= args.max_dim]
+        if not prime_results:
+            print(f"  No grokking results within dim range")
+            continue
+
+        # Empirical critical params: first param count after last zero-delay point
+        delay_data = sorted(
+            [{'param_count': r['param_count'], 'delay': r['delay']} for r in prime_results],
+            key=lambda x: x['param_count'],
+        )
+        empirical = None
+        last_zero = -1
+        for i in range(len(delay_data) - 1, -1, -1):
+            if delay_data[i]['delay'] == 0:
+                last_zero = i
+                break
+        if last_zero >= 0 and last_zero + 1 < len(delay_data):
+            empirical = delay_data[last_zero + 1]['param_count']
+        elif last_zero == -1 and delay_data[0]['delay'] > 0:
+            empirical = delay_data[0]['param_count']
+
+        speed_data = aggregate_speed_results_across_seeds(
+            p, n_prime, index, hval_filters, args.batch_size, args.saturation_threshold,
+        )
+        if args.min_dim is not None:
+            speed_data = [r for r in speed_data if r['dim'] >= args.min_dim]
+        if args.max_dim is not None:
+            speed_data = [r for r in speed_data if r['dim'] <= args.max_dim]
+        predicted = compute_critical_params_from_speed(
+            prime_results, speed_data,
+            threshold_train=args.threshold_train,
+            threshold_val=args.threshold_val,
+        )
+
+        print(f"  Empirical critical params : {empirical:,.0f}" if empirical else "  Empirical critical params : N/A")
+        print(f"  Predicted critical params : {predicted:,.0f}" if predicted else "  Predicted critical params : N/A")
+        points.append({'hyper_val': hval, 'empirical': empirical, 'predicted': predicted})
+
+    if not points:
+        print("No data points to plot.")
+        return
+
+    # Plot
+    fig, ax = plt.subplots(figsize=(8, 5))
+
+    emp_xy = [(pt['hyper_val'], pt['empirical']) for pt in points if pt['empirical'] is not None]
+    pred_xy = [(pt['hyper_val'], pt['predicted']) for pt in points if pt['predicted'] is not None]
+
+    if emp_xy:
+        ex, ey = zip(*emp_xy)
+        ax.plot(ex, ey, 'o-', label='Empirical (first delay > 0)', color='tab:blue')
+    if pred_xy:
+        px, py = zip(*pred_xy)
+        ax.plot(px, py, 's--', label='Predicted (T_mem ∩ T_gen)', color='tab:orange')
+
+    ax.set_xlabel(hyper_name)
+    ax.set_ylabel('Critical parameter count')
+    ax.set_title(f'Grokking onset vs {hyper_name}  (p={p})')
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    plt.tight_layout()
+
+    if args.save:
+        save_path = os.path.join(args.plot_dir, f'hyper_{hyper_name}_p{p}.pdf')
+        plt.savefig(save_path, bbox_inches='tight')
+        print(f"\nSaved to {save_path}")
+    if show:
+        plt.show()
+    else:
+        plt.close()
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='View saved experiment results',
@@ -4159,8 +4303,8 @@ Examples:
 
     add_vis_output_args(grok_subparser, plot_dir_default='media/groks')
     add_vis_file_selection_args(grok_subparser)
-    add_vis_model_filter_args(grok_subparser)
-    add_vis_optimizer_filter_args(grok_subparser)
+    add_vis_model_filter_args(grok_subparser, dropout_default=consts.GROKKING_DEFAULTS['dropout'])
+    add_vis_optimizer_filter_args(grok_subparser, wd_default=consts.GROKKING_DEFAULTS['weight_decay'])
     add_vis_task_args(grok_subparser, op_default='/')
     add_vis_dim_args(grok_subparser)
 
@@ -4233,8 +4377,8 @@ Examples:
 
     add_vis_output_args(cap_subparser, plot_dir_default='media/capacity')
     add_vis_file_selection_args(cap_subparser)
-    add_vis_model_filter_args(cap_subparser)
-    add_vis_optimizer_filter_args(cap_subparser)
+    add_vis_model_filter_args(cap_subparser, dropout_default=consts.CAPACITY_DEFAULTS['dropout'])
+    add_vis_optimizer_filter_args(cap_subparser, wd_default=consts.CAPACITY_DEFAULTS['weight_decay'])
     add_vis_dim_args(cap_subparser)
 
     cap_subparser.add_argument('--dataset-type', type=str, default='random',
@@ -4283,8 +4427,8 @@ Examples:
 
     add_vis_output_args(speed_subparser, plot_dir_default='media/speed')
     add_vis_file_selection_args(speed_subparser)
-    add_vis_model_filter_args(speed_subparser)
-    add_vis_optimizer_filter_args(speed_subparser)
+    add_vis_model_filter_args(speed_subparser, dropout_default=consts.SPEED_DEFAULTS['dropout'])
+    add_vis_optimizer_filter_args(speed_subparser, wd_default=consts.SPEED_DEFAULTS['weight_decay'])
     add_vis_task_args(speed_subparser, op_default='/')
     add_vis_dim_args(speed_subparser)
 
@@ -4330,8 +4474,8 @@ Examples:
     primes_subparser.set_defaults(func=primes)
 
     add_vis_output_args(primes_subparser, plot_dir_default='media/primes')
-    add_vis_model_filter_args(primes_subparser)
-    add_vis_optimizer_filter_args(primes_subparser, wd_nargs='+')
+    add_vis_model_filter_args(primes_subparser, dropout_default=consts.GROKKING_DEFAULTS['dropout'])
+    add_vis_optimizer_filter_args(primes_subparser, wd_nargs='+', wd_default=consts.GROKKING_DEFAULTS['weight_decay'])
     add_vis_task_args(primes_subparser, op_default='/')
     add_vis_dim_args(primes_subparser)
 
@@ -4397,6 +4541,55 @@ Examples:
                                    help='For --groks: also compute and plot intersection using global exponential fit across all primes')
     primes_subparser.add_argument('--prime-fit', action='store_true',
                                    help='For --groks: also compute and plot intersection using per-prime exponential fit')
+
+    # =========================================================================
+    # Hyper subparser
+    # =========================================================================
+    hyper_subparser = subparsers.add_parser(
+        'hyper',
+        help='Plot empirical and predicted grokking onset vs a hyperparameter',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # How does grokking onset change with weight decay?
+  python visualise.py hyper --p 113 --hyper weight_decay --save --no-show
+
+  # Init scale sweep for p=97
+  python visualise.py hyper --p 97 --hyper init_scale --save --no-show
+
+  # Training fraction sweep, fixing weight decay
+  python visualise.py hyper --p 113 --hyper train_fraction --weight-decay 1.0 --save --no-show
+"""
+    )
+    hyper_subparser.set_defaults(func=hyper)
+    add_vis_output_args(hyper_subparser, plot_dir_default='media/hyper')
+    add_vis_task_args(hyper_subparser, op_default='/')
+    add_vis_model_filter_args(hyper_subparser,
+                              dropout_default=consts.GROKKING_DEFAULTS['dropout'],
+                              init_scale_default=1.0)
+    add_vis_optimizer_filter_args(hyper_subparser,
+                                  wd_default=consts.GROKKING_DEFAULTS['weight_decay'])
+
+    hyper_subparser.add_argument('--p', type=int, required=True,
+                                 help='Prime number')
+    hyper_subparser.add_argument('--hyper', type=str, required=True,
+                                 choices=['weight_decay', 'dropout', 'init_scale', 'lr', 'train_fraction'],
+                                 help='Hyperparameter to sweep over')
+    hyper_subparser.add_argument('--lr', type=float, default=consts.GROKKING_DEFAULTS['lr'],
+                                 help=f'Fix learning rate filter (default: {consts.GROKKING_DEFAULTS["lr"]})')
+    hyper_subparser.add_argument('--min-dim', type=int, default=None,
+                                 help='Minimum model dimension to include (default: no lower bound)')
+    hyper_subparser.add_argument('--max-dim', type=int, default=None,
+                                 help='Maximum model dimension to include — useful for bounding '
+                                      'the param range so a well-defined intersection exists')
+    hyper_subparser.add_argument('--threshold-train', type=float, default=99.0,
+                                 help='Accuracy threshold for training (default: 99.0)')
+    hyper_subparser.add_argument('--threshold-val', type=float, default=97.0,
+                                 help='Accuracy threshold for validation (default: 97.0)')
+    hyper_subparser.add_argument('--saturation-threshold', type=float, default=99.0,
+                                 help='Accuracy threshold for speed saturation (default: 99.0)')
+    hyper_subparser.add_argument('--batch-size', type=int, default=512,
+                                 help='Batch size used in speed experiments (default: 512)')
 
     # Run the appropriate function based on the subparser
     args = parser.parse_args()

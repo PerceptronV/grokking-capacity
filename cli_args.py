@@ -72,29 +72,37 @@ def add_vis_file_selection_args(parser):
                         help='List available results matching current filters and exit')
 
 
-def add_vis_model_filter_args(parser):
-    """Architecture filter args (None = no filter)."""
+def add_vis_model_filter_args(parser, *, dropout_default=None, init_scale_default=None):
+    """Architecture filter args.
+
+    Args:
+        dropout_default: Default dropout filter value. Pass from the relevant
+                         consts.*_DEFAULTS dict for the experiment type.
+        init_scale_default: Default init-scale filter value (default: 1.0).
+    """
     parser.add_argument('--depth', type=int, default=2,
                         help='Filter by model depth (default: 2)')
     parser.add_argument('--heads', type=int, default=1,
                         help='Filter by attention heads (default: 1)')
-    parser.add_argument('--dropout', type=float, default=None,
-                        help='Filter by dropout rate (default: no filter)')
-    parser.add_argument('--init-scale', type=float, default=None,
-                        help='Filter by init scale (default: no filter)')
+    parser.add_argument('--dropout', type=float, default=dropout_default,
+                        help=f'Filter by dropout rate (default: {dropout_default})')
+    parser.add_argument('--init-scale', type=float, default=init_scale_default,
+                        help=f'Filter by init scale (default: {init_scale_default})')
 
 
-def add_vis_optimizer_filter_args(parser, wd_nargs=None):
-    """Optimizer filter args (None = no filter).
+def add_vis_optimizer_filter_args(parser, wd_nargs=None, wd_default=None):
+    """Optimizer filter args.
 
     Args:
         wd_nargs: nargs for --weight-decay. Pass '+' to allow multiple values
                   (used by the primes subparser for multi-wd overlays).
+        wd_default: Default weight-decay filter value. Pass from the relevant
+                    consts.*_DEFAULTS dict for the experiment type.
     """
-    parser.add_argument('--weight-decay', type=float, nargs=wd_nargs, default=None,
+    parser.add_argument('--weight-decay', type=float, nargs=wd_nargs, default=wd_default,
                         help='Weight decay filter. Single value filters results; '
                              'multiple values (when wd_nargs="+") overlay separate '
-                             'curve sets per value. Default: no filter (shows all).')
+                             f'curve sets per value. Default: {wd_default}.')
 
 
 def add_vis_task_args(parser, *, op_default='/', op_choices=None):

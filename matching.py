@@ -3,6 +3,8 @@ import json
 from dataclasses import dataclass
 from typing import Optional
 
+import numpy as np
+
 from utils import compute_dataset_size_bits
 
 
@@ -78,10 +80,65 @@ class ExperimentMatch:
     speed_npz_path: str
 
 
+def measure_capacity_constant(
+    index,
+    depth: int = 2,
+    heads: int = 1,
+    weight_decay: float = 1.0,
+    dropout: float = 0.0,
+    init_scale: float = 1.0,
+) -> Optional[float]:
+    """Fit C from capacity runs matching the given condition.
+
+    Queries the ResultsIndex for capacity entries at the specified hyperparameters,
+    collects the saturation point (max bits memorised) per param count, and fits
+    the slope bits = C * params via linear regression.
+
+    Returns None if fewer than 2 distinct param counts are found — the caller
+    should fall back to a global constant in that case.
+    """
+    from plotting import estimate_capacity
+
+    # Legacy runs predate init_scale — treat None as the default 1.0
+    is_filter = (lambda x: x is None or x == init_scale) if init_scale == 1.0 else init_scale
+
+    entries = index.query(
+        experiment_type='capacity',
+        depth=depth,
+        heads=heads,
+        weight_decay=weight_decay,
+        dropout=dropout,
+        init_scale=is_filter,
+    )
+    if not entries:
+        return None
+
+    by_param: dict = {}
+    for entry in entries:
+        pc = entry.get('model', {}).get('param_count')
+        if pc is None:
+            continue
+        traces = index.load_traces(entry)
+        bits = traces.get('total_bits_memorized') or traces.get('total_bits')
+        if bits is None:
+            continue
+        max_bits = float(np.asarray(bits).max())
+        if pc not in by_param or max_bits > by_param[pc]:
+            by_param[pc] = max_bits
+
+    saturation_points = sorted(by_param.items())
+    if len(saturation_points) < 2:
+        return None
+
+    C, _intercept, _r2 = estimate_capacity(saturation_points)
+    return C
+
+
 def build_match_table(
     groks_entries: list,
     speed_entries: list,
     capacity_constant: float,
+    capacity_index=None,
     capacity_source: str = "",
     param_tolerance: float = 0.05,
     n_samples_tolerance: int = 2,
@@ -106,6 +163,9 @@ def build_match_table(
         if n is not None:
             speed_by_n.setdefault(n, []).append(se)
 
+    # Cache per-condition C lookups to avoid re-querying the index repeatedly
+    _c_cache: dict = {}
+
     matches = []
     for ge in groks_entries:
         gp = ge['model']['param_count']
@@ -114,6 +174,25 @@ def build_match_table(
         g_n_equiv, g_K_mem = compute_n_equiv(
             ge['data']['p'], ge['data']['operation'], ge['data']['train_fraction']
         )
+
+        # Resolve capacity constant: per-condition lookup when index is available
+        if capacity_index is not None:
+            cond = (
+                ge['model'].get('depth', 2),
+                ge['model'].get('heads', 1),
+                ge['optimizer'].get('weight_decay', 1.0),
+                ge['model'].get('dropout', 0.2),
+                ge['model'].get('init_scale', 1.0) or 1.0,
+            )
+            if cond not in _c_cache:
+                _c_cache[cond] = measure_capacity_constant(
+                    capacity_index,
+                    depth=cond[0], heads=cond[1],
+                    weight_decay=cond[2], dropout=cond[3], init_scale=cond[4],
+                )
+            C = _c_cache[cond] or capacity_constant
+        else:
+            C = capacity_constant
 
         # Collect candidates within n_samples_tolerance of the computed n_equiv
         candidates = []
@@ -127,7 +206,7 @@ def build_match_table(
             if mismatch > param_tolerance:
                 continue
             match_type = "exact" if mismatch == 0.0 else "param_matched"
-            cap_frac = g_K_mem / (capacity_constant * gp) if gp > 0 else 0.0
+            cap_frac = g_K_mem / (C * gp) if gp > 0 else 0.0
             matches.append(ExperimentMatch(
                 groks_run_id=ge['run_id'],
                 speed_run_id=se['run_id'],
@@ -136,7 +215,7 @@ def build_match_table(
                 param_count_speed=sp,
                 dataset_bits=g_K_mem,
                 n_equiv=g_n_equiv,
-                capacity_constant=capacity_constant,
+                capacity_constant=C,
                 capacity_fraction=cap_frac,
                 match_type=match_type,
                 param_count_mismatch=mismatch,

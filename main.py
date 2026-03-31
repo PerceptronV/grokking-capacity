@@ -448,6 +448,7 @@ def _build_suite_match_table(suite_name: str, spec: dict) -> None:
         return
 
     matches = build_match_table(all_groks, all_speed, capacity_constant=consts.C,
+                                capacity_index=index,
                                 capacity_source=f"consts.C={consts.C}")
 
     os.makedirs(os.path.join('data', suite_name), exist_ok=True)
