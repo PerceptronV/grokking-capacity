@@ -901,6 +901,106 @@ def plot_grokking_delay_with_speed(
     return delay_data
 
 
+def plot_grokking_delay_with_speed_multi_wd(
+    wd_series: Dict,
+    threshold_train: float = 99.0,
+    threshold_val: float = 99.0,
+    saturation_threshold: float = 99.0,
+    title: Optional[str] = None,
+    save_path: Optional[str] = None,
+    show: bool = True,
+) -> Dict:
+    """Overlay T_gen and T_mem curves for multiple weight decay values on one plot.
+
+    Args:
+        wd_series: {wd: {'grok': prime_results, 'speed': speed_data}}
+            prime_results: list of dicts with 'param_count', 'epochs_to_grok'
+            speed_data:    list of dicts with 'param_count', 'saturation_epoch'
+
+    Returns:
+        Dict mapping wd -> intersection param_count (or None if not found).
+    """
+    from scipy.interpolate import interp1d
+
+    fig, ax = plt.subplots(figsize=(10, 7))
+    colors = sns.color_palette("tab10", n_colors=len(wd_series))
+    intersections = {}
+
+    for (wd, series), color in zip(sorted(wd_series.items()), colors):
+        prime_results = series.get('grok', [])
+        speed_data    = series.get('speed', [])
+
+        grok_pts = []
+        for r in prime_results:
+            etg = r.get('epochs_to_grok')
+            if etg is None:
+                etg = r.get('val_epoch')  # fallback: same as plot_grokking_delay_with_speed
+            if etg is not None and etg > 0:
+                grok_pts.append((r['param_count'], etg))
+        grok_pts.sort(key=lambda x: x[0])
+        speed_pts = sorted(
+            [(s['param_count'], s['saturation_epoch'])
+             for s in speed_data
+             if s.get('saturation_epoch') is not None and s['saturation_epoch'] > 0],
+            key=lambda x: x[0],
+        )
+
+        if grok_pts:
+            gp, ge = zip(*grok_pts)
+            ax.plot(gp, ge, '--', color=color, linewidth=2, label=f'λ={wd} T_gen')
+        if speed_pts:
+            sp, se = zip(*speed_pts)
+            ax.plot(sp, se, '-', color=color, linewidth=2, label=f'λ={wd} T_mem')
+
+        intersect = None
+        if len(grok_pts) >= 2 and len(speed_pts) >= 2:
+            gp_arr = np.array([p for p, _ in grok_pts])
+            ge_arr = np.array([e for _, e in grok_pts])
+            sp_arr = np.array([p for p, _ in speed_pts])
+            se_arr = np.array([e for _, e in speed_pts])
+            p_lo = max(gp_arr.min(), sp_arr.min())
+            p_hi = min(gp_arr.max(), sp_arr.max())
+            if p_lo < p_hi:
+                try:
+                    x_grid = np.logspace(np.log10(p_lo), np.log10(p_hi), 1000)
+                    yg = interp1d(gp_arr, ge_arr, kind='linear', fill_value='extrapolate')(x_grid)
+                    ys = interp1d(sp_arr, se_arr, kind='linear', fill_value='extrapolate')(x_grid)
+                    valid = (yg > 0) & (ys > 0)
+                    if valid.sum() > 0:
+                        diff = np.abs(np.log(np.maximum(yg, 1e-6)) - np.log(np.maximum(ys, 1e-6)))
+                        diff[~valid] = np.inf
+                        intersect = x_grid[np.argmin(diff)]
+                        ax.axvline(intersect, color=color, linestyle=':', linewidth=1.5, alpha=0.8,
+                                   label=f'λ={wd} P*={intersect:,.0f}')
+                        print(f"  λ={wd}: intersection at P={intersect:,.0f} params")
+                except Exception as e:
+                    print(f"  λ={wd}: could not compute intersection ({e})")
+        else:
+            print(f"  λ={wd}: insufficient data for intersection (grok={len(grok_pts)}, speed={len(speed_pts)})")
+
+        intersections[wd] = intersect
+
+    ax.set_xscale('log')
+    ax.set_yscale('log')
+    ax.set_xlabel('Parameter count', fontsize=13)
+    ax.set_ylabel('Epochs', fontsize=13)
+    ax.set_title(title or 'T_gen (dashed) and T_mem (solid) by weight decay', fontsize=13)
+    ax.legend(fontsize=9, ncol=2)
+    ax.grid(True, which='both', alpha=0.3)
+    plt.tight_layout()
+
+    if save_path:
+        os.makedirs(os.path.dirname(os.path.abspath(save_path)), exist_ok=True)
+        plt.savefig(save_path, bbox_inches='tight')
+        print(f"Saved multi-wd overlay to {save_path}")
+    if show:
+        plt.show()
+    else:
+        plt.close()
+
+    return intersections
+
+
 def plot_delay_vs_memorization(
     results: List[Dict],
     mem_key: str = 'mem_u_trace',

@@ -34,6 +34,7 @@ from plotting import (
     compute_critical_params,
     compute_critical_params_from_speed,
     plot_grokking_delay_with_speed,
+    plot_grokking_delay_with_speed_multi_wd,
     plot_learning_speed_curves,
     plot_speed_vs_model_size,
     plot_combined_speed_analysis,
@@ -1303,6 +1304,7 @@ def aggregate_speed_results_across_seeds(
     filters: dict,
     batch_size: int = 512,
     saturation_threshold: float = 99.0,
+    dims=None,
 ) -> list:
     """Load and aggregate speed results across all seeds for a given prime.
 
@@ -1325,6 +1327,10 @@ def aggregate_speed_results_across_seeds(
 
     if not entries:
         return []
+
+    if dims is not None:
+        dims_set = set(dims)
+        entries = [e for e in entries if _nested_get(e, 'dim') in dims_set]
 
     seeds_seen = set()
     for e in entries:
@@ -1490,11 +1496,18 @@ def _primes_from_match_table(args):
         # Load speed traces
         if os.path.exists(m['speed_npz_path']):
             s = np.load(m['speed_npz_path'], allow_pickle=True)
+            if 'saturation_epoch' in s.files:
+                sat_epoch = float(s['saturation_epoch'])
+            else:
+                # Legacy files lack saturation_epoch; derive from step count
+                sat_epoch = (float(s['saturation_step']) * float(s['epochs_trained'])
+                             / float(s['total_steps']))
             speed_entry = {
+                'dim': int(s['dim']),
                 'param_count': m['param_count_speed'],
                 'n_samples': m['n_equiv'],
                 'dataset_bits': m['dataset_bits'],
-                'saturation_epoch': float(s['saturation_epoch']),
+                'saturation_epoch': sat_epoch,
                 'capacity_fraction': m['capacity_fraction'],
             }
             speed_data.setdefault(p, []).append(speed_entry)
@@ -1519,22 +1532,23 @@ def _primes_from_match_table(args):
     # We reconstruct a minimal args-like structure and call into the relevant
     # plotting utilities directly.
     if args.speed:
-        all_speed_results = []
+        all_speed_results = {}
         for p in primes_list:
             for se in speed_data.get(p, []):
-                all_speed_results.append({
-                    'p': p,
+                key = (p, se['dim'])
+                all_speed_results.setdefault(key, []).append({
                     'param_count': se['param_count'],
+                    'n_samples': se['n_samples'],
                     'dataset_bits': se['dataset_bits'],
                     'saturation_epoch': se['saturation_epoch'],
                     'capacity_fraction': se['capacity_fraction'],
                 })
         if all_speed_results:
+            save_path = os.path.join(plot_dir, 'saturation_epochs_vs_params.pdf') if getattr(args, 'save', False) else None
             plot_saturation_epochs_vs_params(
                 all_speed_results,
-                save=getattr(args, 'save', False),
+                save_path=save_path,
                 show=show,
-                plot_dir=plot_dir,
             )
         else:
             print("No speed data found in match table.")
@@ -1589,6 +1603,14 @@ def primes(args):
     if len(primes_list) < 2:
         print("Warning: primes command works best with multiple primes (--p p1 p2 p3 ...)")
 
+    # Resolve --dims-start/--dims-end/--dims-step into args.dims so all downstream
+    # code (aggregate_* functions, _apply_dim_filter) sees a consistent dims list.
+    if not getattr(args, 'dims', None) and getattr(args, 'dims_start', None) is not None:
+        step = getattr(args, 'dims_step', None) or 1
+        end = getattr(args, 'dims_end', None)
+        if end is not None:
+            args.dims = list(range(args.dims_start, end + 1, step))
+
     show = not args.no_show
 
     # Build ResultsIndex and shared filters once for all analysis modes
@@ -1599,7 +1621,14 @@ def primes(args):
         'depth': getattr(args, 'depth', 2),
         'heads': getattr(args, 'heads', 1),
     }
-    _add_filter(filters, 'weight_decay', getattr(args, 'weight_decay', None))
+    wd_arg = getattr(args, 'weight_decay', None)
+    wd_values = None  # None means single-wd (or unfiltered); list means multi-wd overlay
+    if wd_arg is not None:
+        wd_list = wd_arg if isinstance(wd_arg, list) else [wd_arg]
+        if len(wd_list) == 1:
+            _add_filter(filters, 'weight_decay', wd_list[0])
+        else:
+            wd_values = wd_list
     _add_filter(filters, 'dropout', getattr(args, 'dropout', None))
 
     # Create plot directory
@@ -1796,6 +1825,39 @@ def primes(args):
             n_prime, size_prime = compute_dataset_size_bits(p_prime, args.op, args.training_fraction)
             threshold_params_prime = size_prime / consts.C
 
+            # Multi-wd overlay: build per-wd series and call overlay plotter, then skip single-wd path
+            if wd_values is not None:
+                wd_series = {}
+                for wd in wd_values:
+                    wd_filters = dict(filters)
+                    wd_filters['weight_decay'] = wd
+                    wd_prime_results = aggregate_grokking_results_across_seeds(
+                        p_prime, index, wd_filters,
+                        args.threshold_train, args.threshold_val, args.saturation_threshold,
+                        use_min_delay=True, dims=getattr(args, 'dims', None)
+                    )
+                    if args.max_dim is not None:
+                        wd_prime_results = [r for r in wd_prime_results if r['dim'] <= args.max_dim]
+                    wd_speed_data = aggregate_speed_results_across_seeds(
+                        p_prime, n_prime, index, wd_filters, args.batch_size, args.saturation_threshold,
+                        dims=getattr(args, 'dims', None),
+                    )
+                    if wd_prime_results or wd_speed_data:
+                        wd_series[wd] = {'grok': wd_prime_results, 'speed': wd_speed_data}
+                    else:
+                        print(f"  Warning: No data for wd={wd}, p={p_prime}")
+                if wd_series:
+                    os.makedirs(prime_plot_dir, exist_ok=True)
+                    wd_tag = '_'.join(f'wd{w}' for w in sorted(wd_series.keys()))
+                    save_path = os.path.join(prime_plot_dir, f'delay_with_speed_p{p_prime}_multi_{wd_tag}.pdf') if args.save else None
+                    plot_grokking_delay_with_speed_multi_wd(
+                        wd_series,
+                        title=f'T_gen and T_mem by weight decay (p={p_prime})',
+                        save_path=save_path,
+                        show=show,
+                    )
+                continue
+
             # Aggregate grokking results across all seeds (computes minimum delay per config)
             # Using minimum ensures critical param is where ALL seeds grok for that param count and above
             prime_results = aggregate_grokking_results_across_seeds(
@@ -1875,7 +1937,7 @@ def primes(args):
             
             elif args.prime_fit:
                 # Fit per-prime exponential model from speed data
-                speed_data_raw = aggregate_speed_results_across_seeds(p_prime, n_prime, index, filters, args.batch_size, args.saturation_threshold)
+                speed_data_raw = aggregate_speed_results_across_seeds(p_prime, n_prime, index, filters, args.batch_size, args.saturation_threshold, dims=getattr(args, 'dims', None))
                 
                 if speed_data_raw and len(speed_data_raw) >= 2:
                     speed_params_arr = np.array([sp['param_count'] for sp in speed_data_raw if sp.get('saturation_epoch')])
@@ -1924,7 +1986,7 @@ def primes(args):
             else:
                 # Aggregate actual speed data across all seeds (default behavior)
                 print(f"Expecting speed data with {n_prime} samples for p={p_prime}, training fraction={args.training_fraction}.")
-                speed_data = aggregate_speed_results_across_seeds(p_prime, n_prime, index, filters, args.batch_size, args.saturation_threshold)
+                speed_data = aggregate_speed_results_across_seeds(p_prime, n_prime, index, filters, args.batch_size, args.saturation_threshold, dims=getattr(args, 'dims', None))
 
             if not speed_data:
                 print(f"Warning: No speed data found for p={p_prime}")
@@ -2003,7 +2065,7 @@ def primes(args):
             plot_predicted_vs_empirical_grokking(all_grokking_points, save_path=save_path, show=show, title=title)
         elif len(all_grokking_points) == 1:
             print("\nOnly one prime processed. Skipping predicted vs empirical comparison plot (requires multiple primes).")
-        else:
+        elif wd_values is None:
             print("\nWarning: No valid grokking points found for any prime")
 
     elif args.speed:
@@ -4269,7 +4331,7 @@ Examples:
 
     add_vis_output_args(primes_subparser, plot_dir_default='media/primes')
     add_vis_model_filter_args(primes_subparser)
-    add_vis_optimizer_filter_args(primes_subparser)
+    add_vis_optimizer_filter_args(primes_subparser, wd_nargs='+')
     add_vis_task_args(primes_subparser, op_default='/')
     add_vis_dim_args(primes_subparser)
 

@@ -84,10 +84,17 @@ def add_vis_model_filter_args(parser):
                         help='Filter by init scale (default: no filter)')
 
 
-def add_vis_optimizer_filter_args(parser):
-    """Optimizer filter args (None = no filter)."""
-    parser.add_argument('--weight-decay', type=float, default=None,
-                        help='Filter by weight decay (default: no filter — shows all)')
+def add_vis_optimizer_filter_args(parser, wd_nargs=None):
+    """Optimizer filter args (None = no filter).
+
+    Args:
+        wd_nargs: nargs for --weight-decay. Pass '+' to allow multiple values
+                  (used by the primes subparser for multi-wd overlays).
+    """
+    parser.add_argument('--weight-decay', type=float, nargs=wd_nargs, default=None,
+                        help='Weight decay filter. Single value filters results; '
+                             'multiple values (when wd_nargs="+") overlay separate '
+                             'curve sets per value. Default: no filter (shows all).')
 
 
 def add_vis_task_args(parser, *, op_default='/', op_choices=None):
