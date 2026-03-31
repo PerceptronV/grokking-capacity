@@ -2770,6 +2770,12 @@ is roughly constant across primes, supporting that hypothesis.
         from scipy.interpolate import interp1d
         import pandas as pd
 
+        # ONE-OFF: old data has mismatched weight decay (speed=0.01, groks=1.0)
+        groks_filters = dict(filters)
+        groks_filters['weight_decay'] = 1.0
+        speed_filters = dict(filters)
+        speed_filters['weight_decay'] = 0.01
+
         # =================================================================
         # STEP 1: Collect data (same as --correlation)
         # =================================================================
@@ -2785,7 +2791,7 @@ is roughly constant across primes, supporting that hypothesis.
 
         for p_prime in primes_list:
             n_prime, size_prime = compute_dataset_size_bits(p_prime, args.op, args.training_fraction)
-            speed_data_temp = aggregate_speed_results_across_seeds(p_prime, n_prime, index, filters, args.batch_size, args.saturation_threshold)
+            speed_data_temp = aggregate_speed_results_across_seeds(p_prime, n_prime, index, speed_filters, args.batch_size, args.saturation_threshold)
 
             for sp in speed_data_temp:
                 if sp.get('saturation_epoch') is not None and sp['saturation_epoch'] > 0:
@@ -2822,7 +2828,7 @@ is roughly constant across primes, supporting that hypothesis.
             n_prime, size_prime = compute_dataset_size_bits(p_prime, args.op, args.training_fraction)
 
             prime_results = aggregate_grokking_results_across_seeds(
-                p_prime, index, filters,
+                p_prime, index, groks_filters,
                 args.threshold_train, args.threshold_val, args.saturation_threshold,
                 use_min_delay=True, dims=getattr(args, 'dims', None)
             )
@@ -2837,7 +2843,7 @@ is roughly constant across primes, supporting that hypothesis.
                     print(f"  Warning: No results found for p={p_prime} with dim <= {args.max_dim}")
                     continue
 
-            speed_data = aggregate_speed_results_across_seeds(p_prime, n_prime, index, filters, args.batch_size, args.saturation_threshold)
+            speed_data = aggregate_speed_results_across_seeds(p_prime, n_prime, index, speed_filters, args.batch_size, args.saturation_threshold)
 
             # Compute empirical critical params
             delay_data = sorted(prime_results, key=lambda x: x['param_count'])
@@ -3284,6 +3290,12 @@ is roughly constant across primes, supporting that hypothesis.
         from sklearn.model_selection import LeaveOneOut
         import pandas as pd
 
+        # ONE-OFF: old data has mismatched weight decay (speed=0.01, groks=1.0)
+        groks_filters = dict(filters)
+        groks_filters['weight_decay'] = 1.0
+        speed_filters = dict(filters)
+        speed_filters['weight_decay'] = 0.01
+
         # =================================================================
         # STEP 1: Collect data (same as --cv)
         # =================================================================
@@ -3299,7 +3311,7 @@ is roughly constant across primes, supporting that hypothesis.
 
         for p_prime in primes_list:
             n_prime, size_prime = compute_dataset_size_bits(p_prime, args.op, args.training_fraction)
-            speed_data_temp = aggregate_speed_results_across_seeds(p_prime, n_prime, index, filters, args.batch_size, args.saturation_threshold)
+            speed_data_temp = aggregate_speed_results_across_seeds(p_prime, n_prime, index, speed_filters, args.batch_size, args.saturation_threshold)
 
             for sp in speed_data_temp:
                 if sp.get('saturation_epoch') is not None and sp['saturation_epoch'] > 0:
@@ -3324,7 +3336,7 @@ is roughly constant across primes, supporting that hypothesis.
             n_prime, size_prime = compute_dataset_size_bits(p_prime, args.op, args.training_fraction)
 
             prime_results = aggregate_grokking_results_across_seeds(
-                p_prime, index, filters,
+                p_prime, index, groks_filters,
                 args.threshold_train, args.threshold_val, args.saturation_threshold,
                 use_min_delay=True, dims=getattr(args, 'dims', None)
             )
@@ -3337,7 +3349,7 @@ is roughly constant across primes, supporting that hypothesis.
                 if not prime_results:
                     continue
 
-            speed_data = aggregate_speed_results_across_seeds(p_prime, n_prime, index, filters, args.batch_size, args.saturation_threshold)
+            speed_data = aggregate_speed_results_across_seeds(p_prime, n_prime, index, speed_filters, args.batch_size, args.saturation_threshold)
 
             # Compute empirical critical params
             delay_data = sorted(prime_results, key=lambda x: x['param_count'])
@@ -4141,10 +4153,12 @@ def hyper(args):
     # Base filters — everything except the swept hyperparameter
     base_filters = {
         'operation': _legacy_filter(args.op, '/'),
-        'depth': args.depth,
-        'heads': args.heads,
         'p': p,
     }
+    if hyper_name != 'depth':
+        base_filters['depth'] = args.depth
+    if hyper_name != 'heads':
+        base_filters['heads'] = args.heads
     if hyper_name != 'train_fraction':
         base_filters['train_fraction'] = _legacy_filter(args.training_fraction, 0.5)
 
@@ -4573,7 +4587,8 @@ Examples:
     hyper_subparser.add_argument('--p', type=int, required=True,
                                  help='Prime number')
     hyper_subparser.add_argument('--hyper', type=str, required=True,
-                                 choices=['weight_decay', 'dropout', 'init_scale', 'lr', 'train_fraction'],
+                                 choices=['weight_decay', 'dropout', 'init_scale', 'lr', 'train_fraction',
+                                          'depth', 'heads'],
                                  help='Hyperparameter to sweep over')
     hyper_subparser.add_argument('--lr', type=float, default=consts.GROKKING_DEFAULTS['lr'],
                                  help=f'Fix learning rate filter (default: {consts.GROKKING_DEFAULTS["lr"]})')
