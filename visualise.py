@@ -319,6 +319,7 @@ def _build_speed_filters(args):
     }
     _add_filter(filters, 'weight_decay', getattr(args, 'weight_decay', None))
     _add_filter(filters, 'dropout', getattr(args, 'dropout', None))
+    _add_filter(filters, 'init_scale', getattr(args, 'init_scale', None))
     return filters
 
 
@@ -719,6 +720,39 @@ def groks(args):
             save_path = os.path.join(plot_dir, f'delay_and_mem_vs_params_p{p}.pdf') if args.save else None
             plot_delay_and_memorization_vs_params(results, threshold_train=args.threshold_train, threshold_val=args.threshold_val,
                                                  save_path=save_path, show=show)
+
+    if args.norm_delay:
+        nd_params, nd_values = [], []
+        for r in results:
+            train_epoch, val_epoch, delay = calculate_grokking_delay(
+                r['train_acc'], r['val_acc'], args.threshold_train, args.threshold_val
+            )
+            if train_epoch is None or train_epoch == 0:
+                continue
+            nd_params.append(r['param_count'])
+            nd_values.append(delay / train_epoch)
+
+        if nd_params:
+            fig, ax = plt.subplots(figsize=(8, 5))
+            ax.scatter(nd_params, nd_values, zorder=3)
+            ax.plot(nd_params, nd_values)
+            ax.axhline(0, color='grey', linewidth=0.8, linestyle='--')
+            ax.set_xscale('log')
+            ax.set_xlabel('Parameter count')
+            ax.set_ylabel('Normalised delay  (delay / train_epoch)')
+            ax.set_title(f'Normalised grokking delay  p={p}')
+            ax.grid(True, alpha=0.3)
+            plt.tight_layout()
+            if args.save:
+                os.makedirs(plot_dir, exist_ok=True)
+                save_path = os.path.join(plot_dir, f'norm_delay_p{p}.pdf')
+                plt.savefig(save_path, bbox_inches='tight')
+            if show:
+                plt.show()
+            else:
+                plt.close()
+        else:
+            print("Warning: no results with valid train_epoch for normalised delay plot.")
 
     if args.integral:
         # Integral plot
@@ -4333,6 +4367,8 @@ Examples:
                        help='Plot training and validation in separate subplots')
     grok_subparser.add_argument('--delay', action='store_true',
                        help='Plot grokking delay vs parameter count')
+    grok_subparser.add_argument('--norm-delay', action='store_true',
+                       help='Plot normalised grokking delay (delay / train_epoch) vs parameter count')
     grok_subparser.add_argument('--integral', action='store_true',
                        help='Plot grokking integral vs parameter count (sum of min(train_acc - val_acc, 0) after train reaches threshold)')
     grok_subparser.add_argument('--critical', action='store_true',
