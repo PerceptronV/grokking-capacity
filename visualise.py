@@ -342,6 +342,33 @@ def _build_capacity_filters(args, p):
     return filters
 
 
+def _nondefault_vis_suffix(args):
+    """Return a filename suffix encoding non-default hyperparam filter values.
+
+    Follows the _wd/_do/_is/_depth/_heads naming convention.  Only non-default
+    values are included so that baseline runs keep clean filenames.
+    """
+    parts = []
+    wd = getattr(args, 'weight_decay', None)
+    if wd is not None:
+        wd_list = wd if isinstance(wd, list) else [wd]
+        if len(wd_list) == 1 and wd_list[0] != consts.GROKKING_DEFAULTS['weight_decay']:
+            parts.append(f'wd{wd_list[0]}')
+    do = getattr(args, 'dropout', None)
+    if do is not None and do != consts.GROKKING_DEFAULTS['dropout']:
+        parts.append(f'do{do}')
+    is_ = getattr(args, 'init_scale', None)
+    if is_ is not None and is_ != 1.0:
+        parts.append(f'is{is_}')
+    depth = getattr(args, 'depth', 2)
+    if depth != 2:
+        parts.append(f'depth{depth}')
+    heads = getattr(args, 'heads', 1)
+    if heads != 1:
+        parts.append(f'heads{heads}')
+    return ('_' + '_'.join(parts)) if parts else ''
+
+
 def _apply_dim_filter(entries, args, index):
     """Post-filter entries by --dims or --dims-start/end/step."""
     if args.dims:
@@ -814,7 +841,7 @@ def groks(args):
             print(f"Warning: No speed data found for p={p} with n_samples≈{n}")
 
         # Plot the speed-grok intersect graph
-        save_path = os.path.join(plot_dir, f'delay_with_speed_p{p}.pdf') if args.save else None
+        save_path = os.path.join(plot_dir, f'delay_with_speed_p{p}{_nondefault_vis_suffix(args)}.pdf') if args.save else None
         plot_grokking_delay_with_speed(
             results,
             speed_data,
@@ -1665,6 +1692,7 @@ def primes(args):
         else:
             wd_values = wd_list
     _add_filter(filters, 'dropout', getattr(args, 'dropout', None))
+    _add_filter(filters, 'init_scale', getattr(args, 'init_scale', None))
 
     # Create plot directory
     plot_dir = args.plot_dir
@@ -2026,13 +2054,14 @@ def primes(args):
             if not speed_data:
                 print(f"Warning: No speed data found for p={p_prime}")
 
-            # Determine filename suffix based on method
+            # Determine filename suffix based on method and non-default hyperparams
             if args.global_fit:
                 filename_suffix = '_gf'
             elif args.prime_fit:
                 filename_suffix = '_pf'
             else:
                 filename_suffix = ''
+            filename_suffix += _nondefault_vis_suffix(args)
 
             # Plot the speed-grok intersect graph for this prime
             os.makedirs(prime_plot_dir, exist_ok=True)
@@ -2085,7 +2114,7 @@ def primes(args):
             print("Plotting predicted vs empirical grokking points")
             print(f"{'='*80}")
 
-            # Determine filename suffix based on method
+            # Determine filename suffix based on method and non-default hyperparams
             if args.global_fit:
                 suffix = '_global_fit'
                 title = 'Predicted (Global Exp Fit) vs Empirical Grokking Points'
@@ -2095,7 +2124,8 @@ def primes(args):
             else:
                 suffix = ''
                 title = None  # Use default title
-            
+            suffix += _nondefault_vis_suffix(args)
+
             save_path = os.path.join(plot_dir, f'predicted_vs_empirical_grokking{suffix}.pdf') if args.save else None
             plot_predicted_vs_empirical_grokking(all_grokking_points, save_path=save_path, show=show, title=title)
         elif len(all_grokking_points) == 1:
