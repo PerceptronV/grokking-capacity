@@ -304,7 +304,9 @@ def _build_groks_filters(args, p):
     }
     _add_filter(filters, 'weight_decay', getattr(args, 'weight_decay', None))
     _add_filter(filters, 'dropout', getattr(args, 'dropout', None))
-    _add_filter(filters, 'init_scale', getattr(args, 'init_scale', None))
+    _is = getattr(args, 'init_scale', None)
+    if _is is not None:
+        filters['init_scale'] = _legacy_filter(_is, 1.0)
     return filters
 
 
@@ -319,7 +321,9 @@ def _build_speed_filters(args):
     }
     _add_filter(filters, 'weight_decay', getattr(args, 'weight_decay', None))
     _add_filter(filters, 'dropout', getattr(args, 'dropout', None))
-    _add_filter(filters, 'init_scale', getattr(args, 'init_scale', None))
+    _is = getattr(args, 'init_scale', None)
+    if _is is not None:
+        filters['init_scale'] = _legacy_filter(_is, 1.0)
     return filters
 
 
@@ -338,7 +342,9 @@ def _build_capacity_filters(args, p):
         filters['operation'] = op
     _add_filter(filters, 'dropout', getattr(args, 'dropout', None))
     _add_filter(filters, 'weight_decay', getattr(args, 'weight_decay', None))
-    _add_filter(filters, 'init_scale', getattr(args, 'init_scale', None))
+    _is = getattr(args, 'init_scale', None)
+    if _is is not None:
+        filters['init_scale'] = _legacy_filter(_is, 1.0)
     return filters
 
 
@@ -1692,7 +1698,9 @@ def primes(args):
         else:
             wd_values = wd_list
     _add_filter(filters, 'dropout', getattr(args, 'dropout', None))
-    _add_filter(filters, 'init_scale', getattr(args, 'init_scale', None))
+    _is = getattr(args, 'init_scale', None)
+    if _is is not None:
+        filters['init_scale'] = _legacy_filter(_is, 1.0)
 
     # Create plot directory
     plot_dir = args.plot_dir
