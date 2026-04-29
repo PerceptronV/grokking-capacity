@@ -4237,12 +4237,14 @@ def hyper(args):
     fixed_hypers = {
         'weight_decay': getattr(args, 'weight_decay', None),
         'dropout':      getattr(args, 'dropout', None),
-        'init_scale':   getattr(args, 'init_scale', None),
         'lr':           getattr(args, 'lr', None),
     }
     for key, val in fixed_hypers.items():
         if key != hyper_name and val is not None:
             base_filters[key] = val
+    _is = getattr(args, 'init_scale', None)
+    if hyper_name != 'init_scale' and _is is not None:
+        base_filters['init_scale'] = _legacy_filter(_is, 1.0)
 
     # Discover all values of the swept hyperparameter from groks entries
     candidate_entries = index.query(experiment_type='groks', **base_filters)
