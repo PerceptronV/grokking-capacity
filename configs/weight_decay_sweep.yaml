@@ -19,7 +19,7 @@ defaults:
 experiments:
   capacity:
     type: capacity
-    weight_decay: 1.0
+    weight_decay: [0.01, 0.1, 1.0]
     dropout: 0.0
     primes: [113]
     dims: [10, 12, 14, 16, 18, 20, 22]
@@ -28,14 +28,13 @@ experiments:
 
   speed:
     type: speed
-    # weight_decay swept jointly with groks — the confound is eliminated
-    weight_decay: [0.01, 0.1, 0.3, 1.0]
+    weight_decay: [0.0, 0.01, 0.03, 0.1, 0.3, 1.0, 3.0]
     n_samples: auto
     dims: [20, 24, 28, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 200, 256]
 
   groks:
     type: groks
-    weight_decay: [0.01, 0.1, 0.3, 1.0]
+    weight_decay: [0.0, 0.01, 0.03, 0.1, 0.3, 1.0, 3.0]
     dim_ranges:
       - {start: 20, end: 32, step: 4}
       - {start: 40, end: 64, step: 8}

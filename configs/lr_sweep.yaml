@@ -19,13 +19,16 @@ defaults:
 experiments:
   speed:
     type: speed
-    lr: [0.0003, 0.001, 0.003]
+    # Half-decade log-spaced around the Power et al. baseline (1e-3).
+    # 1e-4 = too-slow floor; 3e-4 / 1e-3 / 3e-3 = standard regime;
+    # 1e-2 = upper edge where Thilak et al. observed slingshot dynamics.
+    lr: [0.0001, 0.0003, 0.001, 0.003, 0.01]
     n_samples: auto
     dims: [20, 24, 28, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 200, 256]
 
   groks:
     type: groks
-    lr: [0.0003, 0.001, 0.003]
+    lr: [0.0001, 0.0003, 0.001, 0.003, 0.01]
     dim_ranges:
       - {start: 20, end: 32, step: 4}
       - {start: 40, end: 64, step: 8}
