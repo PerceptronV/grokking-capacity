@@ -19,7 +19,7 @@ dependencies = [
     "seaborn>=0.12.0",
     "pandas>=2.0.0",
     "scikit-learn>=1.3.0",
-    "wallow @ file:///Users/yiding/Desktop/Research/wallow",
+    "wallow>=0.1.0",
 ]
 
 [project.optional-dependencies]
