@@ -21,6 +21,7 @@ experiments:
   capacity:
     type: capacity
     operation: random   # use random-target data, not the modular task
+    primes: [113]
     dims: [16, 24]
     n_samples: [1000, 3000, 9300]
 
