@@ -171,8 +171,13 @@ cython_debug/
 .pypirc
 
 # Data
-data/
-media/
+/data/
+/media/
+
+# wallow registry (recreated from wallow.toml)
+runs.db
+runs.db-wal
+runs.db-shm
 
 # OSX
 .DS_Store

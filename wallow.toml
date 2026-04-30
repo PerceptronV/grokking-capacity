@@ -1,0 +1,219 @@
+[project]
+name = "torch_grokking"
+description = "Grokking experiments — capacity, speed, groks — registered + dedup'd by wallow."
+
+# ---- identifying fields ----------------------------------------------------
+# Together these define one experiment. Two runs with the same identifying
+# tuple dedup against each other. Identifying fields must be int/float/string/bool
+# and can never be NULL; use a TOML default to make a field optional in callers.
+
+[identifying.experiment_type]
+type = "string"
+doc = "'capacity' | 'speed' | 'groks'."
+
+[identifying.p]
+type = "int"
+doc = "Modular prime. Vocabulary size = p + 2."
+
+[identifying.operation]
+type = "string"
+default = "/"
+doc = "Modular op. Always '/'/'*'/'+'/'-'. For speed runs this is the *matched* op (informational, used by analysis); the speed dataset is itself random."
+
+[identifying.train_fraction]
+type = "float"
+default = 0.5
+
+[identifying.split_type]
+type = "string"
+default = "random"
+doc = "'random' | 'sequential' | 'alternating'."
+
+[identifying.dataset_type]
+type = "string"
+default = "random"
+doc = "'random' for speed and capacity-random; 'modular' for groks and capacity-modular. Distinguishes random-target capacity from task-data capacity."
+
+[identifying.n_samples]
+type = "int"
+doc = "Training-set size. Always populated: capacity/speed get it directly; groks runs compute floor(train_fraction * (p*(p-1) if op=='/' else p*p))."
+
+[identifying.dim]
+type = "int"
+
+[identifying.depth]
+type = "int"
+default = 2
+
+[identifying.heads]
+type = "int"
+default = 1
+
+[identifying.dropout]
+type = "float"
+default = 0.2
+
+[identifying.init_scale]
+type = "float"
+default = 1.0
+
+[identifying.lr]
+type = "float"
+default = 0.001
+
+[identifying.weight_decay]
+type = "float"
+default = 1.0
+
+[identifying.beta1]
+type = "float"
+default = 0.9
+
+[identifying.beta2]
+type = "float"
+default = 0.98
+
+[identifying.batch_size]
+type = "int"
+default = 512
+
+[identifying.max_epochs]
+type = "int"
+default = 5000
+
+[identifying.seed]
+type = "int"
+default = 42
+
+[identifying.architecture_family]
+type = "string"
+default = "transformer_gated"
+doc = "Marker for the model family. Bumping this is the cheapest way to make MLP / RoPE-free / LayerNorm variants dedup separately."
+
+# ---- annotating fields -----------------------------------------------------
+# Recorded *about* a run rather than defining it. These can be edited freely
+# (via on_duplicate='overwrite') without breaking dedup.
+
+[annotating.status]
+type = "string"
+indexed = true
+doc = "'pending' | 'running' | 'completed' | 'failed'."
+
+[annotating.run_uuid]
+type = "string"
+indexed = true
+doc = "Random uuid generated at first claim. Used as the directory name under data/<experiment_type>/<run_uuid>/."
+
+[annotating.artefacts_dir]
+type = "path"
+
+[annotating.npz_path]
+type = "path"
+
+[annotating.started_at]
+type = "datetime"
+indexed = true
+
+[annotating.completed_at]
+type = "datetime"
+
+[annotating.wallclock_seconds]
+type = "float"
+
+[annotating.git_hash]
+type = "string"
+indexed = true
+
+[annotating.git_dirty]
+type = "bool"
+
+[annotating.gpu_type]
+type = "string"
+indexed = true
+doc = "Short label: 'H100' | 'A100' | 'mps' | 'cpu' | etc."
+
+[annotating.gpu_count]
+type = "int"
+
+[annotating.host]
+type = "string"
+indexed = true
+
+[annotating.node_rank]
+type = "int"
+
+[annotating.param_count]
+type = "int"
+indexed = true
+doc = "Number of trainable parameters. Required by matching."
+
+[annotating.dataset_bits]
+type = "float"
+doc = "n_samples * log2(p + 2). Stored alongside results for matching."
+
+[annotating.n_equiv]
+type = "int"
+doc = "Provenance for speed runs matched against a (p, operation, train_fraction)."
+
+[annotating.matched_to]
+type = "string"
+doc = "Optional matching breadcrumb."
+
+[annotating.capacity_constant_used]
+type = "float"
+
+[annotating.capacity_constant_source]
+type = "string"
+doc = "e.g. 'consts.C=2.16' or 'measured(depth=4,wd=1.0,...)'."
+
+[annotating.error_excerpt]
+type = "string"
+doc = "Truncated traceback when status='failed'."
+
+# Per-experiment result fields. All experiments share the same row schema, so
+# each result field is optional (NULL when not relevant for that experiment_type).
+
+[annotating.final_acc]
+type = "float"
+indexed = true
+
+[annotating.final_loss]
+type = "float"
+
+[annotating.epochs_trained]
+type = "int"
+
+# capacity-only
+[annotating.final_bits_per_example]
+type = "float"
+
+[annotating.total_bits_memorized]
+type = "float"
+indexed = true
+
+# speed-only
+[annotating.saturation_step]
+type = "int"
+indexed = true
+
+[annotating.saturation_epoch]
+type = "float"
+
+[annotating.saturated]
+type = "bool"
+
+# groks-only
+[annotating.final_train_acc]
+type = "float"
+
+[annotating.final_val_acc]
+type = "float"
+indexed = true
+
+[annotating.grokking_epoch]
+type = "int"
+indexed = true
+doc = "First epoch where val_acc >= early_stopping_val. NULL if never reached."
+
+[annotating.grokking_threshold]
+type = "float"

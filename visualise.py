@@ -49,11 +49,11 @@ from plotting import (
     plot_critical_params_vs_dataset_size,
     calculate_grokking_delay
 )
-from utils import compute_dataset_size_bits
-import consts
+from torch_grokking.utils.compute import compute_dataset_size_bits
+from torch_grokking import consts
 from results import ResultsIndex
-from matching import load_match_table
-from cli_args import (
+from torch_grokking.analysis.matching import load_match_table
+from torch_grokking.utils.cli_args import (
     add_vis_output_args,
     add_vis_file_selection_args,
     add_vis_model_filter_args,

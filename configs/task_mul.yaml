@@ -17,8 +17,8 @@ defaults:
   beta2: 0.98
   batch_size: 512
   max_epochs: 5000
-  primes: [97, 113, 139]
-  seeds: [42, 43, 44]
+  primes: [97, 107, 113, 127, 139, 149]
+  seeds: [42, 43, 44, 45, 46]
 
 experiments:
   speed_mul:

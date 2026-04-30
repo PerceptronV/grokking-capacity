@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "torch_grokking"
+version = "0.2.0"
+description = "Empirical study of grokking onset, predicted from memorisation and generalisation speeds."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "torch>=2.0.0",
+    "numpy>=1.24.0",
+    "tqdm>=4.65.0",
+    "pyyaml>=6.0",
+    "psutil>=7.0.0",
+    "scipy>=1.15.0",
+    "matplotlib>=3.7.0",
+    "seaborn>=0.12.0",
+    "pandas>=2.0.0",
+    "scikit-learn>=1.3.0",
+    "wallow @ file:///Users/yiding/Desktop/Research/wallow",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[project.scripts]
+tg-capacity = "torch_grokking.experiments.capacity:main"
+tg-speed = "torch_grokking.experiments.speed:main"
+tg-groks = "torch_grokking.experiments.groks:main"
+tg-dispatch = "torch_grokking.dispatch.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+torch_grokking = ["py.typed"]

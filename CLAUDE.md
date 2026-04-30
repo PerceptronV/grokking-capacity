@@ -2,137 +2,117 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Install
+
+```bash
+pip install -e .   # editable; pulls wallow from /Users/yiding/Desktop/Research/wallow
+```
+
+Run-tracking lives in a SQLite registry (`runs.db`) defined by `wallow.toml`.
+Both paths can be overridden via env vars: `TG_WALLOW_DB`, `TG_WALLOW_TOML`,
+`TG_DATA_DIR`. The schema auto-creates on first use.
+
 ## Running experiments
 
 ```bash
 # Run a full experiment suite (dispatches jobs in parallel across GPUs)
-python main.py --config configs/weight_decay_sweep.yaml
+tg-dispatch --config configs/weight_decay_sweep.yaml
 
-# Dry-run to see what commands would be issued
-python main.py --config configs/weight_decay_sweep.yaml --dry-run
+# Dry-run (does not touch the wallow DB)
+tg-dispatch --config configs/weight_decay_sweep.yaml --dry-run
 
-# Re-run even if results already exist
-python main.py --config configs/depth_scaling.yaml --force
+# Re-run even if a row already exists with status='completed'
+tg-dispatch --config configs/depth_scaling.yaml --force
 
 # Run a single experiment directly
-python groks.py --p 113 --seed 42 --dims 64 128 --operation / --weight-decay 1.0 --depth 2 --heads 1
-python speed.py --p 113 --seed 42 --dims 64 --samples-start 6328 --samples-end 6328 --samples-steps 1 --weight-decay 1.0
-python capacity.py --p 113 --seed 42 --dims 10 12 14 --samples-start 1000 --samples-end 9300 --samples-steps 8
+tg-groks    --p 113 --seed 42 --dim 128 --operation / --weight-decay 1.0 --depth 2 --heads 1
+tg-speed    --p 113 --seed 42 --dim 64 --n-samples 6328 --weight-decay 1.0
+tg-capacity --p 113 --seed 42 --dim 10 --n-samples 9300 --dataset-type random
 ```
 
 ## Multi-node clusters (e.g. Lambda 2×8 H100)
 
-`main.py` uses `--node-rank` / `--num-nodes` to partition the command list across nodes. Each node runs an interleaved shard (`i % num_nodes == node_rank`) of each experiment-type batch, preserving the `capacity → speed → groks` ordering within each node. The match table is built only on node-rank 0. Both nodes must share a filesystem (NFS) so that file-based existence checks are consistent.
-
-Run simultaneously on each node:
+`tg-dispatch` partitions the expanded command list across nodes via
+`--node-rank` / `--num-nodes` (interleaved by `i % num_nodes == node_rank`),
+preserving the `capacity → speed → groks` ordering within each node. The
+match table is built only on node-rank 0. Both nodes must share `runs.db`
+(typically over NFS) so the wallow UNIQUE constraint dedups across nodes.
 
 ```bash
 # Node 0
-python main.py --config configs/weight_decay_sweep.yaml --num-nodes 2 --node-rank 0
+tg-dispatch --config configs/weight_decay_sweep.yaml --num-nodes 2 --node-rank 0
 
 # Node 1
-python main.py --config configs/weight_decay_sweep.yaml --num-nodes 2 --node-rank 1
+tg-dispatch --config configs/weight_decay_sweep.yaml --num-nodes 2 --node-rank 1
 ```
 
-Preview each node's shard before running:
+Workers per GPU default to 4 for H100 (based on compute capability). Override
+with `--workers-per-gpu` if needed.
+
+## Visualisation (legacy — read-only against `data/.legacy-newer/`)
+
+`visualise.py` and `plotting.py` are still root-level legacy modules; they
+read `.meta.json` sidecars via `results.ResultsIndex`. Until they are
+refactored to query wallow, point them at the legacy data dir:
 
 ```bash
-python main.py --config configs/weight_decay_sweep.yaml --num-nodes 2 --node-rank 0 --dry-run
-python main.py --config configs/weight_decay_sweep.yaml --num-nodes 2 --node-rank 1 --dry-run
-```
-
-Workers per GPU default to 4 for H100 (based on compute capability). Override with `--workers-per-gpu` if needed:
-
-```bash
-python main.py --config configs/weight_decay_sweep.yaml --num-nodes 2 --node-rank 0 --workers-per-gpu 6
-```
-
-## Visualisation
-
-```bash
-python visualise.py capacity --all --p 127 --save --no-show --curves
-python visualise.py primes --p 97 101 103 107 109 113 127 131 137 139 --threshold-val 98 --max-dim 200 --save --no-show --correlation
-python visualise.py primes --p 97 101 ... --save --no-show --speed
-python visualise.py primes --p 97 101 ... --save --no-show --groks
-```
-
-## Data migration
-
-```bash
-# Migrate legacy data to current path format (idempotent)
-python scripts/migrate_legacy_data.py --standardise-only
-
-# Full migration (legacy → op-in-dir → standardised)
-python scripts/migrate_legacy_data.py
+python visualise.py primes --data-dir data/.legacy-newer --p 97 101 113 ...
 ```
 
 ## Architecture overview
 
 The paper's central claim is that grokking onset is predicted by the intersection of memorisation speed and generalisation speed. Three experiment types generate the data:
 
-- `**capacity.py**` — Measures `C` (bits per parameter). Trains on random-target data to saturation; fits the slope of bits-memorised vs param-count. The constant `C = 2.16` in `consts.py` is the empirical result for the standard architecture.
-- `**speed.py**` — Measures `T_mem` (memorisation speed). Counts steps to saturation on random-target data of a fixed size (`n_equiv`), which is the equivalent-complexity dataset computed from the modular arithmetic task.
-- `**groks.py**` — Measures `T_gen` (generalisation speed). Trains on modular arithmetic; records the epoch when validation accuracy first crosses the grokking threshold.
+- `**experiments/capacity.py**` — Measures `C` (bits per parameter). Trains on random-target data to saturation; the slope of bits-memorised vs param-count is fit by `analysis.capacity_constant.measure_capacity_constant`. The constant `C = 2.16` in `consts.py` is the empirical result for the standard architecture.
+- `**experiments/speed.py**` — Measures `T_mem` (memorisation speed). Counts steps to saturation on random-target data of a fixed size (`n_equiv`).
+- `**experiments/groks.py**` — Measures `T_gen` (generalisation speed). Trains on modular arithmetic; records the epoch when validation accuracy first crosses the grokking threshold.
 
-`**main.py**` orchestrates suites of these experiments via YAML configs. It expands parameter grids, skips already-existing results, and dispatches jobs in parallel across GPUs. Dependency order within a suite is always `capacity → speed → groks`.
+`**dispatch/main.py**` (entry point `tg-dispatch`) orchestrates suites via YAML configs. It expands parameter grids and, for each combo, claims a wallow row (`return_existing` → check `status` → skip or dispatch). Workers receive the claimed `--run-uuid` and write artefacts to `data/<exp_type>/<run_uuid>/trace.npz`. Dependency order within a suite is always `capacity → speed → groks`.
 
-`**matching.py**` pairs groks and speed results by `(param_count, n_equiv)` and writes a `matches.json` table used for the paper's plots.
+`**analysis/matching.py**` queries wallow for completed groks/speed rows and pairs them by `(p, operation, train_fraction, depth, heads, dropout, init_scale, seed, n_samples ≈ n_equiv, param_count ≈ groks.param_count)`. Output is `data/<suite_name>/matches.json`.
 
-`**results.py**` (`ResultsIndex`) is a queryable index over all `.meta.json` sidecar files. Each `.npz` result file has a paired `.meta.json` with full provenance (hyperparameters, git hash, timestamps).
+`**registry/**` is the wallow integration layer:
+- `store.py` — cached `Store` and `Schema` accessors.
+- `identifying.py` — `build_identifying()` constructs the identifying tuple per experiment type (derives `n_samples` for groks, picks `dataset_type='random'/'modular'`).
+- `paths.py` — flat layout helpers: `data/<exp_type>/<run_uuid>/`.
+- `provenance.py` — host / gpu_type / git info collector.
+- `lifecycle.py` — `claim()` / `run_lifecycle()` helpers wrap the worker's claim → start → finalise/fail flow.
 
-`**experiment.py**` (`ExperimentConfig`, `save_run`) defines the standard metadata schema written to every `.meta.json`.
+## Run registry (wallow)
 
-## File/directory naming
+`wallow.toml` is the source of truth for the schema. Two field categories:
 
-Every result lives under `data/{type}/` with:
+- **Identifying** — composite UNIQUE constraint. Two runs with the same identifying tuple are the same experiment.
+- **Annotating** — recorded *about* a run; freely overwritable. Includes `status`, `run_uuid`, paths, provenance (`host`, `gpu_type`, `git_hash`, `wallclock_seconds`), and per-experiment results.
 
-- **Directory**: `p{p}_op_{op}_seed{seed}[_split{split_type}]`
-- **Filename**: `{type}_dim{dim}_depth{depth}_heads{heads}_wd{wd}[_tf{tf}][_is{is}][_do{do}][_samples{n}].npz`
+To inspect a run: `wallow inspect <id>`. To add a hyperparameter: edit `wallow.toml` (and `registry/identifying.IDENTIFYING_FIELDS`), then `wallow migrate generate "..."` and `wallow migrate apply` (Alembic-managed once set up).
 
-`_op_safe()` maps operation symbols: `/`→`div`, `*`→`mul`, `+`→`add`, `-`→`sub`.
+## File / directory naming
 
-**Naming convention philosophy:** filenames are human-readable and encode the hyperparameters that identify a run. New hyperparameters follow the *optional suffix with default* pattern: the suffix is **omitted when the value equals the default** and included otherwise. This gives zero migration cost — existing files are untouched, and new runs at non-default values get a distinguishing suffix automatically.
+`data/<experiment_type>/<run_uuid>/trace.npz` (plus any extra artefacts in the same dir, e.g. `model.pt` from `tg-groks --save-model`). The `run_uuid` is a 12-char random hex generated at first claim; reruns of the same identifying tuple reuse it (artefacts are overwritten in place, no orphan dirs).
 
-Current optional suffixes (all omitted at default):
-
-- `_tf{train_fraction}` — omitted when `train_fraction == 0.5`
-- `_is{init_scale}` — omitted when `init_scale == 1.0`
-- `_do{dropout}` — omitted when `dropout == 0.0` (capacity) or `dropout == 0.2` (speed, groks)
-
-Depth and heads are **always** present (never omitted even at default), because they define the architecture family rather than a hyperparameter choice.
-
-**Existence check philosophy:** all "does this run exist?" checks query `.meta.json` sidecars via `ResultsIndex.exists()`, not by reconstructing and checking filenames. This means adding a new hyperparameter requires only a one-line change to the query — no new filename generation logic and no migration branch. The `.meta.json` sidecar is the source of truth; the filename is for human readability only.
-
-For hyperparameters added after some runs were already completed (e.g. `init_scale`), legacy sidecars that predate the field are matched using a callable filter that treats `None` as the default:
+Filenames carry no semantic information — all hyperparameters live in the wallow row. To find the npz for a run, query the registry:
 
 ```python
-is_filter = (lambda x: x is None or x == init_scale) if init_scale == 1.0 else init_scale
-index.exists(..., init_scale=is_filter)
+from wallow import F
+from torch_grokking.registry import get_store
+store = get_store()
+r = store.where((F("experiment_type")=="speed") & (F("dim")==64) & (F("p")==113)).first()
+print(r.npz_path)
 ```
-
-## Visualiser filter defaults
-
-`visualise.py` subcommands default `--weight-decay`, `--dropout`, and `--init-scale` to the canonical values from `consts.py` for each experiment type, so omitting them filters to the original baseline experiments:
-
-| Subcommand  | `--weight-decay` | `--dropout` | `--init-scale` |
-| ----------- | ---------------- | ----------- | -------------- |
-| `groks`     | 1.0              | 0.2         | 1.0            |
-| `capacity`  | 0.01             | 0.0         | 1.0            |
-| `speed`     | 0.01             | 0.2         | 1.0            |
-| `primes`    | 1.0              | 0.2         | 1.0            |
-
-Pass explicit values to override, e.g. `--weight-decay 0.1 0.3 1.0 3.0` on `primes` to overlay all weight-decay sweep results.
 
 ## YAML config structure
 
 Each config has `name`, `defaults`, and `experiments`. Experiments have a `type` field (`groks`, `speed`, `capacity`). List-valued keys (except `seeds`, `primes`, `dims`, `dim_ranges`, `param_count_targets`, `match_by`, `n_samples`, `type`) are Cartesian-producted. `n_samples: auto` resolves to `n_equiv` for the given `(p, operation, train_fraction)`. `match_by: param_count` with `param_count_targets` selects dims by nearest param count rather than by explicit dim list.
 
+For capacity, `operation: random` (in the experiment block) selects random-target data; any of `+`, `-`, `*`, `/` selects the modular task at that op (subject to `n_samples ≤ p*(p-1)` for `/` or `p*p` otherwise).
+
 ## Key constants and defaults
 
-`consts.py` has canonical hyperparameter defaults per experiment type. Two known asymmetries:
+`consts.py` has canonical hyperparameter defaults per experiment type. Two known asymmetries (both also encoded in `wallow.toml` and `dispatch/config.py`'s `_TYPE_DEFAULTS`):
 
 - **Weight decay**: groks default `weight_decay=1.0` vs speed/capacity default `weight_decay=0.01` — historical confound corrected by `weight_decay_sweep`.
-- **Dropout**: capacity default `dropout=0.0` vs speed/groks default `dropout=0.2`. The constant `C = 2.16` in `consts.py` was measured at `dropout=0.0`; whether C is stable across dropout values is what `dropout_sweep` tests. The `_do` filename suffix uses per-type omission rules to preserve zero migration cost (see naming section above).
+- **Dropout**: capacity default `dropout=0.0` vs speed/groks default `dropout=0.2`. The constant `C = 2.16` was measured at `dropout=0.0`; whether C is stable across dropout values is what `dropout_sweep` tests.
 
 ## Revision experiments
 
