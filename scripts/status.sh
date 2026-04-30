@@ -40,7 +40,8 @@ if fails:
     print(f"\nFAILURES ({len(fails)}):")
     for r in fails[:20]:
         excerpt = (r.error_excerpt or "(no excerpt)").replace("\n", " ")[:120]
-        print(f"  [{r.experiment_type}] p={r.p} dim={r.dim} wd={r.weight_decay} lr={r.lr} seed={r.seed}")
+        print(f"  [{r.experiment_type}] p={r.p} dim={r.dim} n_samples={r.n_samples} "
+              f"wd={r.weight_decay} lr={r.lr} dropout={r.dropout} seed={r.seed}")
         print(f"      {excerpt}")
         print(f"      uuid={r.run_uuid}  npz={r.npz_path}")
 
