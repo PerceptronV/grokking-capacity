@@ -8,15 +8,23 @@ defaults:
   depth: 2
   heads: 1
   dropout: 0.2
+  lr: 0.001
   weight_decay: 1.0
   beta1: 0.9
   beta2: 0.98
   batch_size: 512
   max_epochs: 5000
-  primes: [97, 107, 113, 127, 139, 149]
-  seeds: [42, 43, 44, 45, 46]
+  primes: [97, 107, 113, 127, 139]
+  seeds: [42, 43, 44, 45]
 
 experiments:
+  capacity:
+    type: capacity
+    primes: [113]
+    dims: [10, 14, 20]
+    n_samples: [1000, 1374, 1891, 2601, 3576, 4917, 6761, 9300]
+    seeds: [42]
+  
   speed:
     type: speed
     # Half-decade log-spaced around the Power et al. baseline (1e-3).

@@ -20,8 +20,8 @@ defaults:
   beta2: 0.98
   batch_size: 512
   max_epochs: 5000
-  primes: [97, 107, 113, 127, 139, 149]
-  seeds: [42, 43, 44, 45, 46]
+  primes: [97, 107, 113, 127, 139]
+  seeds: [42, 43, 44, 45]
 
 experiments:
   # Step 1: measure C_model for each depth
@@ -30,8 +30,8 @@ experiments:
     weight_decay: 0.01
     dropout: 0.0
     primes: [113]
-    depth: [2, 3, 4, 6, 8, 10]
-    dims: [10, 12, 14, 16, 18, 20, 22]
+    depth: [2, 6, 10]
+    dims: [10, 14, 20]
     n_samples: [1000, 1374, 1891, 2601, 3576, 4917, 6761, 9300]
     seeds: [42]
 
@@ -39,7 +39,7 @@ experiments:
   speed:
     type: speed
     weight_decay: 1.0
-    depth: [2, 3, 4, 6, 8, 10]
+    depth: [2, 4, 6, 8, 10]
     n_samples: auto
     match_by: param_count
     param_count_targets: [5000, 10000, 20000, 50000, 100000, 200000, 500000]
@@ -47,6 +47,6 @@ experiments:
   groks:
     type: groks
     weight_decay: 1.0
-    depth: [2, 3, 4, 6, 8, 10]
+    depth: [2, 4, 6, 8, 10]
     match_by: param_count
     param_count_targets: [5000, 10000, 20000, 50000, 100000, 200000, 500000]
