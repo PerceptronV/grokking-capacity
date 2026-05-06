@@ -33,6 +33,7 @@ tg-capacity = "torch_grokking.experiments.capacity:main"
 tg-speed = "torch_grokking.experiments.speed:main"
 tg-groks = "torch_grokking.experiments.groks:main"
 tg-dispatch = "torch_grokking.dispatch.main:main"
+tg-figures = "torch_grokking.analysis.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
