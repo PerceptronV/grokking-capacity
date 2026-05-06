@@ -37,6 +37,7 @@ cd "$REPO_ROOT"
 experiments=(
   "lr_sweep"
   "alpha_sweep"
+  "task_mul"
 )
 
 LOG_DIR="logs"
