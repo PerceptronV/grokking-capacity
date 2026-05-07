@@ -45,8 +45,8 @@ import datetime as dt
 import os
 
 from wallow import F, register
-from torch_grokking.registry import get_store
-from torch_grokking.registry.identifying import IDENTIFYING_FIELDS
+from grokking_capacity.registry import get_store
+from grokking_capacity.registry.identifying import IDENTIFYING_FIELDS
 
 apply     = os.environ["APPLY"] == "1"
 stale_min = int(os.environ["STALE_MIN"])

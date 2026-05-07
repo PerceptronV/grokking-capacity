@@ -4,7 +4,7 @@ import datetime as dt
 import pytest
 from wallow import F, register
 
-from torch_grokking.registry import (
+from grokking_capacity.registry import (
     build_identifying,
     claim,
     AlreadyCompleted,
@@ -92,7 +92,7 @@ def test_claim_creates_artefacts_dir(isolated_repo):
 
 
 def test_failed_run_records_status(isolated_repo):
-    from torch_grokking.registry import run_lifecycle
+    from grokking_capacity.registry import run_lifecycle
     ident = build_identifying(
         experiment_type="speed", p=13, dim=8, seed=42, n_samples=100,
     )

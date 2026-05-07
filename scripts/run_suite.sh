@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Launch a tg-dispatch suite inside a tmux session, with a specific micromamba
+# Launch a gc-dispatch suite inside a tmux session, with a specific micromamba
 # environment activated. The session is named after the suite so each one runs
 # in its own session and `tmux ls` gives you a roster of in-flight sweeps.
 #
@@ -72,7 +72,7 @@ fi
 # activation guarantees the right Python is on PATH.
 ACTIVATE="eval \"\$(micromamba shell hook -s bash)\" && micromamba activate '$MAMBA_ENV' && "
 
-CMD="${ACTIVATE}tg-dispatch --config $CONFIG --workers-per-gpu $WORKERS_PER_GPU ${EXTRA[*]} 2>&1 | tee -a $LOG_FILE"
+CMD="${ACTIVATE}gc-dispatch --config $CONFIG --workers-per-gpu $WORKERS_PER_GPU ${EXTRA[*]} 2>&1 | tee -a $LOG_FILE"
 
 tmux new-session -d -s "$SESSION" -c "$REPO_ROOT" "$CMD; echo; echo 'Done. Press Enter to close.'; read"
 echo "Started tmux session '$SESSION'"

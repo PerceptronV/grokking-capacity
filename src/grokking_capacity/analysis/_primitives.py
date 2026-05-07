@@ -1,4 +1,4 @@
-"""Rendering primitives consumed by `torch_grokking.figures`.
+"""Rendering primitives consumed by `grokking_capacity.figures`.
 
 Trimmed from a much larger legacy file. All call sites now live inside the
 `figures` package; nothing else in the repo imports from here.

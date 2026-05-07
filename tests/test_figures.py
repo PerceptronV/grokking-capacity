@@ -5,9 +5,9 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from torch_grokking.analysis.capacity_constant import fit_capacity_slope
-from torch_grokking.analysis import aggregate
-from torch_grokking.analysis.config_view import ArchKey, ARCH_KEY_FIELDS
+from grokking_capacity.analysis.capacity_constant import fit_capacity_slope
+from grokking_capacity.analysis import aggregate
+from grokking_capacity.analysis.config_view import ArchKey, ARCH_KEY_FIELDS
 
 
 # ---- aggregate.find_grokking_onset -------------------------------------------
@@ -141,7 +141,7 @@ def test_arch_key_defaults_match_wallow_toml():
 def test_arch_key_fields_cover_all_identifying_minus_seed_dim_n_samples_p():
     excluded = {"experiment_type", "seed", "dim", "n_samples",
                 "dataset_type", "max_epochs", "p"}
-    from torch_grokking.registry.identifying import IDENTIFYING_FIELDS
+    from grokking_capacity.registry.identifying import IDENTIFYING_FIELDS
     expected = set(IDENTIFYING_FIELDS) - excluded
     assert set(ARCH_KEY_FIELDS) == expected
 
@@ -174,10 +174,10 @@ def test_config_view_groups_runs_by_arch(isolated_repo, tmp_path):
     """
     import yaml as _yaml
     from wallow import register
-    from torch_grokking.consts import C as DEFAULT_C
-    from torch_grokking.dispatch.config import expand_runs
-    from torch_grokking.analysis import ConfigView
-    from torch_grokking.registry import build_identifying, get_store
+    from grokking_capacity.consts import C as DEFAULT_C
+    from grokking_capacity.dispatch.config import expand_runs
+    from grokking_capacity.analysis import ConfigView
+    from grokking_capacity.registry import build_identifying, get_store
 
     cfg = tmp_path / "smoke.yaml"
     cfg.write_text(SMOKE_YAML)

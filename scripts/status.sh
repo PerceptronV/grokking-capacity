@@ -5,25 +5,25 @@
 #   scripts/status.sh           # summary + recent failures + stuck-running rows
 #   scripts/status.sh --watch   # auto-refresh every 30 s
 #   STALE_MIN=10 scripts/status.sh   # flag 'running' rows older than 10 min as stuck
-#   TG_WALLOW_DB=/path/to/runs.db scripts/status.sh   # override DB location
+#   GC_WALLOW_DB=/path/to/runs.db scripts/status.sh   # override DB location
 #
 # NFS note: must point at the same DB the dispatcher uses. replicate{,2,3}.sh
-# default to $HOME/torch_grokking_runs.db (SQLite WAL can't lock on NFS); we
+# default to $HOME/grokking_capacity_runs.db (SQLite WAL can't lock on NFS); we
 # match that default here so plain `scripts/status.sh` Just Works.
 
 set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
-export TG_WALLOW_DB="${TG_WALLOW_DB:-$HOME/torch_grokking_runs.db}"
+export GC_WALLOW_DB="${GC_WALLOW_DB:-$HOME/grokking_capacity_runs.db}"
 STALE_MIN="${STALE_MIN:-30}"
 
 run_once() {
-# Active dispatchers — extract the --config arg from each running tg-dispatch.
+# Active dispatchers — extract the --config arg from each running gc-dispatch.
 # Shows which suite each tmux session is currently on.
 echo
 echo "active dispatchers:"
-active=$(pgrep -af 'tg-dispatch' 2>/dev/null | grep -- '--config' || true)
+active=$(pgrep -af 'gc-dispatch' 2>/dev/null | grep -- '--config' || true)
 if [[ -n "$active" ]]; then
     while IFS= read -r line; do
         pid=$(awk '{print $1}' <<<"$line")
@@ -37,10 +37,10 @@ fi
 python - <<PY
 import datetime as dt
 from wallow import F
-from torch_grokking.registry import get_store
-from torch_grokking.registry.store import default_db_path
+from grokking_capacity.registry import get_store
+from grokking_capacity.registry.store import default_db_path
 
-store = get_store()  # honours TG_WALLOW_DB / TG_WALLOW_TOML env vars
+store = get_store()  # honours GC_WALLOW_DB / GC_WALLOW_TOML env vars
 
 print(f"\n=== {dt.datetime.now(dt.timezone.utc).isoformat()} ===")
 print(f"db: {default_db_path()}")

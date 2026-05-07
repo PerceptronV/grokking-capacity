@@ -11,7 +11,7 @@ from pathlib import Path
 
 
 def _data_root() -> Path:
-    override = os.environ.get("TG_DATA_DIR")
+    override = os.environ.get("GC_DATA_DIR")
     if override:
         return Path(override)
     # Repo-root/data when called from anywhere within the repo.

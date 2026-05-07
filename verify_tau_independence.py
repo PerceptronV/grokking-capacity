@@ -12,7 +12,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from glob import glob
 from scipy import stats
-from torch_grokking import consts
+from grokking_capacity import consts
 
 
 def compute_saturation_epoch_from_trace(acc_trace, threshold, steps_per_epoch, steps_trace=None):

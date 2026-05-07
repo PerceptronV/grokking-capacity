@@ -77,9 +77,9 @@ def _claim(run: dict, *, store, force: bool, node_rank: int) -> tuple[str | None
 # ---------------------------------------------------------------------------
 
 _EXP_TO_MODULE = {
-    'capacity': 'torch_grokking.experiments.capacity',
-    'speed':    'torch_grokking.experiments.speed',
-    'groks':    'torch_grokking.experiments.groks',
+    'capacity': 'grokking_capacity.experiments.capacity',
+    'speed':    'grokking_capacity.experiments.speed',
+    'groks':    'grokking_capacity.experiments.groks',
 }
 
 

@@ -1,4 +1,4 @@
-"""`tg-figures` — generate every figure family for one config (or all)."""
+"""`gc-figures` — generate every figure family for one config (or all)."""
 from __future__ import annotations
 
 import argparse
@@ -17,7 +17,7 @@ DEFAULT_OUT_ROOT = REPO_ROOT / "figures"
 
 def _render_one(config_path: Path, out_dir: Path, only: set[str] | None,
                 db_path: str | None, skip_stats: bool) -> None:
-    print(f"[tg-figures] {config_path.name} → {out_dir}")
+    print(f"[gc-figures] {config_path.name} → {out_dir}")
     view = ConfigView.from_yaml(config_path, db_path=db_path)
     if not view.groups:
         print("  (no runs found in this config — skipping)")
@@ -38,8 +38,8 @@ def _render_one(config_path: Path, out_dir: Path, only: set[str] | None,
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
-        prog="tg-figures",
-        description="Render figures for a torch_grokking YAML config.",
+        prog="gc-figures",
+        description="Render figures for a grokking_capacity YAML config.",
     )
     src = p.add_mutually_exclusive_group(required=True)
     src.add_argument("--config", type=Path, help="Path to a single configs/*.yaml")
@@ -48,7 +48,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--out", type=Path, default=None,
                    help="Output directory (default: figures/<config_name>/)")
     p.add_argument("--db", default=None,
-                   help="Path to runs.db (default: TG_WALLOW_DB env or repo runs.db)")
+                   help="Path to runs.db (default: GC_WALLOW_DB env or repo runs.db)")
     p.add_argument("--skip-stats", action="store_true",
                    help="Skip the predictiveness CSV/plots")
     p.add_argument("--only", choices=["intersection", "capacity", "speed", "stats"],
@@ -60,7 +60,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.all:
         if args.out:
-            print("[tg-figures] --out is ignored with --all (each config gets its own folder)",
+            print("[gc-figures] --out is ignored with --all (each config gets its own folder)",
                   file=sys.stderr)
         for cfg in sorted(CONFIGS_DIR.glob("*.yaml")):
             _render_one(cfg, DEFAULT_OUT_ROOT / cfg.stem, only, args.db, args.skip_stats)

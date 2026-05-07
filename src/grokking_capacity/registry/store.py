@@ -1,7 +1,7 @@
 """Cached accessors for the project's wallow Store and Schema.
 
 Both `wallow.toml` and `runs.db` live at the repository root by default; both
-locations can be overridden via env var (`TG_WALLOW_TOML`, `TG_WALLOW_DB`).
+locations can be overridden via env var (`GC_WALLOW_TOML`, `GC_WALLOW_DB`).
 """
 from __future__ import annotations
 
@@ -19,14 +19,14 @@ def _repo_root() -> Path:
 
 
 def schema_path() -> Path:
-    override = os.environ.get("TG_WALLOW_TOML")
+    override = os.environ.get("GC_WALLOW_TOML")
     if override:
         return Path(override)
     return _repo_root() / "wallow.toml"
 
 
 def default_db_path() -> Path:
-    override = os.environ.get("TG_WALLOW_DB")
+    override = os.environ.get("GC_WALLOW_DB")
     if override:
         return Path(override)
     return _repo_root() / "runs.db"

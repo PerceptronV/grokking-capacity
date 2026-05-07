@@ -17,8 +17,8 @@ from pathlib import Path
 
 from wallow import F
 
-from torch_grokking.analysis.config_view import ConfigView
-from torch_grokking.registry import get_store
+from grokking_capacity.analysis.config_view import ConfigView
+from grokking_capacity.registry import get_store
 
 
 CONFIG = Path(__file__).resolve().parents[1] / "configs" / "central.yaml"
@@ -74,7 +74,7 @@ def main() -> None:
     # Simulate the per-panel rendering path for one dim slice of
     # intersection_by_prime so we can see what _curve_for_slice and
     # _delay_records_for_slice actually return.
-    from torch_grokking.analysis.plots import (
+    from grokking_capacity.analysis.plots import (
         _curve_for_slice, _delay_records_for_slice, _slice_values,
     )
     speed_group = next((g for g in view.iter_groups() if g.groks_runs), None)

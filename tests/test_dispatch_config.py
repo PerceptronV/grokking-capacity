@@ -1,7 +1,7 @@
 """Verify YAML expansion produces the expected identifying tuples."""
 import yaml
 
-from torch_grokking.dispatch.config import expand_runs
+from grokking_capacity.dispatch.config import expand_runs
 
 
 SMOKE_YAML = """

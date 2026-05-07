@@ -57,7 +57,7 @@ fi
 # GPU-hours are burned).
 ACTIVATE='eval "$(micromamba shell hook -s bash)" && micromamba activate '"$MAMBA_ENV"
 SUITES_QUOTED=$(printf '"%s" ' "${experiments[@]}")
-INNER='set -e; '"$ACTIVATE"' && for s in '"$SUITES_QUOTED"'; do echo "===== $(date -u +%FT%TZ) starting $s ====="; tg-dispatch --config "configs/${s}.yaml" --workers-per-gpu '"$WORKERS_PER_GPU"' || { echo "FAILED: $s"; exit 1; }; echo "===== $(date -u +%FT%TZ) finished $s ====="; done; echo "ALL SUITES DONE"; echo; echo "Press Enter to close."; read'
+INNER='set -e; '"$ACTIVATE"' && for s in '"$SUITES_QUOTED"'; do echo "===== $(date -u +%FT%TZ) starting $s ====="; gc-dispatch --config "configs/${s}.yaml" --workers-per-gpu '"$WORKERS_PER_GPU"' || { echo "FAILED: $s"; exit 1; }; echo "===== $(date -u +%FT%TZ) finished $s ====="; done; echo "ALL SUITES DONE"; echo; echo "Press Enter to close."; read'
 
 CMD="bash -c '$INNER' 2>&1 | tee -a $LOG_FILE"
 

@@ -1,5 +1,5 @@
 [project]
-name = "torch_grokking"
+name = "grokking_capacity"
 description = "Grokking experiments — capacity, speed, groks — registered + dedup'd by wallow."
 
 # ---- identifying fields ----------------------------------------------------

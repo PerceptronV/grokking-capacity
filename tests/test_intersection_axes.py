@@ -14,11 +14,11 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from torch_grokking.analysis.config_view import (
+from grokking_capacity.analysis.config_view import (
     ArchGroup, ArchKey, ConfigView, IntersectionFigure,
 )
-from torch_grokking.analysis.plots import render_all, render_intersection
-from torch_grokking.analysis.stats import compute_predictiveness, render_stats
+from grokking_capacity.analysis.plots import render_all, render_intersection
+from grokking_capacity.analysis.stats import compute_predictiveness, render_stats
 
 
 def _arch_key() -> ArchKey:
@@ -165,7 +165,7 @@ def test_curve_drops_unsaturated_speed_rows(tmp_path):
     `saturated=None` (wallow column unset for groks); they must NOT be
     dropped — only an explicit False filters out a row.
     """
-    from torch_grokking.analysis.plots import _curve_for_slice
+    from grokking_capacity.analysis.plots import _curve_for_slice
     speed_rows = []
     for dim, sat, sat_epoch in [(20, False, 5000), (40, True, 800), (60, True, 200)]:
         speed_rows.append({
@@ -199,7 +199,7 @@ def test_curve_drops_unsaturated_speed_rows(tmp_path):
 def test_max_dim_excludes_wide_runs_from_curve(synth_group, tmp_path):
     """A figure with max_dim=64 should drop the dim=128 row from every
     pathway (curves, scatter, slice enumeration)."""
-    from torch_grokking.analysis.plots import (
+    from grokking_capacity.analysis.plots import (
         _curve_for_slice, _slice_values, _delay_records_for_slice,
     )
     figure = IntersectionFigure(
@@ -229,7 +229,7 @@ def test_delay_thresholds_are_wired_through(synth_group, tmp_path):
     (2) val threshold of 98 vs 99 selects different val epochs when the
         trace plateaus between the two — produces different delays.
     """
-    from torch_grokking.analysis.plots import _delay_records_for_slice
+    from grokking_capacity.analysis.plots import _delay_records_for_slice
     figure_unreachable_train = IntersectionFigure(
         name="ur_train", slice_field="p", x_field="param_count",
         x_label="Parameter count", colour_field="dim", colour_label="Dim",
@@ -273,7 +273,7 @@ def test_delay_thresholds_are_wired_through(synth_group, tmp_path):
 def test_yaml_defaults_for_thresholds_and_cap():
     """A figure entry without max_dim / threshold keys defaults to no cap
     and 99/99 thresholds (preserving the pre-cap behaviour)."""
-    from torch_grokking.analysis.config_view import _parse_intersection_figures
+    from grokking_capacity.analysis.config_view import _parse_intersection_figures
     spec = {"analysis": {"intersection_figures": [
         {"name": "f", "slice_field": "p", "x_field": "param_count"},
     ]}}
@@ -291,7 +291,7 @@ def test_curve_thresholds_label_the_legend(synth_group, tmp_path):
     We can't easily assert against rendered pixels, but we can spy on the
     primitive's keyword args via a wrapper.
     """
-    import torch_grokking.analysis.plots as plots_mod
+    import grokking_capacity.analysis.plots as plots_mod
     captured = {}
     real = plots_mod.plot_grokking_delay_with_speed
     def wrapper(*a, **kw):
@@ -314,7 +314,7 @@ def test_curve_thresholds_label_the_legend(synth_group, tmp_path):
 def test_scatter_takes_min_delay_across_seeds(tmp_path):
     """Three seeds at the same dim/prime produce three rows with three
     delays; the scatter shows ONE dot at that x with the minimum delay."""
-    from torch_grokking.analysis.plots import _delay_records_for_slice
+    from grokking_capacity.analysis.plots import _delay_records_for_slice
     npz_dir = tmp_path / "npz"
     rows = []
     for seed, grok_epoch in [(42, 600), (43, 300), (44, 450)]:
@@ -352,7 +352,7 @@ def test_warn_on_stored_threshold_mismatch(synth_group, tmp_path):
         x_label="Parameter count", colour_field="dim", colour_label="Dim",
         gen_curve_threshold=95.0,  # disagrees with stored 99
     )
-    from torch_grokking.analysis.plots import render_intersection
+    from grokking_capacity.analysis.plots import render_intersection
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
         render_intersection(synth_group, tmp_path / "out", figure=figure)

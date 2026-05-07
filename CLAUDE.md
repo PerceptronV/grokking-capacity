@@ -9,30 +9,30 @@ pip install -e .   # editable; pulls wallow from /Users/yiding/Desktop/Research/
 ```
 
 Run-tracking lives in a SQLite registry (`runs.db`) defined by `wallow.toml`.
-Both paths can be overridden via env vars: `TG_WALLOW_DB`, `TG_WALLOW_TOML`,
-`TG_DATA_DIR`. The schema auto-creates on first use.
+Both paths can be overridden via env vars: `GC_WALLOW_DB`, `GC_WALLOW_TOML`,
+`GC_DATA_DIR`. The schema auto-creates on first use.
 
 ## Running experiments
 
 ```bash
 # Run a full experiment suite (dispatches jobs in parallel across GPUs)
-tg-dispatch --config configs/weight_decay_sweep.yaml
+gc-dispatch --config configs/weight_decay_sweep.yaml
 
 # Dry-run (does not touch the wallow DB)
-tg-dispatch --config configs/weight_decay_sweep.yaml --dry-run
+gc-dispatch --config configs/weight_decay_sweep.yaml --dry-run
 
 # Re-run even if a row already exists with status='completed'
-tg-dispatch --config configs/depth_scaling.yaml --force
+gc-dispatch --config configs/depth_scaling.yaml --force
 
 # Run a single experiment directly
-tg-groks    --p 113 --seed 42 --dim 128 --operation / --weight-decay 1.0 --depth 2 --heads 1
-tg-speed    --p 113 --seed 42 --dim 64 --n-samples 6328 --weight-decay 1.0
-tg-capacity --p 113 --seed 42 --dim 10 --n-samples 9300 --dataset-type random
+gc-groks    --p 113 --seed 42 --dim 128 --operation / --weight-decay 1.0 --depth 2 --heads 1
+gc-speed    --p 113 --seed 42 --dim 64 --n-samples 6328 --weight-decay 1.0
+gc-capacity --p 113 --seed 42 --dim 10 --n-samples 9300 --dataset-type random
 ```
 
 ## Multi-node clusters (e.g. Lambda 2×8 H100)
 
-`tg-dispatch` partitions the expanded command list across nodes via
+`gc-dispatch` partitions the expanded command list across nodes via
 `--node-rank` / `--num-nodes` (interleaved by `i % num_nodes == node_rank`),
 preserving the `capacity → speed → groks` ordering within each node. The
 match table is built only on node-rank 0. Both nodes must share `runs.db`
@@ -40,10 +40,10 @@ match table is built only on node-rank 0. Both nodes must share `runs.db`
 
 ```bash
 # Node 0
-tg-dispatch --config configs/weight_decay_sweep.yaml --num-nodes 2 --node-rank 0
+gc-dispatch --config configs/weight_decay_sweep.yaml --num-nodes 2 --node-rank 0
 
 # Node 1
-tg-dispatch --config configs/weight_decay_sweep.yaml --num-nodes 2 --node-rank 1
+gc-dispatch --config configs/weight_decay_sweep.yaml --num-nodes 2 --node-rank 1
 ```
 
 Workers per GPU default to 4 for H100 (based on compute capability). Override
@@ -51,15 +51,15 @@ with `--workers-per-gpu` if needed.
 
 ## Figures
 
-`tg-figures` reads any config in `configs/` and renders every figure family
+`gc-figures` reads any config in `configs/` and renders every figure family
 straight off the wallow store. No CLI flags for plot selection — drive
 everything from the YAML.
 
 ```bash
-tg-figures --config configs/central.yaml                  # → figures/central/
-tg-figures --config configs/weight_decay_sweep.yaml --out /tmp/wd/
-tg-figures --all                                           # every config
-tg-figures --config configs/central.yaml --only intersection --only stats
+gc-figures --config configs/central.yaml                  # → figures/central/
+gc-figures --config configs/weight_decay_sweep.yaml --out /tmp/wd/
+gc-figures --all                                           # every config
+gc-figures --config configs/central.yaml --only intersection --only stats
 ```
 
 Output per config: `intersection/p=<P>[__<axis>=<v>].pdf` (mem-vs-gen
@@ -89,11 +89,11 @@ The paper's central claim is that grokking onset is predicted by the intersectio
 - `**experiments/speed.py**` — Measures `T_mem` (memorisation speed). Counts steps to saturation on random-target data of a fixed size (`n_equiv`).
 - `**experiments/groks.py**` — Measures `T_gen` (generalisation speed). Trains on modular arithmetic; records the epoch when validation accuracy first crosses the grokking threshold.
 
-`**dispatch/main.py**` (entry point `tg-dispatch`) orchestrates suites via YAML configs. It expands parameter grids and, for each combo, claims a wallow row (`return_existing` → check `status` → skip or dispatch). Workers receive the claimed `--run-uuid` and write artefacts to `data/<exp_type>/<run_uuid>/trace.npz`. Dependency order within a suite is always `capacity → speed → groks`.
+`**dispatch/main.py**` (entry point `gc-dispatch`) orchestrates suites via YAML configs. It expands parameter grids and, for each combo, claims a wallow row (`return_existing` → check `status` → skip or dispatch). Workers receive the claimed `--run-uuid` and write artefacts to `data/<exp_type>/<run_uuid>/trace.npz`. Dependency order within a suite is always `capacity → speed → groks`.
 
 `**analysis/**` is the post-hoc layer. Two surfaces:
 - Legacy match-table — `analysis/matching.py` pairs completed groks/speed rows by `(p, operation, train_fraction, depth, heads, dropout, init_scale, seed, n_samples ≈ n_equiv, param_count ≈ groks.param_count)` and `dispatch/main.py` writes `data/<suite_name>/matches.json` at the end of every suite.
-- Config-driven figure pipeline — `analysis/config_view.py` (parses a YAML, groups completed wallow rows into `ArchGroup`s, resolves a per-group capacity constant), `analysis/aggregate.py` (seed aggregation: mean curves, min-delay, onset detection, intersection finder), `analysis/plots.py` (orchestrators per figure family), `analysis/stats.py` (predictiveness CSV + scatter + per-axis breakdowns), `analysis/_primitives.py` (matplotlib primitives), `analysis/cli.py` (the `tg-figures` entry point).
+- Config-driven figure pipeline — `analysis/config_view.py` (parses a YAML, groups completed wallow rows into `ArchGroup`s, resolves a per-group capacity constant), `analysis/aggregate.py` (seed aggregation: mean curves, min-delay, onset detection, intersection finder), `analysis/plots.py` (orchestrators per figure family), `analysis/stats.py` (predictiveness CSV + scatter + per-axis breakdowns), `analysis/_primitives.py` (matplotlib primitives), `analysis/cli.py` (the `gc-figures` entry point).
 
 `**registry/**` is the wallow integration layer:
 - `store.py` — cached `Store` and `Schema` accessors.
@@ -113,13 +113,13 @@ To inspect a run: `wallow inspect <id>`. To add a hyperparameter: edit `wallow.t
 
 ## File / directory naming
 
-`data/<experiment_type>/<run_uuid>/trace.npz` (plus any extra artefacts in the same dir, e.g. `model.pt` from `tg-groks --save-model`). The `run_uuid` is a 12-char random hex generated at first claim; reruns of the same identifying tuple reuse it (artefacts are overwritten in place, no orphan dirs).
+`data/<experiment_type>/<run_uuid>/trace.npz` (plus any extra artefacts in the same dir, e.g. `model.pt` from `gc-groks --save-model`). The `run_uuid` is a 12-char random hex generated at first claim; reruns of the same identifying tuple reuse it (artefacts are overwritten in place, no orphan dirs).
 
 Filenames carry no semantic information — all hyperparameters live in the wallow row. To find the npz for a run, query the registry:
 
 ```python
 from wallow import F
-from torch_grokking.registry import get_store
+from grokking_capacity.registry import get_store
 store = get_store()
 r = store.where((F("experiment_type")=="speed") & (F("dim")==64) & (F("p")==113)).first()
 print(r.npz_path)

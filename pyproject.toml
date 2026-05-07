@@ -3,9 +3,9 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "torch_grokking"
+name = "grokking_capacity"
 version = "0.2.0"
-description = "Empirical study of grokking onset, predicted from memorisation and generalisation speeds."
+description = "Empirical study of grokking onset as a function of model capacity, predicted from memorisation and generalisation speeds."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -19,7 +19,7 @@ dependencies = [
     "seaborn>=0.12.0",
     "pandas>=2.0.0",
     "scikit-learn>=1.3.0",
-    # Pinned to 0.1.0; 0.2.0 adds an auto `uuid` column which torch_grokking's
+    # Pinned to 0.1.0; 0.2.0 adds an auto `uuid` column which grokking_capacity's
     # current registry/lifecycle.py doesn't need. Bump after the registry
     # cleanup PR migrates to wallow.contrib.lifecycle + Store.artefacts_dir.
     "wallow==0.1.0",
@@ -29,14 +29,14 @@ dependencies = [
 test = ["pytest>=7"]
 
 [project.scripts]
-tg-capacity = "torch_grokking.experiments.capacity:main"
-tg-speed = "torch_grokking.experiments.speed:main"
-tg-groks = "torch_grokking.experiments.groks:main"
-tg-dispatch = "torch_grokking.dispatch.main:main"
-tg-figures = "torch_grokking.analysis.cli:main"
+gc-capacity = "grokking_capacity.experiments.capacity:main"
+gc-speed = "grokking_capacity.experiments.speed:main"
+gc-groks = "grokking_capacity.experiments.groks:main"
+gc-dispatch = "grokking_capacity.dispatch.main:main"
+gc-figures = "grokking_capacity.analysis.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-torch_grokking = ["py.typed"]
+grokking_capacity = ["py.typed"]

@@ -1,7 +1,7 @@
 """Post-hoc analysis of completed runs: matching, capacity-constant fits,
 config-driven figure rendering, and predictiveness stats.
 
-The CLI lives in `cli.py` and is registered as `tg-figures`.
+The CLI lives in `cli.py` and is registered as `gc-figures`.
 """
 # Legacy matching utilities (still used by dispatch/main.py to emit matches.json
 # and by dispatch/config.py for compute_n_equiv / find_dims_for_param_targets).
