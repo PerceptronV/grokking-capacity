@@ -126,8 +126,9 @@ def _curve_for_slice(
     length, set as a clamp by speed.py when the model never reached the
     saturation threshold). Including them produces a flat plateau on the
     left tail of the mem curve where the model didn't actually memorise.
-    Groks rows don't have a `saturated` field, so `r.get("saturated",
-    True)` defaults to True and never drops them.
+    Groks rows materialise `saturated=None` via `_row_to_dict` (the
+    wallow column is unset for groks runs), so we check `is not False`
+    rather than truthiness — None passes through.
     """
     return aggregate.mean_over_seeds(
         (r for r in rows
@@ -135,7 +136,7 @@ def _curve_for_slice(
          and _passes_filters(r, figure)
          and r.get(figure.x_field) is not None
          and r.get(y_field) is not None
-         and r.get("saturated", True)),
+         and r.get("saturated") is not False),
         x_field=figure.x_field, y_field=y_field,
     )
 

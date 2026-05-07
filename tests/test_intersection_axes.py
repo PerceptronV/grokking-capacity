@@ -161,12 +161,14 @@ def test_predictiveness_csv_has_renamed_columns(synth_group, tmp_path):
 def test_curve_drops_unsaturated_speed_rows(tmp_path):
     """Speed rows with `saturated=False` carry a clamped saturation_epoch
     (equal to the run length); they must not contribute to the mem curve
-    or you get a flat plateau on the small-capacity tail."""
+    or you get a flat plateau on the small-capacity tail. Groks rows have
+    `saturated=None` (wallow column unset for groks); they must NOT be
+    dropped — only an explicit False filters out a row.
+    """
     from torch_grokking.analysis.plots import _curve_for_slice
-    rows = []
-    # 3 dims at p=113. dim=20 didn't saturate; dim=40, dim=60 did.
+    speed_rows = []
     for dim, sat, sat_epoch in [(20, False, 5000), (40, True, 800), (60, True, 200)]:
-        rows.append({
+        speed_rows.append({
             "p": 113, "dim": dim, "operation": "/", "train_fraction": 0.5,
             "param_count": dim * dim * 8 + 113 * dim * 2,
             "saturation_epoch": float(sat_epoch),
@@ -176,10 +178,22 @@ def test_curve_drops_unsaturated_speed_rows(tmp_path):
         name="canonical", slice_field="p", x_field="param_count",
         x_label="Parameter count", colour_field="dim", colour_label="Dim",
     )
-    curve = _curve_for_slice(rows, figure, 113, "saturation_epoch")
+    curve = _curve_for_slice(speed_rows, figure, 113, "saturation_epoch")
     # dim=20's clamped 5000 must be dropped; only dim=40 and dim=60 survive.
     assert len(curve) == 2
     assert all(y < 5000 for y in curve.values())
+
+    # Groks rows have saturated=None (unset on the wallow row): keep them.
+    groks_rows = []
+    for dim, gk_epoch in [(20, 1500), (40, 800), (60, 200)]:
+        groks_rows.append({
+            "p": 113, "dim": dim, "operation": "/", "train_fraction": 0.5,
+            "param_count": dim * dim * 8 + 113 * dim * 2,
+            "grokking_epoch": float(gk_epoch),
+            "saturated": None,
+        })
+    gen_curve = _curve_for_slice(groks_rows, figure, 113, "grokking_epoch")
+    assert len(gen_curve) == 3
 
 
 def test_max_dim_excludes_wide_runs_from_curve(synth_group, tmp_path):
