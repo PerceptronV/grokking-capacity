@@ -173,6 +173,8 @@ cython_debug/
 # Data
 /data/
 /media/
+/docs/
+/figures/
 
 # wallow registry (recreated from wallow.toml)
 runs.db

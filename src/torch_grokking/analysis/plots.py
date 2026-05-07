@@ -155,7 +155,7 @@ def render_intersection(
     figure: IntersectionFigure = None,
     suffix: str = "",
 ) -> list[Path]:
-    """One PNG per slice value. Skips slices with no groks/speed overlap."""
+    """One PDF per slice value. Skips slices with no groks/speed overlap."""
     if figure is None:
         # Default for ad-hoc callers / tests: today's per-prime figure.
         from .config_view import _DEFAULT_INTERSECTION_FIGURE
@@ -171,7 +171,7 @@ def render_intersection(
         if not records or not groks_curve or not speed_curve:
             continue
         slice_label = f"{figure.slice_field}={slice_value}"
-        fname = f"{slice_label}{('__' + suffix) if suffix else ''}.png"
+        fname = f"{slice_label}{('__' + suffix) if suffix else ''}.pdf"
         path = save_dir / fname
         # Surface mismatches between the figure's declared curve thresholds
         # and the threshold each row was actually computed at (groks rows
@@ -194,13 +194,14 @@ def render_intersection(
                 f"won't be visible.",
                 stacklevel=2,
             )
+        # Title intentionally omitted — slice identity (e.g. p=113, dim=64)
+        # already lives in the filename.
         plot_grokking_delay_with_speed(
             records, speed_curve=speed_curve, groks_curve=groks_curve,
             mem_curve_threshold=figure.mem_curve_threshold,
             gen_curve_threshold=figure.gen_curve_threshold,
             threshold_train=figure.delay_train_threshold,
             threshold_val=figure.delay_val_threshold,
-            title=slice_label.replace("=", " = "),
             save_path=str(path),
             x_label=figure.x_label,
             colour_label=figure.colour_label,
@@ -220,8 +221,8 @@ def render_capacity(group: ArchGroup, save_dir: Path, suffix: str = "") -> list[
     primary_p = next(iter({r.get("p") for r in group.capacity_runs if r.get("p")}), 113)
 
     suffix_part = f"__{suffix}" if suffix else ""
-    curves_path = save_dir / f"M_T_vs_dataset_size{suffix_part}.png"
-    fit_path = save_dir / f"saturation_bits_vs_params{suffix_part}.png"
+    curves_path = save_dir / f"M_T_vs_dataset_size{suffix_part}.pdf"
+    fit_path = save_dir / f"saturation_bits_vs_params{suffix_part}.pdf"
     saturation_points = plot_capacity_curves(
         by_dim, p=int(primary_p), save_path=str(curves_path),
     )
@@ -246,8 +247,8 @@ def render_speed(group: ArchGroup, save_dir: Path, suffix: str = "") -> list[Pat
         by_key.setdefault(k, []).append(r)
 
     suffix_part = f"__{suffix}" if suffix else ""
-    inv_path = save_dir / f"epochs_vs_inverse_capacity{suffix_part}.png"
-    frac_path = save_dir / f"epochs_vs_capacity_fraction{suffix_part}.png"
+    inv_path = save_dir / f"epochs_vs_inverse_capacity{suffix_part}.pdf"
+    frac_path = save_dir / f"epochs_vs_capacity_fraction{suffix_part}.pdf"
     plot_saturation_epochs_vs_inverse_capacity(
         by_key, C=group.capacity_constant, save_path=str(inv_path),
     )

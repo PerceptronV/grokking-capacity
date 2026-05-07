@@ -96,7 +96,7 @@ def synth_group(tmp_path):
                      speed_runs=speed_rows, groks_runs=groks_rows)
 
 
-def test_default_figure_renders_one_png_per_prime(synth_group, tmp_path):
+def test_default_figure_renders_one_pdf_per_prime(synth_group, tmp_path):
     figure = IntersectionFigure(
         name="intersection", slice_field="p", x_field="param_count",
         x_label="Parameter count", colour_field="dim", colour_label="Dim",
@@ -104,10 +104,10 @@ def test_default_figure_renders_one_png_per_prime(synth_group, tmp_path):
     out = render_intersection(synth_group, tmp_path / "intersection",
                               figure=figure)
     names = sorted(p.name for p in out)
-    assert names == ["p=113.png", "p=139.png", "p=97.png"]
+    assert names == ["p=113.pdf", "p=139.pdf", "p=97.pdf"]
 
 
-def test_swapped_figure_renders_one_png_per_dim(synth_group, tmp_path):
+def test_swapped_figure_renders_one_pdf_per_dim(synth_group, tmp_path):
     figure = IntersectionFigure(
         name="intersection_by_prime", slice_field="dim",
         x_field="dataset_bits", x_label="Dataset bits",
@@ -116,7 +116,7 @@ def test_swapped_figure_renders_one_png_per_dim(synth_group, tmp_path):
     out = render_intersection(synth_group, tmp_path / "by_prime",
                               figure=figure)
     names = sorted(p.name for p in out)
-    assert names == ["dim=128.png", "dim=32.png", "dim=64.png"]
+    assert names == ["dim=128.pdf", "dim=32.pdf", "dim=64.pdf"]
 
 
 def test_render_all_uses_per_figure_subdirs(synth_group, tmp_path):
@@ -136,9 +136,9 @@ def test_render_all_uses_per_figure_subdirs(synth_group, tmp_path):
     rendered = render_all(view, tmp_path / "out", only={"intersection"})
     assert "intersection" in rendered and "intersection_by_prime" in rendered
     assert all((tmp_path / "out" / "intersection" / n).exists()
-               for n in ["p=97.png", "p=113.png", "p=139.png"])
+               for n in ["p=97.pdf", "p=113.pdf", "p=139.pdf"])
     assert all((tmp_path / "out" / "intersection_by_prime" / n).exists()
-               for n in ["dim=32.png", "dim=64.png", "dim=128.png"])
+               for n in ["dim=32.pdf", "dim=64.pdf", "dim=128.pdf"])
 
 
 def test_predictiveness_csv_has_renamed_columns(synth_group, tmp_path):

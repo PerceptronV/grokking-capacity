@@ -197,11 +197,11 @@ def render_stats(view: ConfigView, out_dir: Path) -> dict[str, Path]:
         csv_path = sub / "predictiveness.csv"
         save_predictiveness_csv(df, csv_path)
         paths[f"{figure.name}/csv"] = csv_path
-        scatter = plot_predicted_vs_empirical(df, sub / "predicted_vs_empirical.png")
+        scatter = plot_predicted_vs_empirical(df, sub / "predicted_vs_empirical.pdf")
         if scatter is not None:
             paths[f"{figure.name}/scatter"] = scatter
         for axis in view.swept_axes:
-            p = plot_error_vs_axis(df, axis, sub / f"error_vs_{axis}.png")
+            p = plot_error_vs_axis(df, axis, sub / f"error_vs_{axis}.pdf")
             if p is not None:
                 paths[f"{figure.name}/axis:{axis}"] = p
         if view.stats.enabled:

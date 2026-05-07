@@ -62,13 +62,16 @@ tg-figures --all                                           # every config
 tg-figures --config configs/central.yaml --only intersection --only stats
 ```
 
-Output per config: `intersection/p=<P>[__<axis>=<v>].png` (mem-vs-gen
+Output per config: `intersection/p=<P>[__<axis>=<v>].pdf` (mem-vs-gen
 crossing, one per prime, suffix-tagged with the swept axes), `capacity/`
 (Image 2a + 2b: total memorisation vs dataset size and saturation bits vs
 params), `speed/` (Image 3a + 3b: epochs vs 1/(C·P) and vs capacity
-fraction), `stats/predictiveness.csv` plus `predicted_vs_empirical.png`
-and one `error_vs_<axis>.png` per swept axis, and `meta.json` recording
-the per-arch capacity constants used and their provenance.
+fraction), `stats/predictiveness.csv` plus `predicted_vs_empirical.pdf`
+and one `error_vs_<axis>.pdf` per swept axis, and `meta.json` recording
+the per-arch capacity constants used and their provenance. All figures
+are vector PDFs saved with `bbox_inches="tight"`. Intersection panels
+carry no on-figure title — the slice identity (e.g. `p=113`) lives in
+the filename.
 
 The capacity constant is **per-architecture, measured from each config's
 own capacity runs** (not the global `consts.C = 2.16`). When a sweep cell
