@@ -205,7 +205,7 @@ def render_capacity(group: ArchGroup, save_dir: Path, suffix: str = "") -> list[
     by_dim: dict[int, list[dict]] = {}
     for r in group.capacity_runs:
         by_dim.setdefault(int(r["dim"]), []).append(r)
-    primary_p = next(iter({r.get("p") for r in group.capacity_runs if r.get("p")}), group.key.p)
+    primary_p = next(iter({r.get("p") for r in group.capacity_runs if r.get("p")}), 113)
 
     suffix_part = f"__{suffix}" if suffix else ""
     curves_path = save_dir / f"M_T_vs_dataset_size{suffix_part}.png"

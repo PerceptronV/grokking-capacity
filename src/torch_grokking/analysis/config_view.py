@@ -31,9 +31,12 @@ from ..registry import get_store, npz_path_for
 # Identifying fields that pin one architecture/task setting. Excluded from
 # the key (because they vary within a group): `seed`, `dim`, `n_samples`,
 # `experiment_type`, `dataset_type`, `max_epochs` (capacity runs an order
-# of magnitude longer than groks; not part of the architecture).
+# of magnitude longer than groks; not part of the architecture), and `p`
+# (treated as an *input* the figures vary along — figures keyed on prime
+# slice the group's rows by `p` themselves; figures keyed on dim need rows
+# from all primes pooled into one group to form a curve).
 ARCH_KEY_FIELDS: tuple[str, ...] = (
-    "p", "operation", "train_fraction", "split_type",
+    "operation", "train_fraction", "split_type",
     "depth", "heads", "dropout", "init_scale",
     "lr", "weight_decay", "beta1", "beta2", "batch_size",
     "architecture_family",
@@ -62,7 +65,6 @@ _TOML_DEFAULTS: dict[str, Any] = {
 
 @dataclass(frozen=True)
 class ArchKey:
-    p: int
     operation: str
     train_fraction: float
     split_type: str
@@ -82,12 +84,16 @@ class ArchKey:
         return cls(**{f: d.get(f, _TOML_DEFAULTS.get(f)) for f in ARCH_KEY_FIELDS})
 
     def as_filter(self):
-        """Wallow filter expression that matches rows with this architecture."""
-        expr = F("p") == self.p
+        """Wallow filter expression that matches rows with this architecture.
+
+        Does not constrain `p` — an `ArchGroup` pools rows across every
+        prime so figures sliced by prime AND figures sliced by dim both
+        have multi-prime data to draw from.
+        """
+        expr = None
         for f in ARCH_KEY_FIELDS:
-            if f == "p":
-                continue
-            expr = expr & (F(f) == getattr(self, f))
+            term = F(f) == getattr(self, f)
+            expr = term if expr is None else expr & term
         return expr
 
     def short_label(self, swept_axes: Iterable[str]) -> str:
@@ -336,14 +342,13 @@ def _resolve_C(group: "ArchGroup", all_groups: list["ArchGroup"]) -> tuple[float
 
 
 def _detect_swept_axes(groups: list[ArchGroup]) -> list[str]:
-    """Identifying fields whose value differs across groups. `p` is excluded
-    because the per-prime intersection plots already split on it."""
+    """Identifying fields whose value differs across groups. `p` is not in
+    `ARCH_KEY_FIELDS` so it's never a swept axis here — figures slice on
+    prime themselves via `IntersectionFigure.slice_field`."""
     if not groups:
         return []
     out = []
     for ax in ARCH_KEY_FIELDS:
-        if ax == "p":
-            continue
         values = {getattr(g.key, ax) for g in groups}
         if len(values) > 1:
             out.append(ax)

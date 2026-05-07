@@ -126,10 +126,11 @@ def test_fit_capacity_slope_too_few_points_returns_none():
 def test_arch_key_defaults_match_wallow_toml():
     """If a YAML omits a field that wallow.toml defaults, ArchKey.from_dict
     should fill the same default — otherwise rows the dispatcher inserted
-    won't match the filter the figures package builds."""
-    minimal = {"p": 113}
-    key = ArchKey.from_dict(minimal)
-    assert key.p == 113
+    won't match the filter the figures package builds. `p` is deliberately
+    not part of the key so groups span primes; figures slice by prime
+    themselves."""
+    key = ArchKey.from_dict({})
+    assert not hasattr(key, "p")
     assert key.operation == "/"          # wallow default
     assert key.train_fraction == 0.5
     assert key.depth == 2
@@ -137,9 +138,9 @@ def test_arch_key_defaults_match_wallow_toml():
     assert key.architecture_family == "transformer_gated"
 
 
-def test_arch_key_fields_cover_all_identifying_minus_seed_dim_n_samples():
+def test_arch_key_fields_cover_all_identifying_minus_seed_dim_n_samples_p():
     excluded = {"experiment_type", "seed", "dim", "n_samples",
-                "dataset_type", "max_epochs"}
+                "dataset_type", "max_epochs", "p"}
     from torch_grokking.registry.identifying import IDENTIFYING_FIELDS
     expected = set(IDENTIFYING_FIELDS) - excluded
     assert set(ARCH_KEY_FIELDS) == expected
