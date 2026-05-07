@@ -119,12 +119,23 @@ def _curve_for_slice(
     slice_value,
     y_field: str,
 ) -> dict[float, float]:
+    """Build the mean-over-seeds curve for one slice value.
+
+    Drops speed rows where `saturated=False` — those carry
+    `saturation_epoch = total_steps / steps_per_epoch` (the full run
+    length, set as a clamp by speed.py when the model never reached the
+    saturation threshold). Including them produces a flat plateau on the
+    left tail of the mem curve where the model didn't actually memorise.
+    Groks rows don't have a `saturated` field, so `r.get("saturated",
+    True)` defaults to True and never drops them.
+    """
     return aggregate.mean_over_seeds(
         (r for r in rows
          if r.get(figure.slice_field) == slice_value
          and _passes_filters(r, figure)
          and r.get(figure.x_field) is not None
-         and r.get(y_field) is not None),
+         and r.get(y_field) is not None
+         and r.get("saturated", True)),
         x_field=figure.x_field, y_field=y_field,
     )
 

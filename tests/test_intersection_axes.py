@@ -158,6 +158,30 @@ def test_predictiveness_csv_has_renamed_columns(synth_group, tmp_path):
     assert (df["x_field"] == "param_count").all()
 
 
+def test_curve_drops_unsaturated_speed_rows(tmp_path):
+    """Speed rows with `saturated=False` carry a clamped saturation_epoch
+    (equal to the run length); they must not contribute to the mem curve
+    or you get a flat plateau on the small-capacity tail."""
+    from torch_grokking.analysis.plots import _curve_for_slice
+    rows = []
+    # 3 dims at p=113. dim=20 didn't saturate; dim=40, dim=60 did.
+    for dim, sat, sat_epoch in [(20, False, 5000), (40, True, 800), (60, True, 200)]:
+        rows.append({
+            "p": 113, "dim": dim, "operation": "/", "train_fraction": 0.5,
+            "param_count": dim * dim * 8 + 113 * dim * 2,
+            "saturation_epoch": float(sat_epoch),
+            "saturated": sat,
+        })
+    figure = IntersectionFigure(
+        name="canonical", slice_field="p", x_field="param_count",
+        x_label="Parameter count", colour_field="dim", colour_label="Dim",
+    )
+    curve = _curve_for_slice(rows, figure, 113, "saturation_epoch")
+    # dim=20's clamped 5000 must be dropped; only dim=40 and dim=60 survive.
+    assert len(curve) == 2
+    assert all(y < 5000 for y in curve.values())
+
+
 def test_max_dim_excludes_wide_runs_from_curve(synth_group, tmp_path):
     """A figure with max_dim=64 should drop the dim=128 row from every
     pathway (curves, scatter, slice enumeration)."""
