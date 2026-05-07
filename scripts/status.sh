@@ -5,11 +5,17 @@
 #   scripts/status.sh           # summary + recent failures + stuck-running rows
 #   scripts/status.sh --watch   # auto-refresh every 30 s
 #   STALE_MIN=10 scripts/status.sh   # flag 'running' rows older than 10 min as stuck
+#   TG_WALLOW_DB=/path/to/runs.db scripts/status.sh   # override DB location
+#
+# NFS note: must point at the same DB the dispatcher uses. replicate{,2,3}.sh
+# default to $HOME/torch_grokking_runs.db (SQLite WAL can't lock on NFS); we
+# match that default here so plain `scripts/status.sh` Just Works.
 
 set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
+export TG_WALLOW_DB="${TG_WALLOW_DB:-$HOME/torch_grokking_runs.db}"
 STALE_MIN="${STALE_MIN:-30}"
 
 run_once() {
@@ -17,10 +23,12 @@ python - <<PY
 import datetime as dt
 from wallow import F
 from torch_grokking.registry import get_store
+from torch_grokking.registry.store import default_db_path
 
 store = get_store()  # honours TG_WALLOW_DB / TG_WALLOW_TOML env vars
 
 print(f"\n=== {dt.datetime.now(dt.timezone.utc).isoformat()} ===")
+print(f"db: {default_db_path()}")
 print(f"total rows: {store.count()}")
 for st in ("pending", "running", "completed", "failed"):
     n = store.where(F("status") == st).count()
