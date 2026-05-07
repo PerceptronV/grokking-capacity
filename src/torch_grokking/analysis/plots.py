@@ -19,19 +19,67 @@ from ._primitives import (
 )
 
 from . import aggregate
-from .config_view import ArchGroup, ConfigView, load_npz
+from .config_view import ArchGroup, ConfigView, IntersectionFigure, load_npz
 
+
+import warnings
 
 SATURATION_THRESHOLD = 99.0
 DELAY_TRAIN_THRESHOLD = 99.0
 DELAY_VAL_THRESHOLD = 99.0
 
 
-def _delay_records_for_prime(group: ArchGroup, p: int) -> list[dict]:
-    """Per-seed delay scatter records for the intersection plot."""
+def _warn_threshold_mismatch(rows, threshold_field: str, configured: float,
+                              context: str) -> None:
+    """If wallow rows annotate the threshold they used, warn when it differs
+    from the figure's configured curve threshold.
+
+    Currently only `grokking_threshold` is annotated (by groks.py); speed
+    runs don't store theirs yet, so this no-ops for the mem curve until
+    that annotation lands.
+    """
+    observed = {r.get(threshold_field) for r in rows
+                if r.get(threshold_field) is not None}
+    if not observed:
+        return
+    # Stored threshold is in [0, 1] (e.g. 0.99); configured is in % (99).
+    bad = {t for t in observed if abs(float(t) * 100.0 - configured) > 0.5}
+    if bad:
+        warnings.warn(
+            f"{context}: stored {threshold_field} values {sorted(bad)} "
+            f"(×100) don't match the configured curve threshold "
+            f"{configured}. The legend will say {configured}% even though "
+            f"the underlying data was computed at a different threshold.",
+            stacklevel=2,
+        )
+
+
+def _passes_filters(row: dict, figure: IntersectionFigure) -> bool:
+    """Apply every figure-level row filter (currently just `max_dim`)."""
+    if figure.max_dim is not None:
+        dim = row.get("dim")
+        if dim is None or dim > figure.max_dim:
+            return False
+    return True
+
+
+def _delay_records_for_slice(
+    group: ArchGroup,
+    figure: IntersectionFigure,
+    slice_value,
+) -> list[dict]:
+    """Per-seed delay scatter records for one slice value of one figure family.
+
+    The returned dicts use the generic keys `x`, `colour`, `delay` so the
+    rendering primitive stays axis-agnostic. The caller (or figure spec)
+    decides which row fields those map to. Delay is recomputed from the
+    npz traces using the figure spec's train/val thresholds.
+    """
     records: list[dict] = []
     for row in group.groks_runs:
-        if row.get("p") != p:
+        if row.get(figure.slice_field) != slice_value:
+            continue
+        if not _passes_filters(row, figure):
             continue
         try:
             with load_npz(row) as npz:
@@ -40,48 +88,91 @@ def _delay_records_for_prime(group: ArchGroup, p: int) -> list[dict]:
         except (FileNotFoundError, KeyError):
             continue
         delays = aggregate.compute_delays(
-            [{"param_count": row.get("param_count"),
+            [{figure.x_field: row.get(figure.x_field),
               "train_acc": train, "val_acc": val}],
-            threshold_train=DELAY_TRAIN_THRESHOLD,
-            threshold_val=DELAY_VAL_THRESHOLD,
+            x_field=figure.x_field,
+            threshold_train=figure.delay_train_threshold,
+            threshold_val=figure.delay_val_threshold,
         )
         if not delays:
             continue
-        pc, delay = delays[0]
+        x_value, delay = delays[0]
+        colour_raw = row.get(figure.colour_field)
         records.append({
-            "param_count": pc,
-            "dim": int(row.get("dim") or 0),
-            "delay": delay,
+            "x": float(x_value),
+            "colour": float(colour_raw if colour_raw is not None else 0),
+            "delay": float(delay),
         })
     return records
 
 
-def _curve_for_prime(rows: Iterable[dict], p: int, y_field: str) -> dict[float, float]:
+def _curve_for_slice(
+    rows: Iterable[dict],
+    figure: IntersectionFigure,
+    slice_value,
+    y_field: str,
+) -> dict[float, float]:
     return aggregate.mean_over_seeds(
-        (r for r in rows if r.get("p") == p and r.get(y_field) is not None),
-        x_field="param_count", y_field=y_field,
+        (r for r in rows
+         if r.get(figure.slice_field) == slice_value
+         and _passes_filters(r, figure)
+         and r.get(figure.x_field) is not None
+         and r.get(y_field) is not None),
+        x_field=figure.x_field, y_field=y_field,
     )
 
 
-def render_intersection(group: ArchGroup, save_dir: Path, suffix: str = "") -> list[Path]:
-    """One PNG per prime. Skips primes with no groks/speed overlap."""
-    primes = sorted({r.get("p") for r in group.groks_runs if r.get("p") is not None})
+def _slice_values(group: ArchGroup, figure: IntersectionFigure) -> list:
+    """Distinct, sorted slice values that survive the figure's row filters."""
+    vals = {r.get(figure.slice_field) for r in group.groks_runs
+            if r.get(figure.slice_field) is not None
+            and _passes_filters(r, figure)}
+    return sorted(vals)
+
+
+def render_intersection(
+    group: ArchGroup,
+    save_dir: Path,
+    figure: IntersectionFigure = None,
+    suffix: str = "",
+) -> list[Path]:
+    """One PNG per slice value. Skips slices with no groks/speed overlap."""
+    if figure is None:
+        # Default for ad-hoc callers / tests: today's per-prime figure.
+        from .config_view import _DEFAULT_INTERSECTION_FIGURE
+        figure = _DEFAULT_INTERSECTION_FIGURE
     out: list[Path] = []
     save_dir.mkdir(parents=True, exist_ok=True)
-    for p in primes:
-        records = _delay_records_for_prime(group, p)
-        groks_curve = _curve_for_prime(group.groks_runs, p, "grokking_epoch")
-        speed_curve = _curve_for_prime(group.speed_runs, p, "saturation_epoch")
+    for slice_value in _slice_values(group, figure):
+        records = _delay_records_for_slice(group, figure, slice_value)
+        groks_curve = _curve_for_slice(group.groks_runs, figure, slice_value,
+                                        "grokking_epoch")
+        speed_curve = _curve_for_slice(group.speed_runs, figure, slice_value,
+                                        "saturation_epoch")
         if not records or not groks_curve or not speed_curve:
             continue
-        name = f"p={p}{('__' + suffix) if suffix else ''}.png"
-        path = save_dir / name
+        slice_label = f"{figure.slice_field}={slice_value}"
+        fname = f"{slice_label}{('__' + suffix) if suffix else ''}.png"
+        path = save_dir / fname
+        # Surface mismatches between the figure's declared curve thresholds
+        # and the threshold each row was actually computed at (groks rows
+        # carry `grokking_threshold`; speed rows don't yet annotate theirs).
+        contributing_groks = [r for r in group.groks_runs
+                              if r.get(figure.slice_field) == slice_value
+                              and _passes_filters(r, figure)]
+        _warn_threshold_mismatch(contributing_groks, "grokking_threshold",
+                                  figure.gen_curve_threshold,
+                                  context=f"{figure.name}/{slice_label}")
         plot_grokking_delay_with_speed(
             records, speed_curve=speed_curve, groks_curve=groks_curve,
-            saturation_threshold=SATURATION_THRESHOLD,
-            threshold_train=DELAY_TRAIN_THRESHOLD,
-            threshold_val=DELAY_VAL_THRESHOLD,
-            title=f"p = {p}", save_path=str(path),
+            mem_curve_threshold=figure.mem_curve_threshold,
+            gen_curve_threshold=figure.gen_curve_threshold,
+            threshold_train=figure.delay_train_threshold,
+            threshold_val=figure.delay_val_threshold,
+            title=slice_label.replace("=", " = "),
+            save_path=str(path),
+            x_label=figure.x_label,
+            colour_label=figure.colour_label,
         )
         out.append(path)
     return out
@@ -166,18 +257,29 @@ def render_all(
     *,
     only: Optional[set[str]] = None,
 ) -> dict[str, list[Path]]:
-    """Render every figure family for every group in the config view."""
+    """Render every figure family for every group in the config view.
+
+    When `only` includes `"intersection"`, every figure declared in
+    `view.intersection_figures` is rendered (each into `out_dir/<name>/`).
+    Each figure's paths land in their own bucket of the returned dict so
+    the CLI can report file counts per figure.
+    """
     out_dir = Path(out_dir)
     only = only or {"intersection", "capacity", "speed"}
-    rendered: dict[str, list[Path]] = {"intersection": [], "capacity": [], "speed": []}
+    rendered: dict[str, list[Path]] = {"capacity": [], "speed": []}
+    if "intersection" in only:
+        for figure in view.intersection_figures:
+            rendered.setdefault(figure.name, [])
     for group in view.iter_groups():
         if not group.has_data():
             continue
         suffix = group.key.short_label(view.swept_axes)
         if "intersection" in only:
-            rendered["intersection"].extend(
-                render_intersection(group, out_dir / "intersection", suffix=suffix)
-            )
+            for figure in view.intersection_figures:
+                rendered[figure.name].extend(
+                    render_intersection(group, out_dir / figure.name,
+                                        figure=figure, suffix=suffix)
+                )
         if "capacity" in only:
             rendered["capacity"].extend(
                 render_capacity(group, out_dir / "capacity", suffix=suffix)

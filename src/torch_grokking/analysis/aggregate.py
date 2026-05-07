@@ -125,23 +125,25 @@ def find_intersection(
 def compute_delays(
     groks_npz_records: Iterable[dict],
     *,
+    x_field: str = "param_count",
     threshold_train: float = 99.0,
     threshold_val: float = 99.0,
 ) -> list[tuple[float, float]]:
-    """For each per-seed groks record, return (param_count, delay).
+    """For each per-seed groks record, return (x_value, delay).
 
-    Records must contain `train_acc`, `val_acc` (in percent) and
-    `param_count`. Records that never reach `threshold_train` are dropped;
-    records that reach train but never val get delay = epochs_trained -
-    train_epoch (i.e. the delay is at least that long, not None — matches
-    the user's "non-zero delay" notion for the right tail of Image #1).
+    Records must contain `train_acc`, `val_acc` (in percent) and the field
+    named by `x_field` (default `param_count` for the canonical figure).
+    Records that never reach `threshold_train` are dropped; records that
+    reach train but never val get delay = epochs_trained - train_epoch
+    (i.e. the delay is at least that long, not None — matches the user's
+    "non-zero delay" notion for the right tail of Image #1).
     """
     out: list[tuple[float, float]] = []
     for rec in groks_npz_records:
-        pc = rec.get("param_count")
+        x = rec.get(x_field)
         train = np.asarray(rec.get("train_acc"))
         val = np.asarray(rec.get("val_acc"))
-        if pc is None or train.size == 0 or val.size == 0:
+        if x is None or train.size == 0 or val.size == 0:
             continue
         train_above = np.where(train >= threshold_train)[0]
         if train_above.size == 0:
@@ -155,5 +157,5 @@ def compute_delays(
             # Train saturated but val never did within the run window — the
             # delay is at least (epochs_trained - train_epoch).
             delay = max(0, len(val) - train_epoch)
-        out.append((float(pc), float(delay)))
+        out.append((float(x), float(delay)))
     return out

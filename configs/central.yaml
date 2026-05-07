@@ -42,3 +42,49 @@ experiments:
     dim_ranges:
       - {start: 20, end: 128, step: 2}
       - {start: 130, end: 1000, step: 10}
+
+# Intersection figure families. The first reproduces the canonical
+# per-prime mem/gen plot (x = parameter count, one panel per prime). The
+# second swaps roles to test the same theory along dataset complexity:
+# one panel per dim, x = dataset_bits, varying prime. Both reuse the same
+# rows already produced above — no new runs needed.
+#
+# `max_dim: 256` excludes wide-dim runs (groks goes up to dim=1000) from
+# both the curves and the intersection — those points are noisy on the
+# right tail and would skew the crossing.
+#
+# Two val thresholds are deliberately split:
+#   delay_val_threshold (98) — used when re-computing per-seed delay
+#       (val_epoch - train_epoch) for the scatter and empirical onset.
+#   gen_curve_threshold (99) — labels the gen *speed* curve, which is
+#       read from the wallow row's `grokking_epoch` and was stored by
+#       groks.py at val ≥ 99 (the training default).
+# mem_curve_threshold likewise labels the mem speed curve at the
+# threshold speed.py used when storing `saturation_epoch`. If you rerun
+# the underlying experiments at non-default thresholds, change these to
+# match — the renderer will warn loudly when it sees a mismatch against
+# the per-row stored thresholds (e.g. `grokking_threshold`).
+analysis:
+  intersection_figures:
+    - name: intersection
+      slice_field: p
+      x_field: param_count
+      x_label: "Parameter count"
+      colour_field: dim
+      colour_label: "Dimension"
+      max_dim: 256
+      delay_train_threshold: 99
+      delay_val_threshold: 98
+      mem_curve_threshold: 99
+      gen_curve_threshold: 99
+    - name: intersection_by_prime
+      slice_field: dim
+      x_field: dataset_bits
+      x_label: "Dataset bits"
+      colour_field: p
+      colour_label: "Prime"
+      max_dim: 256
+      delay_train_threshold: 99
+      delay_val_threshold: 98
+      mem_curve_threshold: 99
+      gen_curve_threshold: 99

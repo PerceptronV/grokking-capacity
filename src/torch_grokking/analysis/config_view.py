@@ -97,7 +97,13 @@ class ArchKey:
 
 
 def _row_to_dict(row: Any) -> dict[str, Any]:
-    """Pull all fields a plot might want off a wallow Row."""
+    """Pull all fields a plot might want off a wallow Row.
+
+    Fills in `n_equiv` and `dataset_bits` from (p, operation, train_fraction)
+    when the row didn't annotate them — groks runs don't store these (only
+    speed/capacity do), but figures keyed on `dataset_bits` need them on
+    every row for the curves to align on the same x-axis.
+    """
     fields = (
         "experiment_type", "p", "operation", "train_fraction", "split_type",
         "dataset_type", "n_samples", "dim", "depth", "heads", "dropout",
@@ -108,7 +114,19 @@ def _row_to_dict(row: Any) -> dict[str, Any]:
         "final_loss", "final_train_acc", "final_val_acc", "grokking_epoch",
         "total_bits_memorized", "final_bits_per_example",
     )
-    return {f: getattr(row, f, None) for f in fields}
+    out = {f: getattr(row, f, None) for f in fields}
+    if (out["n_equiv"] is None or out["dataset_bits"] is None) and (
+        out["p"] is not None and out["operation"] is not None
+        and out["train_fraction"] is not None
+    ):
+        from .matching import compute_n_equiv
+        n_eq, bits = compute_n_equiv(int(out["p"]), out["operation"],
+                                     float(out["train_fraction"]))
+        if out["n_equiv"] is None:
+            out["n_equiv"] = n_eq
+        if out["dataset_bits"] is None:
+            out["dataset_bits"] = bits
+    return out
 
 
 @dataclass
@@ -124,12 +142,96 @@ class ArchGroup:
         return bool(self.capacity_runs or self.speed_runs or self.groks_runs)
 
 
+@dataclass(frozen=True)
+class IntersectionFigure:
+    """One mem/gen intersection figure family.
+
+    Each figure family produces one PNG per `slice_field` value in each
+    `ArchGroup`, with `x_field` along the x-axis and `colour_field` driving
+    the scatter colour-bar. The default family (slice_field=p,
+    x_field=param_count) is the per-prime intersection plot the paper
+    centres on; other families swap the roles to test the same theory along
+    e.g. dataset complexity.
+
+    Filters and thresholds:
+      - `max_dim`: drop rows with `dim > max_dim` from every input to this
+        figure (curves, scatter, intersection, slice-value enumeration). Set
+        from the YAML when wide-dim runs aren't trustworthy on the right
+        tail of the x-axis. None ⇒ no cap.
+      - `delay_train_threshold` / `delay_val_threshold`: train/val accuracy
+        thresholds (in percent) used when re-computing per-seed delay from
+        the npz traces for the scatter and the empirical onset.
+      - `mem_curve_threshold` / `gen_curve_threshold`: thresholds the
+        underlying *experiments* used when storing `saturation_epoch` /
+        `grokking_epoch` (default 99 in both experiment runners). These
+        do not recompute anything — they only label the curves so the
+        legend reflects what the stored data actually represents. If you
+        re-ran the experiments at a non-default early-stopping threshold,
+        set these to match.
+    """
+    name: str
+    slice_field: str
+    x_field: str
+    x_label: str
+    colour_field: str
+    colour_label: str
+    max_dim: Optional[int] = None
+    delay_train_threshold: float = 99.0
+    delay_val_threshold: float = 99.0
+    mem_curve_threshold: float = 99.0
+    gen_curve_threshold: float = 99.0
+
+
+_DEFAULT_INTERSECTION_FIGURE = IntersectionFigure(
+    name="intersection",
+    slice_field="p",
+    x_field="param_count",
+    x_label="Parameter count",
+    colour_field="dim",
+    colour_label="Dimension",
+)
+
+
+def _parse_intersection_figures(spec: dict[str, Any]) -> list[IntersectionFigure]:
+    """Read the optional `analysis.intersection_figures` block.
+
+    Missing/empty ⇒ a one-element list with the default per-prime figure
+    (today's behaviour). Each entry must supply `name`, `slice_field`, and
+    `x_field`; labels and colour fields default sensibly.
+    """
+    raw = (spec.get("analysis") or {}).get("intersection_figures")
+    if not raw:
+        return [_DEFAULT_INTERSECTION_FIGURE]
+    out: list[IntersectionFigure] = []
+    for entry in raw:
+        slice_field = entry["slice_field"]
+        x_field = entry["x_field"]
+        out.append(IntersectionFigure(
+            name=entry.get("name", f"intersection_{slice_field}_x_{x_field}"),
+            slice_field=slice_field,
+            x_field=x_field,
+            x_label=entry.get("x_label", x_field),
+            colour_field=entry.get("colour_field", "dim"),
+            colour_label=entry.get("colour_label",
+                                   entry.get("colour_field", "dim").title()),
+            max_dim=entry.get("max_dim"),
+            delay_train_threshold=float(entry.get("delay_train_threshold", 99.0)),
+            delay_val_threshold=float(entry.get("delay_val_threshold", 99.0)),
+            mem_curve_threshold=float(entry.get("mem_curve_threshold", 99.0)),
+            gen_curve_threshold=float(entry.get("gen_curve_threshold", 99.0)),
+        ))
+    return out
+
+
 @dataclass
 class ConfigView:
     config_name: str
     config_path: Path
     groups: list[ArchGroup]
     swept_axes: list[str]
+    intersection_figures: list[IntersectionFigure] = field(
+        default_factory=lambda: [_DEFAULT_INTERSECTION_FIGURE]
+    )
 
     @classmethod
     def from_yaml(cls, path: str | Path, *, db_path: Optional[str] = None) -> "ConfigView":
@@ -178,9 +280,11 @@ class ConfigView:
             g.capacity_constant, g.capacity_constant_source = _resolve_C(g, groups)
 
         swept = _detect_swept_axes(groups)
+        figures = _parse_intersection_figures(spec)
         name = spec.get("name") or path.stem
         return cls(config_name=name, config_path=path,
-                   groups=groups, swept_axes=swept)
+                   groups=groups, swept_axes=swept,
+                   intersection_figures=figures)
 
     def iter_groups(self) -> Iterator[ArchGroup]:
         return iter(self.groups)

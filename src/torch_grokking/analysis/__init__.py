@@ -17,7 +17,7 @@ from .matching import (
 from .capacity_constant import fit_capacity_slope, measure_capacity_constant
 
 # Config-driven analysis pipeline.
-from .config_view import ArchKey, ArchGroup, ConfigView, load_npz
+from .config_view import ArchKey, ArchGroup, ConfigView, IntersectionFigure, load_npz
 from .plots import (
     render_all,
     render_intersection,
@@ -41,7 +41,7 @@ __all__ = [
     # capacity constant
     "fit_capacity_slope", "measure_capacity_constant",
     # config-driven pipeline
-    "ArchKey", "ArchGroup", "ConfigView", "load_npz",
+    "ArchKey", "ArchGroup", "ConfigView", "IntersectionFigure", "load_npz",
     "render_all", "render_intersection", "render_capacity", "render_speed",
     "write_meta",
     "compute_predictiveness", "plot_predicted_vs_empirical",

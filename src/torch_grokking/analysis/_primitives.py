@@ -42,45 +42,59 @@ def plot_grokking_delay_with_speed(
     speed_curve: Dict[float, float],
     groks_curve: Dict[float, float],
     *,
-    saturation_threshold: float = 99.0,
+    mem_curve_threshold: float = 99.0,
+    gen_curve_threshold: float = 99.0,
     threshold_train: float = 99.0,
     threshold_val: float = 99.0,
     title: Optional[str] = None,
     save_path: Optional[str] = None,
     show: bool = False,
+    x_label: str = "Parameter count",
+    colour_label: str = "Dimension",
 ) -> Optional[Tuple[float, float]]:
     """The intersection plot (Image #1).
 
     Args:
-        delay_records: per-seed delay scatter. List of dicts with
-            `param_count`, `dim`, `delay`.
-        speed_curve: {param_count: mean epochs to memorise (train ≥ thr)}.
-        groks_curve: {param_count: mean epochs to generalise (val ≥ thr)}.
+        delay_records: per-seed delay scatter. List of dicts with `x`,
+            `colour`, `delay` (the caller decides which row fields those
+            map to — for the canonical figure, x=param_count and
+            colour=dim).
+        speed_curve: {x: mean epochs to memorise (train ≥ mem_curve_threshold)}.
+        groks_curve: {x: mean epochs to generalise (val ≥ gen_curve_threshold)}.
+        mem_curve_threshold: train accuracy threshold (in %) the speed
+            experiment used when storing `saturation_epoch`. Drives the
+            mem-curve legend label only — does not recompute anything.
+        gen_curve_threshold: val accuracy threshold (in %) the groks
+            experiment used when storing `grokking_epoch`. Drives the
+            gen-curve legend label only.
+        threshold_train / threshold_val: thresholds used to *recompute*
+            per-seed delay from the npz traces for the scatter. May
+            differ from the curve thresholds.
 
-    Returns the intersection (param_count, epochs) or None.
+    Returns the intersection (x, epochs) or None.
     """
     if not delay_records or not speed_curve or not groks_curve:
         return None
 
-    delay_records = sorted(delay_records, key=lambda r: r["param_count"])
-    pcs = np.array([r["param_count"] for r in delay_records], dtype=float)
-    dims = np.array([r["dim"] for r in delay_records], dtype=float)
+    delay_records = sorted(delay_records, key=lambda r: r["x"])
+    xs = np.array([r["x"] for r in delay_records], dtype=float)
+    colours = np.array([r["colour"] for r in delay_records], dtype=float)
     delays = np.array([r["delay"] for r in delay_records], dtype=float)
 
     fig, ax1 = plt.subplots(figsize=(10, 7))
 
     crest = sns.color_palette("crest", as_cmap=True)
     scatter = ax1.scatter(
-        pcs, delays, c=dims, cmap=crest, s=80, alpha=0.7, edgecolors="none",
+        xs, delays, c=colours, cmap=crest, s=80, alpha=0.7, edgecolors="none",
         label=f"Generalisation delay (val≥{threshold_val:.0f}% − train≥{threshold_train:.0f}%)",
     )
-    ax1.set_xlabel("Parameter count", fontsize=14)
+    ax1.set_xlabel(x_label, fontsize=14)
     ax1.set_ylabel("Generalisation delay (epochs)", fontsize=14, color="#1b7a3d")
     ax1.set_xscale("log")
     ax1.tick_params(axis="y", labelcolor="#1b7a3d")
     ax1.axhline(y=0, color="gray", linestyle="--", alpha=0.5, linewidth=1)
     ax1.grid(True, alpha=0.3)
-    cbar = plt.colorbar(scatter, ax=ax1, label="Dimension", pad=0.12)
+    cbar = plt.colorbar(scatter, ax=ax1, label=colour_label, pad=0.12)
     cbar.ax.tick_params(labelsize=10)
 
     ax2 = ax1.twinx()
@@ -90,11 +104,11 @@ def plot_grokking_delay_with_speed(
     groks_y = np.array([groks_curve[x] for x in groks_x], dtype=float)
     ax2.plot(
         groks_x, groks_y, "-", color="#d95f02", linewidth=2, alpha=0.85,
-        label=f"Epochs to generalise (val≥{saturation_threshold:.0f}%)",
+        label=f"Epochs to generalise (val≥{gen_curve_threshold:.0f}%)",
     )
     ax2.plot(
         speed_x, speed_y, "-", color="#7570b3", linewidth=2, alpha=0.85,
-        label=f"Epochs to memorise (train≥{saturation_threshold:.0f}%)",
+        label=f"Epochs to memorise (train≥{mem_curve_threshold:.0f}%)",
     )
     ax2.set_ylabel("Epochs", fontsize=14, color="#d95f02")
     ax2.set_yscale("log")

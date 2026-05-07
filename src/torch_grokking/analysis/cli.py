@@ -29,7 +29,9 @@ def _render_one(config_path: Path, out_dir: Path, only: set[str] | None,
     for kind, paths in rendered.items():
         print(f"  {kind}: {len(paths)} file(s)")
     if not skip_stats and (only is None or "stats" in only):
-        stats_paths = render_stats(view, out_dir / "stats")
+        # Stats live alongside the figures they describe — one subdir per
+        # IntersectionFigure under out_dir, e.g. out_dir/intersection/.
+        stats_paths = render_stats(view, out_dir)
         print(f"  stats: {len(stats_paths)} file(s)")
     write_meta(view, out_dir)
 
