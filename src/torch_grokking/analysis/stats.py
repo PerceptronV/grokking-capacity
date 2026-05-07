@@ -21,6 +21,7 @@ hypothesis-test suite per intersection figure (see
 from __future__ import annotations
 
 import json
+import warnings
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Optional
@@ -250,16 +251,26 @@ def _spearman_and_permutation(
         return {"rho": None, "p_analytic": None, "p_permutation": None,
                 "n_permutations": 0, "n": int(len(log_p)),
                 "skipped": "constant_input"}
-    rho, p_an = scipy_stats.spearmanr(log_p, log_e)
-    rng = np.random.default_rng(seed)
-    obs = float(rho)
-    n_ge = 0
-    perm = log_e.copy()
-    for _ in range(n_permutations):
-        rng.shuffle(perm)
-        r, _ = scipy_stats.spearmanr(log_p, perm)
-        if abs(r) >= abs(obs):
-            n_ge += 1
+    # scipy may still raise ConstantInputWarning when ranks tie out under a
+    # specific permutation even though the underlying values aren't constant.
+    # Silenced narrowly here (and in _kendall): the std==0 short-circuit
+    # already covers the genuinely-degenerate case.
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".*[Cc]onstant.*")
+        rho, p_an = scipy_stats.spearmanr(log_p, log_e)
+        if not np.isfinite(rho):
+            return {"rho": None, "p_analytic": None, "p_permutation": None,
+                    "n_permutations": 0, "n": int(len(log_p)),
+                    "skipped": "rho_nan"}
+        rng = np.random.default_rng(seed)
+        obs = float(rho)
+        n_ge = 0
+        perm = log_e.copy()
+        for _ in range(n_permutations):
+            rng.shuffle(perm)
+            r, _ = scipy_stats.spearmanr(log_p, perm)
+            if np.isfinite(r) and abs(r) >= abs(obs):
+                n_ge += 1
     p_perm = (n_ge + 1) / (n_permutations + 1)  # +1 smoothing
     return {"rho": float(obs), "p_analytic": float(p_an),
             "p_permutation": float(p_perm), "n_permutations": int(n_permutations),
@@ -271,7 +282,11 @@ def _kendall(log_p: np.ndarray, log_e: np.ndarray) -> dict[str, Any]:
         return {"tau": None, "p_analytic": None, "skipped": "n<3"}
     if np.std(log_p) == 0 or np.std(log_e) == 0:
         return {"tau": None, "p_analytic": None, "skipped": "constant_input"}
-    tau, p_an = scipy_stats.kendalltau(log_p, log_e)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".*[Cc]onstant.*")
+        tau, p_an = scipy_stats.kendalltau(log_p, log_e)
+    if not np.isfinite(tau):
+        return {"tau": None, "p_analytic": None, "skipped": "tau_nan"}
     return {"tau": float(tau), "p_analytic": float(p_an)}
 
 

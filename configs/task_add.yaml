@@ -49,6 +49,9 @@ experiments:
 # point of running stats on this config is to confirm the predictor
 # transfers from division to addition without recalibration.
 analysis:
+  # See central.yaml — capacity fits too noisy; pin to consts.C for now.
+  use_default_capacity_constant: true
+
   intersection_figures:
     - name: intersection
       slice_field: p

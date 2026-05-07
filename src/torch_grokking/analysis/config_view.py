@@ -63,6 +63,23 @@ _TOML_DEFAULTS: dict[str, Any] = {
 }
 
 
+_OPERATION_FILENAME_LABELS: dict[str, str] = {
+    "+": "add", "-": "sub", "*": "mul", "/": "div",
+}
+
+
+def _safe_for_filename(value: Any) -> str:
+    """Render a sweep value as a filename-safe token. Operation symbols
+    get readable names (`/` → `div` in particular — leaving it would split
+    the suffix across a directory boundary)."""
+    s = str(value)
+    if s in _OPERATION_FILENAME_LABELS:
+        return _OPERATION_FILENAME_LABELS[s]
+    for ch in '/\\:*?"<>| ':
+        s = s.replace(ch, "_")
+    return s
+
+
 @dataclass(frozen=True)
 class ArchKey:
     operation: str
@@ -97,8 +114,15 @@ class ArchKey:
         return expr
 
     def short_label(self, swept_axes: Iterable[str]) -> str:
-        """Filename-friendly suffix using only the swept fields."""
-        parts = [f"{ax}={getattr(self, ax)}" for ax in swept_axes if hasattr(self, ax)]
+        """Filename-friendly suffix using only the swept fields.
+
+        Operation symbols (`+`, `-`, `*`, `/`) are mapped to their readable
+        names (`add`, `sub`, `mul`, `div`) — `/` in particular would
+        otherwise be parsed as a path separator and matplotlib would then
+        try to save into a nonexistent directory. Other path-unsafe
+        characters fall back to `_`."""
+        parts = [f"{ax}={_safe_for_filename(getattr(self, ax))}"
+                 for ax in swept_axes if hasattr(self, ax)]
         return "__".join(parts)
 
 
@@ -277,6 +301,12 @@ class ConfigView:
         default_factory=lambda: [_DEFAULT_INTERSECTION_FIGURE]
     )
     stats: StatsConfig = field(default_factory=lambda: _DEFAULT_STATS_CONFIG)
+    # When true, every group's `capacity_constant` is pinned to `consts.C`
+    # regardless of whether the config has capacity rows. Used when the
+    # per-config capacity fits are too noisy to trust (see central.yaml's
+    # capacity figure: small-dim curves sag below dataset complexity, so
+    # the fitted slope is unreliable).
+    force_default_capacity: bool = False
 
     @classmethod
     def from_yaml(cls, path: str | Path, *, db_path: Optional[str] = None) -> "ConfigView":
@@ -321,8 +351,17 @@ class ConfigView:
         # Resolve capacity constants. Each group's C comes from its own
         # capacity rows when available; otherwise from the closest-matching
         # capacity-bearing group in the view. Fallback to consts.C.
+        # When `analysis.use_default_capacity_constant: true`, pin every
+        # group to `consts.C` and skip the fit entirely.
+        force_default = bool(
+            (spec.get("analysis") or {}).get("use_default_capacity_constant", False)
+        )
         for g in groups:
-            g.capacity_constant, g.capacity_constant_source = _resolve_C(g, groups)
+            if force_default:
+                g.capacity_constant = DEFAULT_C
+                g.capacity_constant_source = "fallback:consts.C (forced by config)"
+            else:
+                g.capacity_constant, g.capacity_constant_source = _resolve_C(g, groups)
 
         swept = _detect_swept_axes(groups)
         figures = _parse_intersection_figures(spec)
@@ -331,7 +370,8 @@ class ConfigView:
         return cls(config_name=name, config_path=path,
                    groups=groups, swept_axes=swept,
                    intersection_figures=figures,
-                   stats=stats_cfg)
+                   stats=stats_cfg,
+                   force_default_capacity=force_default)
 
     def iter_groups(self) -> Iterator[ArchGroup]:
         return iter(self.groups)
