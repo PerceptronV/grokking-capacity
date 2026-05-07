@@ -68,14 +68,17 @@ def _delay_records_for_slice(
     figure: IntersectionFigure,
     slice_value,
 ) -> list[dict]:
-    """Per-seed delay scatter records for one slice value of one figure family.
+    """Min-across-seeds delay scatter records for one slice value.
 
-    The returned dicts use the generic keys `x`, `colour`, `delay` so the
-    rendering primitive stays axis-agnostic. The caller (or figure spec)
-    decides which row fields those map to. Delay is recomputed from the
-    npz traces using the figure spec's train/val thresholds.
+    Returns one dict per `(x, colour)` cell, holding the minimum delay
+    observed across compatible seeds — the same convention
+    `aggregate.find_grokking_onset` uses when locating the empirical
+    onset. The keys `x`, `colour`, `delay` are generic so the rendering
+    primitive stays axis-agnostic; the figure spec decides which row
+    fields those map to. Delay is recomputed from the npz traces using
+    the figure spec's train/val thresholds.
     """
-    records: list[dict] = []
+    per_cell: dict[tuple, dict] = {}
     for row in group.groks_runs:
         if row.get(figure.slice_field) != slice_value:
             continue
@@ -98,12 +101,16 @@ def _delay_records_for_slice(
             continue
         x_value, delay = delays[0]
         colour_raw = row.get(figure.colour_field)
-        records.append({
-            "x": float(x_value),
-            "colour": float(colour_raw if colour_raw is not None else 0),
-            "delay": float(delay),
-        })
-    return records
+        colour = float(colour_raw if colour_raw is not None else 0)
+        key = (float(x_value), colour)
+        existing = per_cell.get(key)
+        if existing is None or delay < existing["delay"]:
+            per_cell[key] = {
+                "x": float(x_value),
+                "colour": colour,
+                "delay": float(delay),
+            }
+    return list(per_cell.values())
 
 
 def _curve_for_slice(
@@ -163,6 +170,18 @@ def render_intersection(
         _warn_threshold_mismatch(contributing_groks, "grokking_threshold",
                                   figure.gen_curve_threshold,
                                   context=f"{figure.name}/{slice_label}")
+        # Surface degenerate panels — curves with <2 distinct x values can't
+        # form a visible line or yield an intersection.
+        if len(speed_curve) < 2 or len(groks_curve) < 2:
+            warnings.warn(
+                f"{figure.name}/{slice_label}: degenerate curves — "
+                f"speed has {len(speed_curve)} point(s), "
+                f"groks has {len(groks_curve)} point(s). "
+                f"Scatter records: {len(records)}. "
+                f"This panel will render but the curves and intersection "
+                f"won't be visible.",
+                stacklevel=2,
+            )
         plot_grokking_delay_with_speed(
             records, speed_curve=speed_curve, groks_curve=groks_curve,
             mem_curve_threshold=figure.mem_curve_threshold,

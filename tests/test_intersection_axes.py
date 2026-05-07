@@ -273,6 +273,35 @@ def test_curve_thresholds_label_the_legend(synth_group, tmp_path):
     assert captured["gen_curve_threshold"] == 98.5
 
 
+def test_scatter_takes_min_delay_across_seeds(tmp_path):
+    """Three seeds at the same dim/prime produce three rows with three
+    delays; the scatter shows ONE dot at that x with the minimum delay."""
+    from torch_grokking.analysis.plots import _delay_records_for_slice
+    npz_dir = tmp_path / "npz"
+    rows = []
+    for seed, grok_epoch in [(42, 600), (43, 300), (44, 450)]:
+        npz = npz_dir / f"seed{seed}.npz"
+        _write_groks_npz(npz, train_epoch=100,
+                         grok_epoch=grok_epoch, total_epochs=1000)
+        rows.append(_row(
+            exp_type="groks", p=113, dim=64, seed=seed,
+            param_count=50000, n_samples=6328, dataset_bits=5e6,
+            epoch_field="grokking_epoch", epoch_value=float(grok_epoch),
+            npz_path=npz,
+        ))
+    group = ArchGroup(key=_arch_key(), capacity_runs=[],
+                      speed_runs=[], groks_runs=rows)
+    figure = IntersectionFigure(
+        name="min_check", slice_field="p", x_field="param_count",
+        x_label="Parameter count", colour_field="dim", colour_label="Dim",
+    )
+    records = _delay_records_for_slice(group, figure, 113)
+    assert len(records) == 1
+    assert records[0]["x"] == 50000
+    # Min delay = grok_epoch=300 minus train_epoch=100 = 200.
+    assert records[0]["delay"] == 200
+
+
 def test_warn_on_stored_threshold_mismatch(synth_group, tmp_path):
     """If a groks row carries `grokking_threshold` and it disagrees with
     the figure's `gen_curve_threshold`, the renderer warns."""
