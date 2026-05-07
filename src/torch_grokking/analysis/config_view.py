@@ -198,6 +198,44 @@ _DEFAULT_INTERSECTION_FIGURE = IntersectionFigure(
 )
 
 
+@dataclass(frozen=True)
+class StatsConfig:
+    """Knobs for the formal hypothesis-test suite written by `stats.py`.
+
+    The defaults match the central experiment. `enabled=False` keeps the
+    descriptive predictiveness CSV/scatter/per-axis plots but suppresses
+    `hypothesis_tests.{json,md}` — useful for smoke configs where there
+    aren't enough cells for the tests to be meaningful.
+
+    `baseline_predictors="auto"` selects `view.swept_axes ∪ {slice_field}`
+    at test time. A list overrides the auto choice — handy when only a
+    subset of the swept axes belong in the sceptic baseline.
+    """
+    enabled: bool = True
+    alpha: float = 0.05
+    n_permutations: int = 10_000
+    n_bootstrap: int = 10_000
+    multiple_comparisons: str = "holm"
+    baseline_predictors: Any = "auto"  # "auto" | list[str]
+
+
+_DEFAULT_STATS_CONFIG = StatsConfig()
+
+
+def _parse_stats_config(spec: dict[str, Any]) -> StatsConfig:
+    raw = (spec.get("analysis") or {}).get("statistics")
+    if not raw:
+        return _DEFAULT_STATS_CONFIG
+    return StatsConfig(
+        enabled=bool(raw.get("enabled", True)),
+        alpha=float(raw.get("alpha", 0.05)),
+        n_permutations=int(raw.get("n_permutations", 10_000)),
+        n_bootstrap=int(raw.get("n_bootstrap", 10_000)),
+        multiple_comparisons=str(raw.get("multiple_comparisons", "holm")),
+        baseline_predictors=raw.get("baseline_predictors", "auto"),
+    )
+
+
 def _parse_intersection_figures(spec: dict[str, Any]) -> list[IntersectionFigure]:
     """Read the optional `analysis.intersection_figures` block.
 
@@ -238,6 +276,7 @@ class ConfigView:
     intersection_figures: list[IntersectionFigure] = field(
         default_factory=lambda: [_DEFAULT_INTERSECTION_FIGURE]
     )
+    stats: StatsConfig = field(default_factory=lambda: _DEFAULT_STATS_CONFIG)
 
     @classmethod
     def from_yaml(cls, path: str | Path, *, db_path: Optional[str] = None) -> "ConfigView":
@@ -287,10 +326,12 @@ class ConfigView:
 
         swept = _detect_swept_axes(groups)
         figures = _parse_intersection_figures(spec)
+        stats_cfg = _parse_stats_config(spec)
         name = spec.get("name") or path.stem
         return cls(config_name=name, config_path=path,
                    groups=groups, swept_axes=swept,
-                   intersection_figures=figures)
+                   intersection_figures=figures,
+                   stats=stats_cfg)
 
     def iter_groups(self) -> Iterator[ArchGroup]:
         return iter(self.groups)

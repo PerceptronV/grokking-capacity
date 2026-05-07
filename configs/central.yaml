@@ -88,3 +88,20 @@ analysis:
       delay_val_threshold: 98
       mem_curve_threshold: 99
       gen_curve_threshold: 99
+
+  # Formal hypothesis tests (`hypothesis_tests.{json,md}` per figure).
+  # Decomposes "the intersection predicts grokking onset" into four
+  # falsifiable sub-claims; design lives in .claude/plans/statistics.md.
+  # Numbers below are the central experiment's tuning — large N_perm and
+  # N_boot because the figures here have tens of cells, so we want stable
+  # tail probabilities. Lower them on faster smoke configs.
+  statistics:
+    enabled: true
+    alpha: 0.05
+    n_permutations: 10000
+    n_bootstrap: 10000
+    multiple_comparisons: holm
+    # "auto" → view.swept_axes ∪ {slice_field}. central.yaml has no swept
+    # arch axis, so the sceptic baseline is just {p} — sufficiency tests
+    # ask whether the intersection beats predicting onset from prime alone.
+    baseline_predictors: auto

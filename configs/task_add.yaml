@@ -42,3 +42,41 @@ experiments:
       - {start: 40, end: 64, step: 8}
       - {start: 80, end: 128, step: 16}
       - {start: 160, end: 256, step: 32}
+
+# Mirror of central.yaml — see central.yaml for full commentary. No swept
+# arch axis here, so the sceptic baseline (auto) is {p} for the canonical
+# figure and {dim} for the by-prime swap, exactly like central.yaml. The
+# point of running stats on this config is to confirm the predictor
+# transfers from division to addition without recalibration.
+analysis:
+  intersection_figures:
+    - name: intersection
+      slice_field: p
+      x_field: param_count
+      x_label: "Parameter count"
+      colour_field: dim
+      colour_label: "Dimension"
+      max_dim: 256
+      delay_train_threshold: 99
+      delay_val_threshold: 98
+      mem_curve_threshold: 99
+      gen_curve_threshold: 99
+    - name: intersection_by_prime
+      slice_field: dim
+      x_field: dataset_bits
+      x_label: "Dataset bits"
+      colour_field: p
+      colour_label: "Prime"
+      max_dim: 256
+      delay_train_threshold: 99
+      delay_val_threshold: 98
+      mem_curve_threshold: 99
+      gen_curve_threshold: 99
+
+  statistics:
+    enabled: true
+    alpha: 0.05
+    n_permutations: 10000
+    n_bootstrap: 10000
+    multiple_comparisons: holm
+    baseline_predictors: auto
