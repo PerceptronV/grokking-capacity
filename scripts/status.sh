@@ -19,6 +19,21 @@ export TG_WALLOW_DB="${TG_WALLOW_DB:-$HOME/torch_grokking_runs.db}"
 STALE_MIN="${STALE_MIN:-30}"
 
 run_once() {
+# Active dispatchers — extract the --config arg from each running tg-dispatch.
+# Shows which suite each tmux session is currently on.
+echo
+echo "active dispatchers:"
+active=$(pgrep -af 'tg-dispatch' 2>/dev/null | grep -- '--config' || true)
+if [[ -n "$active" ]]; then
+    while IFS= read -r line; do
+        pid=$(awk '{print $1}' <<<"$line")
+        cfg=$(grep -oE -- '--config[= ]+[^ ]+' <<<"$line" | head -1 | sed -E 's/^--config[= ]+//; s/^["'\'']//; s/["'\'']$//')
+        echo "  pid=$pid  $cfg"
+    done <<<"$active"
+else
+    echo "  (none)"
+fi
+
 python - <<PY
 import datetime as dt
 from wallow import F
