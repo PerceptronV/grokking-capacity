@@ -36,7 +36,6 @@ cd "$REPO_ROOT"
 # list of experiments to replicate, in order
 experiments=(
   "lr_sweep"
-  "alpha_sweep"
   "task_mul"
 )
 

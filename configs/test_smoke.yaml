@@ -7,7 +7,7 @@ defaults:
   split_type: random
   depth: 2
   heads: 1
-  dropout: 0.0
+  dropout: 0.2
   lr: 0.001
   beta1: 0.9
   beta2: 0.98

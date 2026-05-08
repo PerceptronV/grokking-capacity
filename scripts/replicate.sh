@@ -33,13 +33,13 @@ experiments=(
   "central"
   "weight_decay_sweep"
   "alpha_sweep"
+  "dropout_sweep"
   "lr_sweep"
   "init_scale_sweep"
   "task_add"
   "depth_scaling"
   "heads_sweep"
   "task_mul"
-  "dropout_sweep"
 )
 
 LOG_DIR="logs"

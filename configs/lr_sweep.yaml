@@ -20,6 +20,7 @@ defaults:
 experiments:
   capacity:
     type: capacity
+    lr: [0.0001, 0.0003, 0.001, 0.003, 0.01]
     primes: [113]
     dims: [10, 14, 20]
     n_samples: [1000, 1374, 1891, 2601, 3576, 4917, 6761, 9300]

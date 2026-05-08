@@ -18,6 +18,8 @@ defaults:
   lr: 0.001
   beta1: 0.9
   beta2: 0.98
+  weight_decay: 1.0
+  dropout: 0.2
   batch_size: 512
   max_epochs: 5000
   primes: [97, 107, 113, 127, 139]
@@ -27,8 +29,6 @@ experiments:
   # Step 1: measure C_model for each depth
   capacity:
     type: capacity
-    weight_decay: 0.01
-    dropout: 0.0
     primes: [113]
     depth: [2, 6, 10]
     dims: [10, 14, 20]
@@ -38,7 +38,6 @@ experiments:
   # Step 2: speed and groks matched by param count, not dim
   speed:
     type: speed
-    weight_decay: 1.0
     depth: [2, 4, 6, 8, 10]
     n_samples: auto
     match_by: param_count
@@ -46,7 +45,6 @@ experiments:
 
   groks:
     type: groks
-    weight_decay: 1.0
     depth: [2, 4, 6, 8, 10]
     match_by: param_count
     param_count_targets: [5000, 10000, 20000, 50000, 100000, 200000, 500000]

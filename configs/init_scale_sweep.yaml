@@ -20,7 +20,6 @@ defaults:
 experiments:
   capacity:
     type: capacity
-    dropout: 0.0
     primes: [113]
     init_scale: [0.5, 1.0, 2.0]
     dims: [10, 14, 20]
