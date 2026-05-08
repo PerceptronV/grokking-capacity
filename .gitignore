@@ -195,3 +195,7 @@ runs.db-shm
 
 # Cursor
 .cursor
+
+# Anonymous Distribution
+code.sh
+code.zip
