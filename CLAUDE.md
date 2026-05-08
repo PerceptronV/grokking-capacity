@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Install
 
 ```bash
-pip install -e .   # editable; pulls wallow from /Users/yiding/Desktop/Research/wallow
+pip install -e .
 ```
 
 Run-tracking lives in a SQLite registry (`runs.db`) defined by `wallow.toml`.
