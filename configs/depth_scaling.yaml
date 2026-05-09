@@ -58,11 +58,8 @@ experiments:
 # swept here (match_by: param_count), so the by-prime swap slices on
 # whatever dim values the matcher selected per (depth, p, target).
 analysis:
-  # Use the per-config measured capacity constant (per-arch — capacity
-  # runs above measured C separately for depth ∈ {2, 6, 10}). Falls back
-  # to the closest-matching arch group, then to consts.C, when a sweep
-  # cell has no direct capacity counterpart (e.g. depth ∈ {4, 8}).
-  use_default_capacity_constant: false
+  # See central.yaml — capacity fits too noisy; pin to consts.C for now.
+  use_default_capacity_constant: true
 
   intersection_figures:
     - name: intersection
