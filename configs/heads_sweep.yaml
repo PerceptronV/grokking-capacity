@@ -1,8 +1,11 @@
 name: heads_sweep
 description: "Attention head count at fixed depth, varying dim (Experiment 3b)"
 
-# All dims must be divisible by max(heads)=8 since dim_head = dim // heads.
-# Capacity is re-run per head count because H may affect bits-per-parameter.
+# Rotary embeddings pair adjacent feature dims, so dim_head must be EVEN.
+# With dim_head = dim // heads, that means: dim % (2 * heads) == 0.
+# We therefore split capacity / speed / groks per head count, picking dim
+# lists that satisfy the constraint at each H. Capacity is also re-run per
+# head count because H may affect bits-per-parameter.
 
 defaults:
   operation: "/"
@@ -14,35 +17,97 @@ defaults:
   beta1: 0.9
   beta2: 0.98
   weight_decay: 1.0
-  dropout: 0.2
   batch_size: 512
   max_epochs: 5000
   primes: [97, 107, 113, 127, 139]
   seeds: [42, 43, 44, 45]
 
 experiments:
-  # Re-measure C_model per head count — H may change bits-per-parameter
-  capacity:
+  # ---- capacity (re-measure C_model per H) -----------------------------
+  # H=1 needs dim % 2 == 0; H=2 needs dim % 4 == 0; H=4 needs dim % 8 == 0;
+  # H=8 needs dim % 16 == 0. Param ranges are kept comparable across H.
+  capacity_h1:
     type: capacity
-    heads: [1, 2, 4, 8]
+    heads: 1
+    dims: [10, 14, 20]
+    n_samples: [1000, 1374, 1891, 2601, 3576, 4917, 6761, 9300]
+    primes: [113]
+    seeds: [42]
+  capacity_h2:
+    type: capacity
+    heads: 2
+    dims: [10, 14, 20]
+    n_samples: [1000, 1374, 1891, 2601, 3576, 4917, 6761, 9300]
+    primes: [113]
+    seeds: [42]
+  capacity_h4:
+    type: capacity
+    heads: 4
+    dims: [10, 14, 20]
+    n_samples: [1000, 1374, 1891, 2601, 3576, 4917, 6761, 9300]
+    primes: [113]
+    seeds: [42]
+  capacity_h8:
+    type: capacity
+    heads: 8
     dims: [10, 14, 20]
     n_samples: [1000, 1374, 1891, 2601, 3576, 4917, 6761, 9300]
     primes: [113]
     seeds: [42]
 
-  speed:
+  # ---- speed (T_mem on random labels) ----------------------------------
+  # Same dim list for H=1,2,4 (all entries divisible by 8); H=8 drops the
+  # entries (24, 40, 56) that violate dim % 16 == 0.
+  speed_h1:
     type: speed
-    weight_decay: 1.0
-    heads: [1, 2, 4, 8]
+    heads: 1
     n_samples: auto
     dims: [24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 256]
+  speed_h2:
+    type: speed
+    heads: 2
+    n_samples: auto
+    dims: [24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 256]
+  speed_h4:
+    type: speed
+    heads: 4
+    n_samples: auto
+    dims: [24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 256]
+  speed_h8:
+    type: speed
+    heads: 8
+    n_samples: auto
+    dims: [32, 48, 64, 80, 96, 112, 128, 160, 256]
 
-  groks:
+  # ---- groks (T_gen on modular division) -------------------------------
+  # Per-H dim_ranges chosen so every yielded dim satisfies dim % (2*H) == 0.
+  groks_h1:
     type: groks
-    weight_decay: 1.0
-    heads: [1, 2, 4, 8]
+    heads: 1
     dim_ranges:
-      - {start: 20, end: 32, step: 4}
-      - {start: 40, end: 64, step: 8}
-      - {start: 80, end: 128, step: 16}
-      - {start: 160, end: 256, step: 32}
+      - {start: 20, end: 32, step: 4}      # 20, 24, 28, 32
+      - {start: 40, end: 64, step: 8}      # 40, 48, 56, 64
+      - {start: 80, end: 128, step: 16}    # 80, 96, 112, 128
+      - {start: 160, end: 256, step: 32}   # 160, 192, 224, 256
+  groks_h2:
+    type: groks
+    heads: 2
+    dim_ranges:
+      - {start: 20, end: 32, step: 4}      # all div by 4
+      - {start: 40, end: 64, step: 8}      # all div by 4
+      - {start: 80, end: 128, step: 16}    # all div by 4
+      - {start: 160, end: 256, step: 32}   # all div by 4
+  groks_h4:
+    type: groks
+    heads: 4
+    dim_ranges:
+      - {start: 24, end: 32, step: 8}      # 24, 32
+      - {start: 40, end: 64, step: 8}      # 40, 48, 56, 64
+      - {start: 80, end: 128, step: 16}    # 80, 96, 112, 128
+      - {start: 160, end: 256, step: 32}   # 160, 192, 224, 256
+  groks_h8:
+    type: groks
+    heads: 8
+    dim_ranges:
+      - {start: 32, end: 128, step: 16}    # 32, 48, 64, 80, 96, 112, 128
+      - {start: 160, end: 256, step: 32}   # 160, 192, 224, 256
