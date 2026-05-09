@@ -48,3 +48,50 @@ experiments:
     depth: [2, 4, 6, 8, 10]
     match_by: param_count
     param_count_targets: [5000, 10000, 20000, 50000, 100000, 200000, 500000]
+
+# Mirror of central.yaml — see central.yaml for full commentary on the
+# threshold split, max_dim, and the four sub-claims tested. With swept_axes
+# = [depth], the sceptic baseline (auto) becomes {depth, p} for the
+# canonical figure and {depth, dim} for the by-prime swap, so the M3-vs-M2
+# F-test directly answers "does the intersection beat predicting onset
+# from depth and the slice axis alone?" Note that dim is not directly
+# swept here (match_by: param_count), so the by-prime swap slices on
+# whatever dim values the matcher selected per (depth, p, target).
+analysis:
+  # Use the per-config measured capacity constant (per-arch — capacity
+  # runs above measured C separately for depth ∈ {2, 6, 10}). Falls back
+  # to the closest-matching arch group, then to consts.C, when a sweep
+  # cell has no direct capacity counterpart (e.g. depth ∈ {4, 8}).
+  use_default_capacity_constant: false
+
+  intersection_figures:
+    - name: intersection
+      slice_field: p
+      x_field: param_count
+      x_label: "Parameter count"
+      colour_field: dim
+      colour_label: "Dimension"
+      max_dim: 256
+      delay_train_threshold: 99
+      delay_val_threshold: 98
+      mem_curve_threshold: 99
+      gen_curve_threshold: 99
+    - name: intersection_by_prime
+      slice_field: dim
+      x_field: dataset_bits
+      x_label: "Dataset bits"
+      colour_field: p
+      colour_label: "Prime"
+      max_dim: 256
+      delay_train_threshold: 99
+      delay_val_threshold: 98
+      mem_curve_threshold: 99
+      gen_curve_threshold: 99
+
+  statistics:
+    enabled: true
+    alpha: 0.05
+    n_permutations: 10000
+    n_bootstrap: 10000
+    multiple_comparisons: holm
+    baseline_predictors: auto

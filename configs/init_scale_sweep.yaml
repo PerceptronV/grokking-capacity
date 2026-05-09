@@ -48,8 +48,10 @@ experiments:
 # M3-vs-M2 F-test directly answers "does the intersection beat predicting
 # onset from init_scale and the slice axis alone?"
 analysis:
-  # See central.yaml — capacity fits too noisy; pin to consts.C for now.
-  use_default_capacity_constant: true
+  # Use the per-config measured capacity constant (per-arch from the
+  # capacity runs above), falling back to consts.C only when no matching
+  # capacity row exists.
+  use_default_capacity_constant: false
 
   intersection_figures:
     - name: intersection
