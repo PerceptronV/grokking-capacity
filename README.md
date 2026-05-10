@@ -1,42 +1,49 @@
-# Competing Speeds of Memorisation and Generalisation Predict Grokking
+# Model Capacity Determines Grokking through Competing Memorisation and Generalisation Speeds
 
-Deep networks trained with gradient descent have been observed to exhibit 'grokking', or delayed generalisation, on small algorithmic datasets.
-It has been conjectured that grokking is the result of different pattern learning speeds, where gradient descent first learns fast patterns that may overfit, and only later learns slower patterns that generalise better. 
-In this work, we formalise this conjecture by establishing information-theoretic estimates of model capacity and dataset complexity. We demonstrate that the onset of grokking correlates strongly with the intersection of memorisation and generalisation speeds, where the time taken by a model to find an algorithmic solution equals that required to memorise a dataset of equivalent complexity.
-Surprisingly, we find that smaller models do not grok even if they have enough capacity to memorise the training set. We argue this is because smaller models have slower memorisation speeds, biasing gradient descent towards first discovering the faster, generalising solution.
-Our experiments provide evidence that memorisation and learning speeds are sufficient to quantitatively model grokking, and may be useful for understanding the generalisation behaviour of larger models on natural tasks.
+Existing accounts of grokking explain the phenomena in terms of mechanistic frameworks such as circuit efficiency or lazy-to-rich transitions. However, despite a known dependence between grokking and model size, how model capacity shapes grokking remains an open question. We give an information-theoretic account of this relationship on the task of modular arithmetic, showing that grokking does not immediately occur when a model becomes large enough to memorise the training set, but rather emerges as the outcome of a competition between two measurable timescales: a memorisation speed $T_{\text{mem}}(P)$ and a generalisation speed $T_{\text{gen}}(P)$, both of which are functions of model parameter count $P$. Adapting the information capacity framework of Morris et al. (2025), we estimate $T_{\text{mem}}(P)$ on random-label data of equivalent complexity and $T_{\text{gen}}(P)$ on the modular task itself, and show that grokking emerges close to the parameter scale where these timescales intersect. The framework also suggests an empirical model for predicting memorisation speed given model capacity and dataset complexity, recovering the previously reported empirical observation that larger models memorise faster. Overall, we motivate the formalisation of different learning timescales as important abstractions to study when explaining how model capacity shapes grokking on algorithmic tasks.
+
+## Installation
+
+In your micromamba environment of choice, run the following command to install the package in editable mode:
+
+```bash
+pip install -e .
+```
+
+This exposes the experiment entry points (`gc-capacity`, `gc-speed`, `gc-groks`), the suite dispatcher (`gc-dispatch`), and the figure renderer (`gc-figures`). The experiment runs database lives at `runs.db` (override with `GC_WALLOW_DB`); the schema is declared in `wallow.toml` and auto-creates on first use.
 
 ## Reproducibility
 
-To reproduce the data, run the following command:
+The paper's data is produced by a set of YAML-driven suites under `configs/`. Each suite is dispatched in parallel across the available GPUs by `gc-dispatch`.
+
+To reproduce every suite end-to-end on a single multi-GPU node, run the wrapper script from the repo root with your micromamba environment name:
 
 ```bash
-python main.py
+scripts/replicate.sh <micromamba-env>
 ```
 
-After running the [`main.py`](/main.py) script, generate the main plots used in the paper, run the following commands:
+This launches a detached `tmux` session that runs all ten suites (`central`, `weight_decay_sweep`, `alpha_sweep`, `dropout_sweep`, `lr_sweep`, `init_scale_sweep`, `task_add`, `depth_scaling`, `heads_sweep`, `task_mul`) sequentially.
+
+Once the wallow database is populated, render the figures off it (one folder per config under `figures/`):
 
 ```bash
-python visualise.py capacity --all --p 127 --save --no-show --curves
-python visualise.py primes --p 97 101 103 107 109 113 127 131 137 139 --threshold-val 98 --max-dim 200 --save --no-show --correlation
-python visualise.py primes --p 97 101 103 107 109 113 127 131 137 139 --threshold-val 98 --max-dim 200 --save --no-show --speed
-python visualise.py primes --p 97 101 103 107 109 113 127 131 137 139 --threshold-val 98 --max-dim 200 --save --no-show --groks
-python visualise.py primes --p 97 101 103 107 109 113 127 131 137 139 --threshold-val 98 --max-dim 200 --save --no-show --groks --global-fit
-python visualise.py primes --p 97 101 103 107 109 113 127 131 137 139 --threshold-val 98 --max-dim 200 --save --no-show --groks --prime-fit
+gc-figures --all
 ```
+
+To render a single config or restrict to a figure family, see `gc-figures --help`.
 
 ## License and Attribution
 
 Use the following BibTeX entry to cite this work:
 
 ```bibtex
-@article{song2026competing,
-  title={Competing speeds of memorisation and generalisation predict grokking},
+@article{song2026grokking,
+  title={Model Capacity Determines Grokking through Competing Memorisation and Generalisation Speeds},
   author={Song, Yiding and Ye, Hanming}
   year={2026}
 }
 ```
 
-Unless otherwise stated, the files and code in this repository are licensed under the GNU GENERAL PUBLIC LICENSE (Version 3), Copyright (C) 2025 Yiding Song and Hanming Ye.
+Unless otherwise stated, the files and code in this repository are licensed under the GNU GENERAL PUBLIC LICENSE (Version 3), Copyright (C) 2026 Yiding Song and Hanming Ye.
 
-**Note:** the files [`data.py`](data.py) and [`models.py`](models.py) are adapted from the code by Amund Tveit (available at [adveit/torch_grokking](https://github.com/atveit/torch_grokking) under the MIT License), which itself is a PyTorch port of the original MLX code by Jason Stock (available at [stockeh/mlx-grokking](https://github.com/stockeh/mlx-grokking)). We have modified `data.py` to add different split types and random data generation, and left `models.py` untouched. The trainers used to finetune the neural network also takes inspiration from the code of Tveit and Stock.
+**Note:** the files [`modular.py`](src/grokking_capacity/data/modular.py) and [`transformer.py`](src/grokking_capacity/models/transformer.py) are adapted from the code by Amund Tveit (available at [adveit/torch_grokking](https://github.com/atveit/torch_grokking) under the MIT License), which itself is a PyTorch port of the original MLX code by Jason Stock (available at [stockeh/mlx-grokking](https://github.com/stockeh/mlx-grokking)). We have modified `modular.py` to add different split types and random data generation, and mostly left `transformer.py` untouched. The trainers used to finetune the neural network also takes inspiration from the code of Tveit and Stock.

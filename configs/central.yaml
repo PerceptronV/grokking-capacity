@@ -1,0 +1,111 @@
+name: central_grokking
+description: "Main grokking experiments for modular division with matched weight decay (baseline for revision)"
+
+defaults:
+  operation: "/"
+  train_fraction: 0.5
+  split_type: random
+  depth: 2
+  heads: 1
+  weight_decay: 1.0
+  dropout: 0.2
+  lr: 0.001
+  beta1: 0.9
+  beta2: 0.98
+  batch_size: 512
+  max_epochs: 5000
+  primes: [97, 101, 103, 107, 109, 113, 127, 131, 137, 139]
+  seeds: [42, 43, 44, 45, 46, 47, 48, 49, 50, 51]
+
+experiments:
+  capacity:
+    type: capacity
+    primes: [113]
+    dims: [10, 12, 14, 16, 18, 20, 22]
+    n_samples: [1000, 1374, 1891, 2601, 3576, 4917, 6761, 9300]
+    seeds: [42]
+
+  speed:
+    type: speed
+    n_samples: auto
+    dims: [20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 68, 72,
+           76, 80, 84, 88, 92, 96, 100, 104, 108, 112, 116, 120, 124,
+           128, 136, 144, 152, 160, 168, 176, 184, 192, 200, 208,
+           216, 224, 232, 240, 248, 256]
+
+  groks:
+    type: groks
+    dim_ranges:
+      - {start: 20, end: 128, step: 2}
+      - {start: 130, end: 1000, step: 10}
+
+# Intersection figure families. The first reproduces the canonical
+# per-prime mem/gen plot (x = parameter count, one panel per prime). The
+# second swaps roles to test the same theory along dataset complexity:
+# one panel per dim, x = dataset_bits, varying prime. Both reuse the same
+# rows already produced above — no new runs needed.
+#
+# `max_dim: 256` excludes wide-dim runs (groks goes up to dim=1000) from
+# both the curves and the intersection — those points are noisy on the
+# right tail and would skew the crossing.
+#
+# Two val thresholds are deliberately split:
+#   delay_val_threshold (98) — used when re-computing per-seed delay
+#       (val_epoch - train_epoch) for the scatter and empirical onset.
+#   gen_curve_threshold (99) — labels the gen *speed* curve, which is
+#       read from the wallow row's `grokking_epoch` and was stored by
+#       groks.py at val ≥ 99 (the training default).
+# mem_curve_threshold likewise labels the mem speed curve at the
+# threshold speed.py used when storing `saturation_epoch`. If you rerun
+# the underlying experiments at non-default thresholds, change these to
+# match — the renderer will warn loudly when it sees a mismatch against
+# the per-row stored thresholds (e.g. `grokking_threshold`).
+analysis:
+  # The per-config capacity fits are too noisy to trust right now (small-dim
+  # curves sag below the dataset-complexity line in M_T_vs_dataset_size),
+  # so pin C to `consts.C = 2.16` for every group. Capacity figures still
+  # render — they're diagnostic — but the constant they expose into
+  # speed/groks normalisation comes from consts, not the fit. Flip back to
+  # false once the capacity sweep is rerun cleanly.
+  use_default_capacity_constant: true
+
+  intersection_figures:
+    - name: intersection
+      slice_field: p
+      x_field: param_count
+      x_label: "Parameter count"
+      colour_field: dim
+      colour_label: "Dimension"
+      max_dim: 256
+      delay_train_threshold: 99
+      delay_val_threshold: 98
+      mem_curve_threshold: 99
+      gen_curve_threshold: 99
+    - name: intersection_by_prime
+      slice_field: dim
+      x_field: dataset_bits
+      x_label: "Dataset bits"
+      colour_field: p
+      colour_label: "Prime"
+      max_dim: 256
+      delay_train_threshold: 99
+      delay_val_threshold: 98
+      mem_curve_threshold: 99
+      gen_curve_threshold: 99
+
+  # Formal hypothesis tests (`hypothesis_tests.{json,md}` per figure).
+  # Decomposes "the intersection predicts grokking onset" into four
+  # falsifiable sub-claims; design lives in .claude/plans/statistics.md.
+  # Numbers below are the central experiment's tuning — large N_perm and
+  # N_boot because the figures here have tens of cells, so we want stable
+  # tail probabilities. Lower them on faster smoke configs.
+  statistics:
+    enabled: true
+    alpha: 0.05
+    n_permutations: 10000
+    n_bootstrap: 10000
+    multiple_comparisons: holm
+    # "auto" → view.swept_axes ∪ {slice_field}. central.yaml has no swept
+    # arch axis, so the sceptic baseline is just {p} — sufficiency tests
+    # ask whether the intersection beats predicting onset from prime alone.
+    baseline_predictors: auto

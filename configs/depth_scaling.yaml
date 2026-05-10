@@ -1,0 +1,94 @@
+name: depth_scaling
+description: "Vary depth at fixed width (Experiment 3a)"
+
+# Dependency order enforced by run_config.py: capacity → speed → groks.
+# Capacity must run first to measure C_model per depth. The per-depth C_model
+# is read from the ResultsIndex when building the match table.
+#
+# match_by: param_count means dims are selected to hit the param_count_targets
+# rather than being specified directly. find_dims_for_param_targets() is called
+# per (depth, p) to find the dim values closest to each target.
+
+defaults:
+  operation: "/"
+  train_fraction: 0.5
+  split_type: random
+  heads: 1
+  dropout: 0.2
+  lr: 0.001
+  beta1: 0.9
+  beta2: 0.98
+  weight_decay: 1.0
+  dropout: 0.2
+  batch_size: 512
+  max_epochs: 5000
+  primes: [97, 107, 113, 127, 139]
+  seeds: [42, 43, 44, 45]
+
+experiments:
+  # Step 1: measure C_model for each depth
+  capacity:
+    type: capacity
+    primes: [113]
+    depth: [2, 6, 10]
+    dims: [10, 14, 20]
+    n_samples: [1000, 1374, 1891, 2601, 3576, 4917, 6761, 9300]
+    seeds: [42]
+
+  # Step 2: speed and groks matched by param count, not dim
+  speed:
+    type: speed
+    depth: [2, 4, 6, 8, 10]
+    n_samples: auto
+    match_by: param_count
+    param_count_targets: [5000, 10000, 20000, 50000, 100000, 200000, 500000]
+
+  groks:
+    type: groks
+    depth: [2, 4, 6, 8, 10]
+    match_by: param_count
+    param_count_targets: [5000, 10000, 20000, 50000, 100000, 200000, 500000]
+
+# Mirror of central.yaml — see central.yaml for full commentary on the
+# threshold split, max_dim, and the four sub-claims tested. With swept_axes
+# = [depth], the sceptic baseline (auto) becomes {depth, p} for the
+# canonical figure and {depth, dim} for the by-prime swap, so the M3-vs-M2
+# F-test directly answers "does the intersection beat predicting onset
+# from depth and the slice axis alone?" Note that dim is not directly
+# swept here (match_by: param_count), so the by-prime swap slices on
+# whatever dim values the matcher selected per (depth, p, target).
+analysis:
+  # See central.yaml — capacity fits too noisy; pin to consts.C for now.
+  use_default_capacity_constant: true
+
+  intersection_figures:
+    - name: intersection
+      slice_field: p
+      x_field: param_count
+      x_label: "Parameter count"
+      colour_field: dim
+      colour_label: "Dimension"
+      max_dim: 256
+      delay_train_threshold: 99
+      delay_val_threshold: 98
+      mem_curve_threshold: 99
+      gen_curve_threshold: 99
+    - name: intersection_by_prime
+      slice_field: dim
+      x_field: dataset_bits
+      x_label: "Dataset bits"
+      colour_field: p
+      colour_label: "Prime"
+      max_dim: 256
+      delay_train_threshold: 99
+      delay_val_threshold: 98
+      mem_curve_threshold: 99
+      gen_curve_threshold: 99
+
+  statistics:
+    enabled: true
+    alpha: 0.05
+    n_permutations: 10000
+    n_bootstrap: 10000
+    multiple_comparisons: holm
+    baseline_predictors: auto

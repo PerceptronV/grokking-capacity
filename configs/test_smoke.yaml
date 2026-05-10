@@ -1,0 +1,35 @@
+name: test_smoke
+description: "Minimal smoke test — 1 prime, 1 seed, tiny dim, few epochs"
+
+defaults:
+  operation: "/"
+  train_fraction: 0.5
+  split_type: random
+  depth: 2
+  heads: 1
+  dropout: 0.2
+  lr: 0.001
+  beta1: 0.9
+  beta2: 0.98
+  batch_size: 512
+  max_epochs: 50
+  primes: [13]
+  seeds: [42]
+  weight_decay: 1.0
+
+experiments:
+  capacity:
+    type: capacity
+    operation: random   # use random-target data, not the modular task
+    primes: [113]
+    dims: [16, 24]
+    n_samples: [1000, 3000, 9300]
+
+  speed:
+    type: speed
+    n_samples: auto
+    dims: [16, 24]
+
+  groks:
+    type: groks
+    dims: [16, 24]

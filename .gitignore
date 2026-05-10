@@ -171,8 +171,15 @@ cython_debug/
 .pypirc
 
 # Data
-data/
-media/
+/data/
+/media/
+/docs/
+/figures/
+
+# wallow registry (recreated from wallow.toml)
+runs.db
+runs.db-wal
+runs.db-shm
 
 # OSX
 .DS_Store
@@ -188,3 +195,7 @@ media/
 
 # Cursor
 .cursor
+
+# Anonymous Distribution
+code.sh
+code.zip
