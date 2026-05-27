@@ -219,7 +219,6 @@ def main():
     try:
         with run_lifecycle(
             identifying,
-            run_uuid=args.run_uuid,
             force=args.force,
             db_path=args.db_path,
             device=device,
@@ -301,7 +300,7 @@ def main():
                        f"grok@{grok_epoch}")
             print(summary)
     except AlreadyCompleted as e:
-        print(f"  Skip: run {e.run_uuid} already completed (use --force to re-run).")
+        print(f"  Skip: run {e.run.uuid} already completed (use --force to re-run).")
 
 
 if __name__ == '__main__':

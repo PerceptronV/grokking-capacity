@@ -21,7 +21,7 @@ from wallow import F
 
 from .capacity_constant import fit_capacity_slope
 from ..consts import C as DEFAULT_C
-from ..registry import get_store, npz_path_for
+from ..registry import get_store, npz_path_for_row
 
 # `..dispatch.config` imports back from this package (matching utilities),
 # so `expand_runs` is imported lazily inside `ConfigView.from_yaml` to break
@@ -139,7 +139,7 @@ def _row_to_dict(row: Any) -> dict[str, Any]:
         "dataset_type", "n_samples", "dim", "depth", "heads", "dropout",
         "init_scale", "lr", "weight_decay", "beta1", "beta2", "batch_size",
         "max_epochs", "seed", "architecture_family",
-        "param_count", "run_uuid", "npz_path", "n_equiv", "dataset_bits",
+        "param_count", "uuid", "npz_path", "n_equiv", "dataset_bits",
         "saturation_step", "saturation_epoch", "saturated", "final_acc",
         "final_loss", "final_train_acc", "final_val_acc", "grokking_epoch",
         "total_bits_memorized", "final_bits_per_example",
@@ -440,7 +440,7 @@ def load_npz(row: dict[str, Any]):
     """Load the trace.npz for a wallow row dict.
 
     Prefers the `npz_path` annotation on the row; falls back to the canonical
-    path computed from `experiment_type` + `run_uuid`. Returns the npz file
+    path computed from `experiment_type` + `uuid`. Returns the npz file
     object (caller is responsible for `.close()` if they care).
     """
     import numpy as np
@@ -450,5 +450,5 @@ def load_npz(row: dict[str, Any]):
         p = Path(explicit)
         if p.exists():
             return np.load(p, allow_pickle=False)
-    p = npz_path_for(row["experiment_type"], row["run_uuid"])
+    p = npz_path_for_row(row)
     return np.load(p, allow_pickle=False)

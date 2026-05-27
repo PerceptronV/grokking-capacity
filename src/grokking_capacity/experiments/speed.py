@@ -168,7 +168,6 @@ def main():
     try:
         with run_lifecycle(
             identifying,
-            run_uuid=args.run_uuid,
             force=args.force,
             db_path=args.db_path,
             device=device,
@@ -205,7 +204,7 @@ def main():
                   f"saturation_step={results['saturation_step']:,}, "
                   f"final acc={results['final_acc']:.2f}%")
     except AlreadyCompleted as e:
-        print(f"  Skip: run {e.run_uuid} already completed (use --force to re-run).")
+        print(f"  Skip: run {e.run.uuid} already completed (use --force to re-run).")
 
 
 if __name__ == '__main__':

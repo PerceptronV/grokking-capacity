@@ -2,6 +2,13 @@
 name = "grokking_capacity"
 description = "Grokking experiments — capacity, speed, groks — registered + dedup'd by wallow."
 
+# Artefacts live under data/<experiment_type>/<uuid>/. `uuid` is wallow's
+# native per-row id (generated at INSERT); `Store.artefacts_dir(run)` resolves
+# this layout. Override the root at runtime via the GC_DATA_DIR env var (see
+# registry/store.py). artefacts_root is relative to the process cwd.
+artefacts_root = "data"
+artefacts_layout = "{experiment_type}/{uuid}"
+
 # ---- identifying fields ----------------------------------------------------
 # Together these define one experiment. Two runs with the same identifying
 # tuple dedup against each other. Identifying fields must be int/float/string/bool
@@ -98,11 +105,6 @@ doc = "Marker for the model family. Bumping this is the cheapest way to make MLP
 type = "string"
 indexed = true
 doc = "'pending' | 'running' | 'completed' | 'failed'."
-
-[annotating.run_uuid]
-type = "string"
-indexed = true
-doc = "Random uuid generated at first claim. Used as the directory name under data/<experiment_type>/<run_uuid>/."
 
 [annotating.artefacts_dir]
 type = "path"

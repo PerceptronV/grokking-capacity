@@ -191,7 +191,6 @@ def test_config_view_groups_runs_by_arch(isolated_repo, tmp_path):
             identifying=ident,
             annotating={
                 "status": "completed",
-                "run_uuid": f"smoke_{ident['n_samples']}",
                 "param_count": 12000,
                 "total_bits_memorized": float(ident["n_samples"]) * 5.0,
             },

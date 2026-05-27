@@ -83,7 +83,7 @@ def _row_to_dict(row: Any, extra: tuple[str, ...] = ()) -> dict[str, Any]:
         "experiment_type", "p", "operation", "train_fraction", "split_type",
         "dataset_type", "n_samples", "dim", "depth", "heads", "dropout",
         "init_scale", "lr", "weight_decay", "seed", "architecture_family",
-        "param_count", "run_uuid", "npz_path", "n_equiv", "dataset_bits",
+        "param_count", "uuid", "npz_path", "n_equiv", "dataset_bits",
         "saturation_step", "saturation_epoch", "saturated", "final_acc",
         "final_loss", "final_train_acc", "final_val_acc", "grokking_epoch",
         "total_bits_memorized", "final_bits_per_example",
@@ -194,8 +194,8 @@ def build_match_table(
                 continue
             cap_frac = K_mem / (C * gp) if gp > 0 else 0.0
             matches.append(ExperimentMatch(
-                groks_run_uuid=g["run_uuid"] or "",
-                speed_run_uuid=s["run_uuid"] or "",
+                groks_run_uuid=g["uuid"] or "",
+                speed_run_uuid=s["uuid"] or "",
                 capacity_run_uuid=None,
                 param_count_groks=int(gp),
                 param_count_speed=int(sp),

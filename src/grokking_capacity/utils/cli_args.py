@@ -40,10 +40,6 @@ def add_io_args(parser, *, data_dir: str):
 
 def add_registry_args(parser):
     """Args used by the dispatcher to plumb wallow state into a worker."""
-    parser.add_argument('--run-uuid', type=str, default=None,
-                        help='Pre-generated wallow run uuid (set by dispatcher). '
-                             'When omitted the worker generates its own and registers '
-                             'the run from scratch.')
     parser.add_argument('--node-rank', type=int, default=0,
                         help='Multi-node shard index (recorded as annotation)')
     parser.add_argument('--db-path', type=str, default=None,

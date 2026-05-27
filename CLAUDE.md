@@ -89,31 +89,30 @@ The paper's central claim is that grokking onset is predicted by the intersectio
 - `**experiments/speed.py**` — Measures `T_mem` (memorisation speed). Counts steps to saturation on random-target data of a fixed size (`n_equiv`).
 - `**experiments/groks.py**` — Measures `T_gen` (generalisation speed). Trains on modular arithmetic; records the epoch when validation accuracy first crosses the grokking threshold.
 
-`**dispatch/main.py**` (entry point `gc-dispatch`) orchestrates suites via YAML configs. It expands parameter grids and, for each combo, claims a wallow row (`return_existing` → check `status` → skip or dispatch). Workers receive the claimed `--run-uuid` and write artefacts to `data/<exp_type>/<run_uuid>/trace.npz`. Dependency order within a suite is always `capacity → speed → groks`.
+`**dispatch/main.py**` (entry point `gc-dispatch`) orchestrates suites via YAML configs. It expands parameter grids and, for each combo, claims a wallow row (`return_existing` → check `status` → skip or dispatch). The worker re-derives the same identifying tuple, reads back the wallow-assigned `uuid`, and writes artefacts to `data/<exp_type>/<uuid>/trace.npz` (resolved via `Store.artefacts_dir`). Dependency order within a suite is always `capacity → speed → groks`.
 
 `**analysis/**` is the post-hoc layer. Two surfaces:
 - Legacy match-table — `analysis/matching.py` pairs completed groks/speed rows by `(p, operation, train_fraction, depth, heads, dropout, init_scale, seed, n_samples ≈ n_equiv, param_count ≈ groks.param_count)` and `dispatch/main.py` writes `data/<suite_name>/matches.json` at the end of every suite.
 - Config-driven figure pipeline — `analysis/config_view.py` (parses a YAML, groups completed wallow rows into `ArchGroup`s, resolves a per-group capacity constant), `analysis/aggregate.py` (seed aggregation: mean curves, min-delay, onset detection, intersection finder), `analysis/plots.py` (orchestrators per figure family), `analysis/stats.py` (predictiveness CSV + scatter + per-axis breakdowns), `analysis/_primitives.py` (matplotlib primitives), `analysis/cli.py` (the `gc-figures` entry point).
 
-`**registry/**` is the wallow integration layer:
-- `store.py` — cached `Store` and `Schema` accessors.
+`**registry/**` is the wallow integration layer (wallow ≥ 0.2.0):
+- `store.py` — cached `Store` and `Schema` accessors; sets `artefacts_root` to `<repo>/data` (or `$GC_DATA_DIR`) post-load. Also `artefacts_dir_for_row()` / `npz_path_for_row()` resolve a row dict's path via `Store.artefacts_dir` for the analysis layer.
 - `identifying.py` — `build_identifying()` constructs the identifying tuple per experiment type (derives `n_samples` for groks, picks `dataset_type='random'/'modular'`).
-- `paths.py` — flat layout helpers: `data/<exp_type>/<run_uuid>/`.
-- `provenance.py` — host / gpu_type / git info collector.
-- `lifecycle.py` — `claim()` / `run_lifecycle()` helpers wrap the worker's claim → start → finalise/fail flow.
+- `provenance.py` — host / gpu_type / git info collector (passed as `start_annotating`).
+- `lifecycle.py` — thin wrapper over `wallow.contrib.lifecycle.run_lifecycle`; adds provenance and resolves artefact paths from the run's native `uuid`. The project `WorkerHandle` keeps `.npz_path` / `.artefacts_dir` / `.finalise(results=...)`. The layout `{experiment_type}/{uuid}` lives in `wallow.toml`'s `[project]`.
 
 ## Run registry (wallow)
 
 `wallow.toml` is the source of truth for the schema. Two field categories:
 
 - **Identifying** — composite UNIQUE constraint. Two runs with the same identifying tuple are the same experiment.
-- **Annotating** — recorded *about* a run; freely overwritable. Includes `status`, `run_uuid`, paths, provenance (`host`, `gpu_type`, `git_hash`, `wallclock_seconds`), and per-experiment results.
+- **Annotating** — recorded *about* a run; freely overwritable. Includes `status`, paths (`artefacts_dir`, `npz_path`), provenance (`host`, `gpu_type`, `git_hash`, `wallclock_seconds`), and per-experiment results. The per-row `uuid` is wallow-native (generated at INSERT) — not declared in `wallow.toml`.
 
 To inspect a run: `wallow inspect <id>`. To add a hyperparameter: edit `wallow.toml` (and `registry/identifying.IDENTIFYING_FIELDS`), then `wallow migrate generate "..."` and `wallow migrate apply` (Alembic-managed once set up).
 
 ## File / directory naming
 
-`data/<experiment_type>/<run_uuid>/trace.npz` (plus any extra artefacts in the same dir, e.g. `model.pt` from `gc-groks --save-model`). The `run_uuid` is a 12-char random hex generated at first claim; reruns of the same identifying tuple reuse it (artefacts are overwritten in place, no orphan dirs).
+`data/<experiment_type>/<uuid>/trace.npz` (plus any extra artefacts in the same dir, e.g. `model.pt` from `gc-groks --save-model`). The `uuid` is wallow's native 12-char per-row id, generated at INSERT; reruns of the same identifying tuple reuse the row (and thus its uuid), so artefacts are overwritten in place with no orphan dirs.
 
 Filenames carry no semantic information — all hyperparameters live in the wallow row. To find the npz for a run, query the registry:
 
