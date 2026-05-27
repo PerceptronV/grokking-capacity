@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Launch a gc-dispatch suite inside a tmux session, with a specific micromamba
+# Launch a gc-dispatch suite inside a tmux session, with a specific mamba
 # environment activated. The session is named after the suite so each one runs
 # in its own session and `tmux ls` gives you a roster of in-flight sweeps.
 #
@@ -67,10 +67,10 @@ if [[ "${FORCE:-0}" == "1" ]]; then
     EXTRA+=(--force)
 fi
 
-# Activate the requested micromamba env inside tmux. tmux spawns a fresh shell
+# Activate the requested mamba env inside tmux. tmux spawns a fresh shell
 # that sources ~/.bashrc, which can clobber any inherited PATH; explicit
 # activation guarantees the right Python is on PATH.
-ACTIVATE="eval \"\$(micromamba shell hook -s bash)\" && micromamba activate '$MAMBA_ENV' && "
+ACTIVATE="eval \"\$(mamba shell hook -s bash)\" && mamba activate '$MAMBA_ENV' && "
 
 CMD="${ACTIVATE}gc-dispatch --config $CONFIG --workers-per-gpu $WORKERS_PER_GPU ${EXTRA[*]} 2>&1 | tee -a $LOG_FILE"
 

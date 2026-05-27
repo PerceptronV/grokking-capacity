@@ -52,7 +52,7 @@ fi
 # Build the in-tmux command: activate env once, then run each suite serially.
 # Use `set -e` so a failed suite stops the loop (catch the error before more
 # GPU-hours are burned).
-ACTIVATE='eval "$(micromamba shell hook -s bash)" && micromamba activate '"$MAMBA_ENV"
+ACTIVATE='eval "$(mamba shell hook -s bash)" && mamba activate '"$MAMBA_ENV"
 EXPORT_DB='export GC_WALLOW_DB='"$(printf '%q' "$GC_WALLOW_DB")"
 SUITES_QUOTED=$(printf '"%s" ' "${experiments[@]}")
 INNER='set -e; '"$EXPORT_DB"'; '"$ACTIVATE"' && for s in '"$SUITES_QUOTED"'; do echo "===== $(date -u +%FT%TZ) starting $s ====="; gc-dispatch --config "configs/${s}.yaml" --workers-per-gpu '"$WORKERS_PER_GPU"' || { echo "FAILED: $s"; exit 1; }; echo "===== $(date -u +%FT%TZ) finished $s ====="; done; echo "ALL SUITES DONE"; echo; echo "Press Enter to close."; read'
