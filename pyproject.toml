@@ -22,7 +22,7 @@ dependencies = [
     # 0.2.0 adds a native `uuid` column, [project].artefacts_root/layout +
     # Store.artefacts_dir, and wallow.contrib.lifecycle — all used by the
     # registry layer below.
-    "wallow>=0.2.0",
+    "wallow>=0.2.1",
 ]
 
 [project.optional-dependencies]
