@@ -34,6 +34,7 @@ gc-speed = "grokking_capacity.experiments.speed:main"
 gc-groks = "grokking_capacity.experiments.groks:main"
 gc-dispatch = "grokking_capacity.dispatch.main:main"
 gc-figures = "grokking_capacity.analysis.cli:main"
+gc-error-decay = "grokking_capacity.analysis.error_decay:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
