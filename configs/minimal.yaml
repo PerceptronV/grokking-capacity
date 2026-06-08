@@ -1,0 +1,89 @@
+name: minimal_mechanism
+description: "Minimal sweep to build the two-mechanism theory: norm contraction (T_gen) + jamming hazard (T_mem). Replaces the expensive central sweep for this purpose."
+
+# ---------------------------------------------------------------------------
+# Purpose
+# ---------------------------------------------------------------------------
+# Two analyses, two data sources, one cheap config (~68 runs vs central's
+# thousands). No capacity runs — neither analysis needs C measured here:
+#   - gc-contraction reads η,λ from the row, not C.
+#   - gc-error-decay / gc-rate-vs-capacity / gc-threshold-invariance compute
+#     f with consts.C=2.16. Their *consistency* gates (a_rate vs a_aggregate,
+#     exponent invariance) are C-independent — C only rescales the absolute a.
+# Add a capacity block later if you want C for this exact arch (dropout=0.2)
+# or to attempt Stage 3 (the V_mem/P_cross bridge).
+#
+# Single architecture (the paper's: depth-2, 1-head, gated-FFN, RMSNorm, RoPE),
+# high weight decay λ=1.0, dropout 0.2 — i.e. the regime the theory must explain.
+# Two primes give a little p-variation (κ-vs-p in Stage 1; pooled a in J).
+
+defaults:
+  operation: "/"
+  train_fraction: 0.5
+  split_type: random
+  depth: 2
+  heads: 1
+  weight_decay: 1.0
+  dropout: 0.2
+  lr: 0.001
+  beta1: 0.9
+  beta2: 0.98
+  batch_size: 512
+  max_epochs: 5000
+  primes: [97, 113]
+  seeds: [42, 43, 44, 45]
+
+experiments:
+  # --- OPTIONAL: measure C for this exact architecture --------------------
+  # Uncomment to measure the capacity constant C (bits/param) at THIS arch
+  # (dropout 0.2, inherited) rather than assuming consts.C=2.16. Needed only
+  # if you want an honest absolute jamming exponent `a` or to attempt Stage 3
+  # (the V_mem(P_cross) ≈ V_* bridge). `operation: random` selects random-
+  # target data (without it, capacity inherits "/" and measures C on modular
+  # data instead). These runs also add more random-label trajectories to
+  # Branch J. When enabled, set `use_default_capacity_constant: false` below.
+  #   feeds: per-arch C (config_view), and extra rows for gc-error-decay et al.
+  # capacity:
+  #   type: capacity
+  #   operation: random
+  #   primes: [113]
+  #   dims: [10, 14, 18, 22]
+  #   n_samples: [1374, 2601, 4917, 9300]
+  #   seeds: [42]
+
+  # --- Track A: random-label memorisation → the jamming T_mem mechanism ----
+  # Branch J reads these (speed runs are always random-label). The dim sweep
+  # gives the capacity-fraction spread the fits need: f = dataset_bits/(C·P)
+  # runs ~0.03 → 0.83 over dims 24..128 (all < 1, so every run fully memorises
+  # and reaches the 0.999 threshold gc-threshold-invariance requires). Larger
+  # dims are omitted — they pile up at f<0.02 where T_mem barely moves.
+  #   feeds: gc-error-decay (J1), gc-rate-vs-capacity (J2),
+  #          gc-threshold-invariance (J3)
+  speed:
+    type: speed
+    n_samples: auto
+    dims: [24, 32, 48, 64, 96, 128]
+    seeds: [42, 43, 44]
+
+  # --- Track B: modular-division grokking → the norm-contraction T_gen ------
+  # gc-contraction reads the per-step V_t channel. norm_log_every=10 (denser
+  # than the CLI default of 20) so even short high-λ windows clear the 25-point
+  # minimum; post_grok_epochs=50 settles the V_post plateau. Dims sit above the
+  # memorisation threshold but near enough to crossover to grok with a sizable
+  # delay Δt (the largest-Δt grokkers are the ones §1.6 says to trust).
+  #   feeds: gc-contraction (Stage 1)
+  groks:
+    type: groks
+    dims: [48, 64, 96, 128]
+    seeds: [42, 43, 44, 45]
+    norm_log_every: 10
+    post_grok_epochs: 50
+
+# No capacity runs by default, so pin C to consts.C=2.16 (the analyses that
+# need f use it as a fixed scale; see the note up top). This silences any
+# per-config capacity fit. Flip to false if you uncomment the capacity block
+# above, so f is computed from the measured per-arch C. No intersection/
+# statistics block — the mechanism tools (gc-contraction etc.) are driven
+# straight off the run groups, not the crossover-figure pipeline.
+analysis:
+  use_default_capacity_constant: true

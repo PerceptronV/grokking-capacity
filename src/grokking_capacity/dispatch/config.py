@@ -194,7 +194,7 @@ def _build_speed_dict(cfg: dict, *, p: int, seed: int, dim: int, n_samples: int,
 
 
 def _build_groks_dict(cfg: dict, *, p: int, seed: int, dim: int, exp_name: str) -> dict:
-    return {
+    d = {
         'experiment_type': 'groks',
         '_exp_name': exp_name,
         'p': p, 'seed': seed, 'dim': dim,
@@ -204,3 +204,9 @@ def _build_groks_dict(cfg: dict, *, p: int, seed: int, dim: int, exp_name: str) 
         'dataset_type': 'modular',
         **_common_hparams(cfg),
     }
+    # Optional norm-contraction knobs (non-identifying; forwarded to gc-groks
+    # when present). Absent in most configs → the gc-groks CLI defaults apply.
+    for k in ('norm_log_every', 'post_grok_epochs'):
+        if cfg.get(k) is not None:
+            d[k] = cfg[k]
+    return d

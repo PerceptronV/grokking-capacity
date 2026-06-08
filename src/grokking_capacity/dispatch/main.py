@@ -120,6 +120,10 @@ def build_worker_cmd(
         cmd += ['--train-fraction', str(run['train_fraction'])]
         cmd += ['--split-type', str(run['split_type'])]
         cmd += ['--ignore-memorisation']  # parity with the legacy dispatcher
+        if run.get('norm_log_every') is not None:
+            cmd += ['--norm-log-every', str(int(run['norm_log_every']))]
+        if run.get('post_grok_epochs') is not None:
+            cmd += ['--post-grok-epochs', str(int(run['post_grok_epochs']))]
     if force:
         cmd += ['--force']
     return cmd
