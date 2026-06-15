@@ -132,13 +132,19 @@ def expand_runs(spec: dict) -> Iterator[dict]:
                                 yield _build_capacity_dict(cfg, p=p, seed=seed, dim=dim,
                                                             n_samples=n, op_raw=op_raw, exp_name=exp_name)
                 elif exp_type == 'speed':
-                    n = resolve_n_samples(cfg, p)
-                    if n is None:
-                        continue
+                    # 'auto' / scalar → one dataset size; a list sweeps N (the
+                    # orthogonal capacity-fraction axis), like capacity does.
+                    raw = cfg.get('n_samples')
+                    if isinstance(raw, list):
+                        n_list = list(raw)
+                    else:
+                        n = resolve_n_samples(cfg, p)
+                        n_list = [n] if n is not None else []
                     for seed in seeds:
                         for dim in dims:
-                            yield _build_speed_dict(cfg, p=p, seed=seed, dim=dim,
-                                                     n_samples=n, exp_name=exp_name)
+                            for n in n_list:
+                                yield _build_speed_dict(cfg, p=p, seed=seed, dim=dim,
+                                                         n_samples=n, exp_name=exp_name)
                 elif exp_type == 'groks':
                     for seed in seeds:
                         for dim in dims:

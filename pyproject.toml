@@ -38,6 +38,9 @@ gc-error-decay = "grokking_capacity.analysis.error_decay:main"
 gc-contraction = "grokking_capacity.analysis.contraction:main"
 gc-rate-vs-capacity = "grokking_capacity.analysis.rate_vs_capacity:main"
 gc-threshold-invariance = "grokking_capacity.analysis.threshold_invariance:main"
+gc-kappa-stability = "grokking_capacity.analysis.kappa_stability:main"
+gc-bridge = "grokking_capacity.analysis.bridge:main"
+gc-mem-law = "grokking_capacity.analysis.mem_law:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

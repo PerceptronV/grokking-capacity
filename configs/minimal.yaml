@@ -43,13 +43,22 @@ experiments:
   # data instead). These runs also add more random-label trajectories to
   # Branch J. When enabled, set `use_default_capacity_constant: false` below.
   #   feeds: per-arch C (config_view), and extra rows for gc-error-decay et al.
-  # capacity:
-  #   type: capacity
-  #   operation: random
-  #   primes: [113]
-  #   dims: [10, 14, 18, 22]
-  #   n_samples: [1374, 2601, 4917, 9300]
-  #   seeds: [42]
+  #
+  # ENABLED for the clean Branch-J test: dropout=0.0 here (vs 0.2 on speed/groks)
+  # so the random-label train accuracy reaches ~1.0 with low noise. That (a)
+  # un-blocks gc-threshold-invariance's strict τ=0.999, and (b) gives
+  # gc-error-decay / gc-rate-vs-capacity clean trajectories to disambiguate
+  # whether the marginal dropout-0.2 results were just dropout noise. Caveat:
+  # this is a dropout mismatch vs the contraction/crossover runs — read the J
+  # results from these as the "does the hazard mechanism hold in principle" test.
+  capacity:
+    type: capacity
+    operation: random
+    dropout: 0.0
+    primes: [113]
+    dims: [10, 14, 18, 22]
+    n_samples: [1374, 2601, 4917, 9300]
+    seeds: [42]
 
   # --- Track A: random-label memorisation → the jamming T_mem mechanism ----
   # Branch J reads these (speed runs are always random-label). The dim sweep
@@ -65,6 +74,19 @@ experiments:
     dims: [24, 32, 48, 64, 96, 128]
     seeds: [42, 43, 44]
 
+  # Orthogonal N-axis for the f-collapse / universality test (gc-mem-law): vary
+  # the random-label dataset size at FIXED width, so (P, N) combos reach the same
+  # capacity fraction f via different routes. This decorrelates f from log(P) so
+  # the collapse regression can test whether T_mem depends on f alone (b_P ≈ 0).
+  # The larger N values also push f toward 1 — the regime that most constrains
+  # the exponent a and most cleanly separates exponential from power-law.
+  #   feeds: gc-mem-law (collapse + high-f anchor); also gc-error-decay et al.
+  speed_nsweep:
+    type: speed
+    n_samples: [2000, 4000, 8000, 16000]
+    dims: [48, 96]
+    seeds: [42, 43]
+
   # --- Track B: modular-division grokking → the norm-contraction T_gen ------
   # gc-contraction reads the per-step V_t channel. norm_log_every=10 (denser
   # than the CLI default of 20) so even short high-λ windows clear the 25-point
@@ -75,7 +97,7 @@ experiments:
   groks:
     type: groks
     dims: [48, 64, 96, 128]
-    seeds: [42, 43, 44, 45]
+    seeds: [42, 43, 44, 45, 46, 47]
     norm_log_every: 10
     post_grok_epochs: 50
 

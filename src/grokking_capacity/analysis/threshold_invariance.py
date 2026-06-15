@@ -73,8 +73,17 @@ def _ols(x: np.ndarray, y: np.ndarray):
 # --------------------------------------------------------------------------- #
 # Collect per-run T_mem(τ) and f
 # --------------------------------------------------------------------------- #
-def collect(view: ConfigView) -> list[dict[str, Any]]:
+def collect(view: ConfigView) -> tuple[list[dict[str, Any]], dict[float, int]]:
+    """Per-run ``T_mem(τ)`` over the thresholds each run actually reaches, plus a
+    histogram of how many runs reached each candidate τ.
+
+    Dropout caps the (train-mode) random-label accuracy below 1.0, so the
+    strictest τ may be unreachable. Rather than discarding a run for missing one
+    τ (which silently empties the set), we keep whichever of ``THRESHOLDS`` it
+    reaches and require ≥3 for the per-run prefactor regression.
+    """
     runs: list[dict[str, Any]] = []
+    reach: dict[float, int] = {tau: 0 for tau in THRESHOLDS}
     for row in collect_random_runs(view):
         npz = load_npz(row)
         try:
@@ -86,49 +95,71 @@ def collect(view: ConfigView) -> list[dict[str, Any]]:
         f = _capacity_fraction(row)
         if f is None or f <= 0:
             continue
-        tmem = {tau: _t_mem(acc, tau) for tau in THRESHOLDS}
-        if any(v is None for v in tmem.values()):    # run must reach the strictest τ
+        reached: dict[float, int] = {}
+        for tau in THRESHOLDS:
+            e = _t_mem(acc, tau)
+            if e is not None:
+                reached[tau] = int(e)
+                reach[tau] += 1
+        if len(reached) < 3:          # need ≥3 τ for the -log(1-τ) regression
             continue
         runs.append({"uuid": row.get("uuid"), "p": row.get("p"), "dim": row.get("dim"),
-                     "f": float(f), "tmem": {tau: int(tmem[tau]) for tau in THRESHOLDS}})
-    return runs
+                     "f": float(f), "tmem": reached})
+    return runs, reach
 
 
 def analyse(view: ConfigView) -> dict[str, Any]:
-    runs = collect(view)
-    out: dict[str, Any] = {"config_name": view.config_name, "n_runs": len(runs),
-                           "thresholds": list(THRESHOLDS)}
+    runs, reach = collect(view)
+    out: dict[str, Any] = {
+        "config_name": view.config_name, "n_runs": len(runs),
+        "thresholds": list(THRESHOLDS),
+        "threshold_reach": {str(t): reach[t] for t in THRESHOLDS},
+    }
     if len(runs) < MIN_RUNS:
         out["verdict"] = "no_data"
+        reached_any = [t for t in THRESHOLDS if reach[t] >= MIN_RUNS]
+        out["note"] = (
+            f"only {len(runs)} run(s) reached ≥3 thresholds; "
+            f"τ reached by ≥{MIN_RUNS} runs: {reached_any or 'none'}. "
+            "Random-label accuracy is logged in train mode, so dropout caps it "
+            "below the strict thresholds — run at dropout 0 (capacity block) for "
+            "the full τ range."
+        )
         out["_runs"] = runs
         return out
 
-    f = np.array([r["f"] for r in runs])
-
-    # (a) exponent invariance: a(τ) from log T_mem(f) = log b(τ) + a·f per threshold.
-    per_tau = {}
+    # (a) exponent invariance: a(τ) = slope of log T_mem(f) = log b(τ) + a·f,
+    #     fit per threshold over the runs that reached it (≥ MIN_RUNS).
+    per_tau: dict[float, dict[str, Any]] = {}
     for tau in THRESHOLDS:
-        t = np.array([r["tmem"][tau] for r in runs], float)
-        slope, intercept, se, r2 = _ols(f, np.log(t))
+        sub = [r for r in runs if tau in r["tmem"]]
+        if len(sub) < MIN_RUNS:
+            continue
+        ff = np.array([r["f"] for r in sub], float)
+        t = np.array([r["tmem"][tau] for r in sub], float)
+        slope, intercept, se, r2 = _ols(ff, np.log(t))
         ci = [slope - 1.96 * se, slope + 1.96 * se] if np.isfinite(se) else [float("nan")] * 2
-        per_tau[tau] = {"a": slope, "log_b": intercept, "se_a": se, "r2": r2, "ci95": ci}
+        per_tau[tau] = {"a": slope, "log_b": intercept, "se_a": se, "r2": r2,
+                        "ci95": ci, "n": len(sub)}
 
-    cis = [per_tau[tau]["ci95"] for tau in THRESHOLDS
-           if all(np.isfinite(per_tau[tau]["ci95"]))]
-    overlap = bool(cis) and (max(c[0] for c in cis) <= min(c[1] for c in cis))
+    cis = [v["ci95"] for v in per_tau.values() if all(np.isfinite(v["ci95"]))]
+    # Need ≥2 thresholds to compare exponents at all.
+    overlap = len(cis) >= 2 and (max(c[0] for c in cis) <= min(c[1] for c in cis))
 
-    # (b) prefactor law: per run (fixed f) regress T_mem(τ) on x = -log(1-τ).
-    x_tau = np.array([-np.log(1.0 - tau) for tau in THRESHOLDS])
+    # (b) prefactor law: per run (fixed f) regress T_mem(τ) on x = -log(1-τ),
+    #     over whatever τ that run reached.
     slopes, intercepts, r2s, ratios = [], [], [], []
     for r in runs:
-        y = np.array([r["tmem"][tau] for tau in THRESHOLDS], float)
-        s, b, _, r2 = _ols(x_tau, y)
+        taus = sorted(r["tmem"])
+        x = np.array([-np.log(1.0 - tau) for tau in taus], float)
+        y = np.array([r["tmem"][tau] for tau in taus], float)
+        s, b, _, r2 = _ols(x, y)
         if not np.isfinite(s):
             continue
         slopes.append(s)
         intercepts.append(b)
         r2s.append(r2)
-        denom = s * float(x_tau.mean())
+        denom = s * float(x.mean())
         ratios.append(abs(b) / abs(denom) if denom else float("inf"))
 
     med_intercept_ratio = float(np.median(ratios)) if ratios else float("nan")
@@ -136,13 +167,16 @@ def analyse(view: ConfigView) -> dict[str, Any]:
     near_zero = np.isfinite(med_intercept_ratio) and med_intercept_ratio < INTERCEPT_TOL
     linear = np.isfinite(med_r2_pref) and med_r2_pref >= GOOD_R2
 
-    verdict = "invariant" if (overlap and near_zero and linear) else "not_invariant"
+    verdict = ("invariant"
+               if (overlap and near_zero and linear and len(per_tau) >= 2)
+               else "not_invariant")
 
     out.update({
         "verdict": verdict,
         "exponent_invariance": {
-            "per_threshold": {str(tau): per_tau[tau] for tau in THRESHOLDS},
+            "per_threshold": {str(tau): v for tau, v in per_tau.items()},
             "cis_overlap": overlap,
+            "n_thresholds_fit": len(per_tau),
         },
         "prefactor_law": {
             "median_slope": float(np.median(slopes)) if slopes else float("nan"),
@@ -157,7 +191,7 @@ def analyse(view: ConfigView) -> dict[str, Any]:
             if verdict == "invariant" else
             "NOT INVARIANT — hazard functional form falsified; e^{af} survives as an "
             "empirical fit only. Proceed to the T_gen diagnosis regardless."),
-        "_runs": runs, "_per_tau": per_tau, "_x_tau": x_tau,
+        "_runs": runs, "_per_tau": per_tau,
     })
     return out
 
@@ -189,12 +223,13 @@ def _plot(res: dict[str, Any], path: Path) -> None:
     if len(runs) < MIN_RUNS or "_per_tau" not in res:
         return
     per_tau = res["_per_tau"]
-    x_tau = res["_x_tau"]
+    if not per_tau:
+        return
+    taus = sorted(per_tau)            # only the thresholds actually fit
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.3))
 
     # (a) a(τ) with 95% CI — flat line expected.
-    taus = list(THRESHOLDS)
     a = [per_tau[t]["a"] for t in taus]
     err = [1.96 * per_tau[t]["se_a"] if np.isfinite(per_tau[t]["se_a"]) else 0.0
            for t in taus]
@@ -208,13 +243,16 @@ def _plot(res: dict[str, Any], path: Path) -> None:
                   f"{res['exponent_invariance']['cis_overlap']})")
     ax1.grid(True, alpha=0.3)
 
-    # (b) T_mem(τ) vs -log(1-τ) — linear through ~origin expected.
+    # (b) T_mem(τ) vs -log(1-τ) — linear through ~origin expected. Each run uses
+    # whatever τ it reached.
     primes = sorted({r["p"] for r in runs if r["p"] is not None})
     palette = sns.color_palette("flare", n_colors=max(len(primes), 1))
     colour = {p: palette[i] for i, p in enumerate(primes)}
     for r in runs:
-        y = [r["tmem"][t] for t in taus]
-        ax2.plot(x_tau, y, color=colour.get(r["p"], "0.5"), alpha=0.3, lw=1, marker=".")
+        rt = sorted(r["tmem"])
+        x = [-np.log(1.0 - t) for t in rt]
+        y = [r["tmem"][t] for t in rt]
+        ax2.plot(x, y, color=colour.get(r["p"], "0.5"), alpha=0.3, lw=1, marker=".")
     ax2.set_xlabel(r"$-\log(1-\tau)$")
     ax2.set_ylabel(r"$T_{\rm mem}(\tau)$  (epochs)")
     ax2.set_title(f"Prefactor law (median $R^2$="
@@ -240,10 +278,14 @@ def _render_one(config_path: Path, out_dir: Path, db_path: Optional[str]) -> Non
         return
     res = run_threshold_invariance(view, out_dir)
     print(f"  verdict: {res['verdict']}  (n_runs={res['n_runs']})")
+    if "threshold_reach" in res:
+        print(f"  τ reach: {res['threshold_reach']}")
+    if res.get("note"):
+        print(f"  note: {res['note']}")
     if "prefactor_law" in res:
         ei = res["exponent_invariance"]
         pf = res["prefactor_law"]
-        print(f"  exponent CIs overlap={ei['cis_overlap']}  "
+        print(f"  exponent fits={ei['n_thresholds_fit']} CIs overlap={ei['cis_overlap']}  "
               f"prefactor median R²={pf['median_r2']:.2f}  "
               f"intercept ratio={pf['median_intercept_ratio']:.2f}")
 
