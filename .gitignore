@@ -180,6 +180,7 @@ cython_debug/
 
 # wallow registry (recreated from wallow.toml)
 runs.db
+runs.db*
 runs.db-wal
 runs.db-shm
 
@@ -201,3 +202,7 @@ runs.db-shm
 # Anonymous Distribution
 code.sh
 code.zip
+
+# Puddle data
+.puddle
+docs/
