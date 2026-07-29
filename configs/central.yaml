@@ -61,6 +61,12 @@ experiments:
 # match — the renderer will warn loudly when it sees a mismatch against
 # the per-row stored thresholds (e.g. `grokking_threshold`).
 analysis:
+  # Pin figure rows to the machine (and seed pool) that produced this
+  # suite, so aggregates are comparable across cells when the registry
+  # holds replicas from other machines.
+  row_filters:
+    hosts: ['147-224-250-73']
+
   # The per-config capacity fits are too noisy to trust right now (small-dim
   # curves sag below the dataset-complexity line in M_T_vs_dataset_size),
   # so pin C to `consts.C = 2.16` for every group. Capacity figures still

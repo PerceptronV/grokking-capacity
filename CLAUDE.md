@@ -12,6 +12,31 @@ Run-tracking lives in a SQLite registry (`runs.db`) defined by `wallow.toml`.
 Both paths can be overridden via env vars: `GC_WALLOW_DB`, `GC_WALLOW_TOML`,
 `GC_DATA_DIR`. The schema auto-creates on first use.
 
+## Registry workflow (multi-machine)
+
+The repo `runs.db` is the canonical *read* registry (merged from all
+machines; 33,504 completed rows as of 2026-07-28, with superseded replicas
+preserved in the `runs_superseded` side table). SQLite WAL cannot lock on
+NFS, so **dispatch must write to a local-disk DB** (`GC_WALLOW_DB=$HOME/...`)
+and be folded back afterwards:
+
+```bash
+gc-merge-registries convert --source old.db --out new.db --data-root <repo>/data
+gc-merge-registries merge --source dbA:rootA --source dbB:rootB \
+    --out merged.db --data-root <repo>/data --report merge_report.json
+```
+
+Sources are read-only; priority = argument order; dedup is on the
+identifying tuple with completed-status > artefact-present > source-order
+precedence. Legacy registries name the id column `run_uuid`; `convert`
+renames it to the current wallow's `uuid` and rewrites artefact paths.
+
+Because merged registries can hold replicas of a cell from several machines
+and seed pools, sweep configs pin their figure rows via
+`analysis.row_filters: {hosts: [...], seeds: [...]}` — keep those pins when
+editing configs; seed-min aggregates are only comparable across cells drawn
+from equal seed pools.
+
 ## Running experiments
 
 ```bash

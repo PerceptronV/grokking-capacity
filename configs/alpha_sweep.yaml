@@ -52,6 +52,12 @@ experiments:
 # the intersection beat predicting onset from train_fraction and the
 # slice axis alone?"
 analysis:
+  # Pin figure rows to the machine (and seed pool) that produced this
+  # suite, so aggregates are comparable across cells when the registry
+  # holds replicas from other machines.
+  row_filters:
+    hosts: ['147-224-250-73']
+
   # See central.yaml — capacity fits too noisy; pin to consts.C for now.
   use_default_capacity_constant: true
 

@@ -139,7 +139,7 @@ def _row_to_dict(row: Any) -> dict[str, Any]:
         "dataset_type", "n_samples", "dim", "depth", "heads", "dropout",
         "init_scale", "lr", "weight_decay", "beta1", "beta2", "batch_size",
         "max_epochs", "seed", "architecture_family",
-        "param_count", "uuid", "npz_path", "n_equiv", "dataset_bits",
+        "param_count", "uuid", "npz_path", "n_equiv", "dataset_bits", "host",
         "saturation_step", "saturation_epoch", "saturated", "final_acc",
         "final_loss", "final_train_acc", "final_val_acc", "grokking_epoch",
         "total_bits_memorized", "final_bits_per_example",
@@ -317,6 +317,25 @@ class ConfigView:
         # Lazy import: `dispatch.config` imports back from this package.
         from ..dispatch.config import expand_runs
 
+        # Optional row pinning. A registry merged from several machines can
+        # hold more rows per arch cell than the suite that defined the cell
+        # (extra seeds, replicas from another host). Seed-sensitive
+        # aggregates (the onset detector takes a per-cell *minimum* over
+        # seeds) are only comparable across cells when every cell draws from
+        # the same seed pool, so a config can pin exactly the rows its
+        # figures are defined over. Applies to speed/groks rows; capacity
+        # rows (single-seed by design) are left untouched.
+        raw_filters = (spec.get("analysis") or {}).get("row_filters") or {}
+        pin_seeds = {int(s) for s in (raw_filters.get("seeds") or [])}
+        pin_hosts = {str(h) for h in (raw_filters.get("hosts") or [])}
+
+        def _pinned(rows: list[dict]) -> list[dict]:
+            if pin_seeds:
+                rows = [r for r in rows if int(r.get("seed", -1)) in pin_seeds]
+            if pin_hosts:
+                rows = [r for r in rows if str(r.get("host")) in pin_hosts]
+            return rows
+
         # Walk the config to discover every (arch, experiment_type) the
         # dispatcher would have produced. We don't query wallow per dispatched
         # row — one wallow query per (arch_key, experiment_type) is enough,
@@ -333,16 +352,16 @@ class ConfigView:
                 & (F("experiment_type") == "capacity")
                 & key.as_filter()
             ).all()]
-            spd = [_row_to_dict(r) for r in store.where(
+            spd = _pinned([_row_to_dict(r) for r in store.where(
                 (F("status") == "completed")
                 & (F("experiment_type") == "speed")
                 & key.as_filter()
-            ).all()]
-            grk = [_row_to_dict(r) for r in store.where(
+            ).all()])
+            grk = _pinned([_row_to_dict(r) for r in store.where(
                 (F("status") == "completed")
                 & (F("experiment_type") == "groks")
                 & key.as_filter()
-            ).all()]
+            ).all()])
             groups.append(ArchGroup(
                 key=key,
                 capacity_runs=cap, speed_runs=spd, groks_runs=grk,

@@ -41,6 +41,7 @@ gc-threshold-invariance = "grokking_capacity.analysis.threshold_invariance:main"
 gc-kappa-stability = "grokking_capacity.analysis.kappa_stability:main"
 gc-bridge = "grokking_capacity.analysis.bridge:main"
 gc-mem-law = "grokking_capacity.analysis.mem_law:main"
+gc-merge-registries = "grokking_capacity.registry.merge:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

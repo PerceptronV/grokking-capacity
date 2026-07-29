@@ -43,6 +43,40 @@ def fit_capacity_slope(rows: Iterable) -> Optional[float]:
     return float(slope)
 
 
+def fit_capacity_line(rows: Iterable) -> Optional[dict]:
+    """Like `fit_capacity_slope`, but returns the full fit for provenance work.
+
+    Returns {"slope", "intercept", "r2", "n_points", "param_counts"} using the
+    same max-bits-at-each-param-count collapse, or None with <2 points.
+    """
+    by_param: dict[int, float] = {}
+    for r in rows:
+        get = r.get if isinstance(r, dict) else lambda k, _r=r: getattr(_r, k, None)
+        pc, bits = get("param_count"), get("total_bits_memorized")
+        if pc is None or bits is None:
+            continue
+        pc_i, bits_f = int(pc), float(bits)
+        if pc_i not in by_param or bits_f > by_param[pc_i]:
+            by_param[pc_i] = bits_f
+    if len(by_param) < 2:
+        return None
+    points = sorted(by_param.items())
+    xs = np.array([p for p, _ in points], dtype=float)
+    ys = np.array([b for _, b in points], dtype=float)
+    slope, intercept = np.polyfit(xs, ys, 1)
+    pred = slope * xs + intercept
+    ss_res = float(np.sum((ys - pred) ** 2))
+    ss_tot = float(np.sum((ys - ys.mean()) ** 2))
+    r2 = 1.0 - ss_res / ss_tot if ss_tot > 0 else float("nan")
+    return {
+        "slope": float(slope),
+        "intercept": float(intercept),
+        "r2": r2,
+        "n_points": len(points),
+        "param_counts": [int(x) for x in xs],
+    }
+
+
 def measure_capacity_constant(
     *,
     db_path: str | None = None,

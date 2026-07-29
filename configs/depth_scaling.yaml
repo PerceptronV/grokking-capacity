@@ -58,6 +58,13 @@ experiments:
 # swept here (match_by: param_count), so the by-prime swap slices on
 # whatever dim values the matcher selected per (depth, p, target).
 analysis:
+  # Pin figure rows to the machine (and seed pool) that produced this
+  # suite, so aggregates are comparable across cells when the registry
+  # holds replicas from other machines.
+  row_filters:
+    hosts: ['68-209-72-216']
+    seeds: [42, 43, 44, 45]
+
   # See central.yaml — capacity fits too noisy; pin to consts.C for now.
   use_default_capacity_constant: true
 

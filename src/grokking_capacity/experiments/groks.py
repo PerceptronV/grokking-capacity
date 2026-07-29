@@ -282,6 +282,15 @@ def main():
             param_count = count_parameters(model)
             print(f"  Device: {device}, params: {param_count:,}")
 
+            if args.save_model:
+                # Init-time snapshot for the Fourier init-overlap analysis
+                # (analysis/init_overlap.py): the exact weights training
+                # started from, not a same-seed rebuild.
+                init_path = os.path.join(h.artefacts_dir, 'model_init.pt')
+                torch.save({'model_state_dict':
+                            {k: v.cpu() for k, v in model.state_dict().items()}},
+                           init_path)
+
             optimizer = optim.AdamW(model.parameters(), lr=args.lr,
                                      betas=(args.beta1, args.beta2),
                                      weight_decay=args.weight_decay)

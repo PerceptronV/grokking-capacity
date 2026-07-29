@@ -1,0 +1,45 @@
+name: p197_forecast
+description: >
+  Pre-registered forward test at p=197 (theory-trunk §4; forecast_onset.json).
+  Grokking runs ONLY — no speed runs; the timescale laws are extrapolated,
+  which is the point. The crossing model predicts NO grokking at any width
+  (p* = 167.5 [148, 192]); the power-law null predicts onset at ~9.2e5
+  params (d ~ 160, log10 band [5.83, 6.10]). The width grid covers the
+  null's band densely and extends to ~10x its centre so an
+  absence-of-grokking verdict is meaningful. Seeds and estimator match the
+  central sweep (seed-min over 42-51, thresholds 99/99/98).
+  DO NOT LAUNCH before the pre-registration comment is posted on
+  OpenReview — the timestamp is the entire point.
+
+defaults:
+  operation: "/"
+  train_fraction: 0.5
+  split_type: random
+  depth: 2
+  heads: 1
+  weight_decay: 1.0
+  dropout: 0.2
+  lr: 0.001
+  beta1: 0.9
+  beta2: 0.98
+  batch_size: 512
+  max_epochs: 5000
+  primes: [197]
+  seeds: [42, 43, 44, 45, 46, 47, 48, 49, 50, 51]
+
+experiments:
+  groks:
+    type: groks
+    dims: [52, 64, 76, 92, 108, 124, 140, 156, 172, 188, 204, 236, 268,
+           300, 364, 428, 492, 556]
+
+analysis:
+  use_default_capacity_constant: true
+  intersection_figures:
+    - name: intersection
+      slice_field: p
+      x_field: param_count
+      colour_field: dim
+      max_dim: 556
+      delay_train_threshold: 99.0
+      delay_val_threshold: 98.0

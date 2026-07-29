@@ -1,0 +1,37 @@
+name: batch_size_sweep
+description: >
+  Speed-only batch-size sweep — the thermal-vs-geometric discriminator for
+  the memorisation exponent gamma (theory-trunk §3). At fixed n, varying
+  B in {128, 512, 2048} changes minibatch noise ~16x; a thermal barrier
+  predicts gamma ~ 1/B (adjudicated in STEPS, pre-specified), a geometric
+  barrier predicts invariance. Fresh seed pool (52-54) so these cells
+  never collide with the central sweep's rows and stay a matched pool
+  across all three B arms on this machine.
+
+defaults:
+  operation: "/"
+  train_fraction: 0.5
+  split_type: random
+  depth: 2
+  heads: 1
+  weight_decay: 1.0
+  dropout: 0.2
+  lr: 0.001
+  beta1: 0.9
+  beta2: 0.98
+  max_epochs: 5000
+  primes: [97, 113, 139]
+  seeds: [52, 53, 54]
+
+experiments:
+  speed:
+    type: speed
+    n_samples: auto
+    batch_size: [128, 512, 2048]
+    dims: [40, 48, 56, 64, 80, 96, 112, 128, 152, 176, 216, 256]
+
+analysis:
+  row_filters:
+    seeds: [52, 53, 54]
+  use_default_capacity_constant: true
+  intersection_figures: []

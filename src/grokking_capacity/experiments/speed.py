@@ -108,8 +108,12 @@ def _train_speed(args, *, device: str) -> Dict:
     param_count = count_parameters(model)
     print(f"  n_samples={args.n_samples} dim={args.dim} params={param_count:,}")
 
-    optimizer = optim.AdamW(model.parameters(), lr=args.lr,
-                             betas=(args.beta1, args.beta2), weight_decay=args.weight_decay)
+    if getattr(args, 'optimizer', 'adamw') == 'sgd':
+        optimizer = optim.SGD(model.parameters(), lr=args.lr,
+                              momentum=args.momentum, weight_decay=args.weight_decay)
+    else:
+        optimizer = optim.AdamW(model.parameters(), lr=args.lr,
+                                betas=(args.beta1, args.beta2), weight_decay=args.weight_decay)
     trainer = SpeedTrainer(model=model, optimizer=optimizer,
                            batch_size=args.batch_size, device=device)
     results = trainer.train(
@@ -140,6 +144,15 @@ def main():
     parser.add_argument('--split-type', type=str, default='random',
                         choices=['random', 'sequential', 'alternating'])
     parser.add_argument('--n-samples', type=int, required=True, help='Dataset size')
+    parser.add_argument('--optimizer', type=str, default='adamw',
+                        choices=['adamw', 'sgd'],
+                        help='Optimiser. SGD is a control cell for the batch-noise '
+                             'discriminator; run SGD cells against a dedicated '
+                             'GC_WALLOW_DB — the identifying tuple does not include '
+                             'the optimiser, so mixing them in one registry would '
+                             'collide with AdamW rows.')
+    parser.add_argument('--momentum', type=float, default=0.0,
+                        help='SGD momentum (ignored for adamw).')
     parser.add_argument('--saturation-threshold', type=float, default=99.0,
                         help='Accuracy threshold (%%) to consider saturated')
     parser.add_argument('--patience', type=int, default=0,

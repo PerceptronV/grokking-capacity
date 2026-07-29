@@ -43,3 +43,11 @@ experiments:
       - {start: 40, end: 64, step: 8}
       - {start: 80, end: 128, step: 16}
       - {start: 160, end: 256, step: 32}
+
+analysis:
+  # Pin figure rows to the machine (and seed pool) that produced this
+  # suite, so aggregates are comparable across cells when the registry
+  # holds replicas from other machines.
+  row_filters:
+    hosts: ['68-209-75-173']
+    seeds: [42, 43, 44, 45]

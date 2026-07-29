@@ -57,19 +57,51 @@ def _predicted_onset(group: ArchGroup, figure: IntersectionFigure, slice_value) 
     return pt[0] if pt is not None else None
 
 
+def _capacity_baseline(
+    group: ArchGroup, figure: IntersectionFigure, slice_value,
+) -> tuple[float, float]:
+    """Static capacity-scale predictor for one cell: (k_mem_bits,
+    capacity_baseline_x).
+
+    `k_mem_bits` is the total memorisation load K_mem of the training set
+    (bits), and `capacity_baseline_x = K_mem / C` converts it to param-count
+    units via the group's capacity constant — i.e. the raw scale of the
+    capacity threshold, comparable with `predicted_onset_x` /
+    `empirical_onset_x` on the canonical figure. Only defined when the
+    figure slices by prime with param_count on the x-axis; (nan, nan)
+    otherwise.
+    """
+    if figure.slice_field != "p" or figure.x_field != "param_count":
+        return float("nan"), float("nan")
+    try:
+        from .matching import compute_n_equiv
+        k_mem_bits = float(compute_n_equiv(
+            int(slice_value), group.key.operation,
+            float(group.key.train_fraction),
+        )[1])
+    except (TypeError, ValueError):
+        return float("nan"), float("nan")
+    c = group.capacity_constant
+    if c is None or not np.isfinite(c) or c <= 0:
+        return k_mem_bits, float("nan")
+    return k_mem_bits, k_mem_bits / float(c)
+
+
 def compute_predictiveness(view: ConfigView, figure: IntersectionFigure) -> pd.DataFrame:
     """One row per (group, slice value) cell of one figure family.
 
     Columns: config, figure, slice_field, slice_value, x_field,
     predicted_onset_x, empirical_onset_x, log_ratio, capacity_constant,
-    capacity_source, n_seeds_groks, n_seeds_speed, plus every swept-axis
-    identifying field.
+    capacity_source, k_mem_bits, capacity_baseline_x (static K_mem/C
+    predictor in param-count units; NaN off the canonical figure),
+    n_seeds_groks, n_seeds_speed, plus every swept-axis identifying field.
     """
     rows: list[dict] = []
     for group in view.iter_groups():
         for sv in _slice_values(group, figure):
             predicted = _predicted_onset(group, figure, sv)
             empirical = _empirical_onset(group, figure, sv)
+            k_mem_bits, capacity_baseline_x = _capacity_baseline(group, figure, sv)
             n_groks = sum(1 for r in group.groks_runs
                           if r.get(figure.slice_field) == sv)
             n_speed = sum(1 for r in group.speed_runs
@@ -90,6 +122,8 @@ def compute_predictiveness(view: ConfigView, figure: IntersectionFigure) -> pd.D
                 "log_ratio": log_ratio,
                 "capacity_constant": group.capacity_constant,
                 "capacity_source": group.capacity_constant_source,
+                "k_mem_bits": k_mem_bits,
+                "capacity_baseline_x": capacity_baseline_x,
                 "n_seeds_groks": n_groks,
                 "n_seeds_speed": n_speed,
             }
@@ -424,12 +458,27 @@ def _baseline_lr_table(
     *, axes: list[str],
 ) -> dict[str, Any]:
     """Nested OLS comparisons: M0 (null), M1 (intersection), M2 (axes),
-    M3 (combined). Returns model fits and the three nested F-tests."""
+    M3 (combined). Returns model fits and the three nested F-tests.
+
+    When the predictiveness table carries a finite `capacity_baseline_x`
+    (the static K_mem/C scale), two extra models join the table: M2c
+    (capacity scale alone) and M3c = M1 ∪ M2c, with F-tests M3c-vs-M2c
+    (does the intersection add over the static scale?) and M3c-vs-M1
+    (does the static scale add over the intersection?)."""
     n = len(log_e)
     if n < 4:
         return {"models": {}, "ftests": {}, "skipped": "n<4"}
 
     X_axes, axis_names = _design_matrix_for_axes(valid, axes)
+
+    # Static capacity-scale predictor, log10-transformed. Only usable when
+    # every valid cell carries a finite positive value (all-NaN — e.g. a
+    # figure not sliced by prime — simply omits the M2c/M3c rows).
+    log_cb: Optional[np.ndarray] = None
+    if "capacity_baseline_x" in valid.columns:
+        cb = pd.to_numeric(valid["capacity_baseline_x"], errors="coerce").to_numpy(dtype=float)
+        if np.isfinite(cb).all() and (cb > 0).all():
+            log_cb = np.log10(cb)
 
     def fit(X: np.ndarray) -> dict[str, Any]:
         beta, rss, df = _ols_fit(X, log_e)
@@ -466,6 +515,21 @@ def _baseline_lr_table(
     else:
         skipped.append("M3")
 
+    if log_cb is not None:
+        X2c = np.column_stack([intercept, log_cb])
+        X3c = np.column_stack([intercept, log_p, log_cb])
+        if X2c.shape[1] < n:
+            fits["M2c"] = fit(X2c)
+            fits["M2c"]["predictors"] = ["log10(capacity_baseline_x)"]
+        else:
+            skipped.append("M2c")
+        if X3c.shape[1] < n:
+            fits["M3c"] = fit(X3c)
+            fits["M3c"]["predictors"] = ["log10(predicted_onset_x)",
+                                         "log10(capacity_baseline_x)"]
+        else:
+            skipped.append("M3c")
+
     def f_test(small: str, big: str) -> Optional[dict[str, Any]]:
         if small not in fits or big not in fits:
             return None
@@ -485,6 +549,9 @@ def _baseline_lr_table(
         "M3_vs_M2": f_test("M2", "M3"),
         "M3_vs_M1": f_test("M1", "M3"),
     }
+    if "M3c" in fits:
+        ftests["M3c_vs_M2c"] = f_test("M2c", "M3c")
+        ftests["M3c_vs_M1"] = f_test("M1", "M3c")
 
     # Strip beta coefficients (numpy arrays) before serialisation.
     out_models: dict[str, dict[str, Any]] = {}
@@ -737,7 +804,7 @@ def format_hypothesis_tests_markdown(results: dict[str, Any]) -> str:
     if models:
         lines.append("| Model | Predictors | RSS | df | R² | adj R² |")
         lines.append("|---|---|---|---|---|---|")
-        for k in ("M0", "M1", "M2", "M3"):
+        for k in ("M0", "M1", "M2", "M3", "M2c", "M3c"):
             m = models.get(k)
             if not m:
                 continue
@@ -759,6 +826,16 @@ def format_hypothesis_tests_markdown(results: dict[str, Any]) -> str:
         lines.append(f"- **M3 vs M1** (hyperparams add over intersection — sceptic-friendly): "
                      f"F = {_fmt(m3_vs_m1.get('f'))}, p = {_fmt(m3_vs_m1.get('p'))}  "
                      f"{_verdict(m3_vs_m1.get('p'), alpha, want_reject=False)}")
+        m3c_vs_m2c = ftests.get("M3c_vs_M2c")
+        if m3c_vs_m2c:
+            lines.append(f"- **M3c vs M2c** (intersection adds over static K_mem/C scale): "
+                         f"F = {_fmt(m3c_vs_m2c.get('f'))}, p = {_fmt(m3c_vs_m2c.get('p'))}  "
+                         f"{_verdict(m3c_vs_m2c.get('p'), alpha, want_reject=True)}")
+        m3c_vs_m1 = ftests.get("M3c_vs_M1")
+        if m3c_vs_m1:
+            lines.append(f"- **M3c vs M1** (static K_mem/C scale adds over intersection): "
+                         f"F = {_fmt(m3c_vs_m1.get('f'))}, p = {_fmt(m3c_vs_m1.get('p'))}  "
+                         f"{_verdict(m3c_vs_m1.get('p'), alpha, want_reject=False)}")
         lines.append("")
     if "skipped_models" in suf:
         lines.append(f"_Skipped: {', '.join(suf['skipped_models'])} — "
