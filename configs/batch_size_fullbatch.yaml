@@ -1,0 +1,40 @@
+name: batch_size_fullbatch
+description: >
+  Full-batch (deterministic-limit) arm of the batch-size sweep — prediction
+  P1 of theory/principled (mem-dmft-perceptron + mem-gram-projection):
+  with sampling noise removed, gamma should collapse toward the
+  deterministic floor (~10, near gamma_inf = 11.0 from the Tobit
+  gamma(B) = 11.0 + 879/sqrt(B) fit) and the ln T–f relation should go
+  concave. batch_size -1 = full dataset (1 optimiser step per epoch, so
+  epochs = steps and the unit question is moot). Protocol otherwise
+  identical to batch_size_sweep (same primes, dims, seed pool 52-54) so
+  these rows extend the same gamma(B) analysis. Dispatch to a LOCAL DB:
+  GC_WALLOW_DB=$HOME/fullbatch_runs.db.
+
+defaults:
+  operation: "/"
+  train_fraction: 0.5
+  split_type: random
+  depth: 2
+  heads: 1
+  weight_decay: 1.0
+  dropout: 0.2
+  lr: 0.001
+  beta1: 0.9
+  beta2: 0.98
+  max_epochs: 5000
+  primes: [97, 113, 139]
+  seeds: [52, 53, 54]
+
+experiments:
+  speed:
+    type: speed
+    n_samples: auto
+    batch_size: [-1]
+    dims: [40, 48, 56, 64, 80, 96, 112, 128, 152, 176, 216, 256]
+
+analysis:
+  row_filters:
+    seeds: [52, 53, 54]
+  use_default_capacity_constant: true
+  intersection_figures: []

@@ -18,15 +18,26 @@ from grokking_capacity.models import TransformerTorch
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--wd", type=float, default=1.0)
+ap.add_argument("--alpha", type=float, default=0.5, help="train fraction")
+ap.add_argument("--dim", type=int, default=128)
 ap.add_argument("--epochs", type=int, default=2500)
 ap.add_argument("--out", type=str, default=None)
 ARGS = ap.parse_args()
 
-P, DIM, SEED, EPOCHS, EVERY, BATCH = 113, 128, 42, ARGS.epochs, 5, 512
+P, DIM, SEED, EPOCHS, EVERY, BATCH = 113, ARGS.dim, 42, ARGS.epochs, 5, 512
 DEV = "cuda"
-OUT = ARGS.out or (
-    "results/theory/character_growth.npz" if ARGS.wd == 1.0
-    else f"results/theory/character_growth_wd{ARGS.wd:g}.npz")
+if ARGS.out:
+    OUT = ARGS.out
+else:
+    tags = ""
+    if ARGS.wd != 1.0:
+        tags += f"_wd{ARGS.wd:g}"
+    if ARGS.alpha != 0.5:
+        tags += f"_a{ARGS.alpha:g}"
+    if ARGS.dim != 128:
+        tags += f"_d{ARGS.dim}"
+    OUT = f"results/theory/character_growth{tags or ''}.npz" if tags \
+        else "results/theory/character_growth.npz"
 
 def primitive_root(p):
     fac, n, d = [], p - 1, 2
@@ -56,7 +67,7 @@ def mult_pow(W):
 np.random.seed(SEED)
 torch.manual_seed(SEED)
 Xtr, Ttr, Xva, Tva = grokking_data_torch(P, op="/", split_type="random",
-                                         train_fraction=0.5, device="cpu")
+                                         train_fraction=ARGS.alpha, device="cpu")
 model = TransformerTorch(depth=2, dim=DIM, heads=1, n_tokens=P + 2,
                          seq_len=4, dropout=0.2, init_scale=1.0).to(DEV)
 opt = optim.AdamW(model.parameters(), lr=1e-3, betas=(0.9, 0.98),
@@ -97,5 +108,5 @@ np.savez(OUT,
          emb_spec=emb_pow / emb_pow.sum(1, keepdims=True),
          out_pow=out_pow, emb_pow=emb_pow,
          train_acc=np.array(tr_acc), val_acc=np.array(va_acc),
-         weight_decay=ARGS.wd)
+         weight_decay=ARGS.wd, alpha=ARGS.alpha, dim=DIM)
 print(f"saved {OUT}")

@@ -226,6 +226,9 @@ def main():
     parser.add_argument('--ignore-memorisation', action='store_true')
     parser.add_argument('--baseline', type=str, default=None,
                         help='Path to baseline model .pt for M_U computation')
+    parser.add_argument('--freeze-norm-scales', action='store_true',
+                        help='Freeze all RMSNorm gains at init (normalisation-'
+                             'clock test; use a dedicated GC_WALLOW_DB).')
     parser.add_argument('--save-model', action='store_true',
                         help='Save the trained weights into the artefacts directory')
     parser.add_argument('--norm-log-every', type=int, default=20,
@@ -279,6 +282,18 @@ def main():
                 depth=args.depth, dim=args.dim, heads=args.heads,
                 n_tokens=n_tokens, seq_len=4, dropout=args.dropout, init_scale=args.init_scale,
             ).to(device)
+            if args.freeze_norm_scales:
+                # Freeze every RMSNorm gain at its init value (ones): the
+                # normalisation-clock test of principled/gen-solvable-circuit
+                # (prediction: T_gen–λ slope steepens toward −1 and the
+                # width advantage collapses). Run these in a separate DB —
+                # the identifying tuple has no freeze column.
+                n_frozen = 0
+                for name, prm in model.named_parameters():
+                    if 'norm.weight' in name:
+                        prm.requires_grad_(False)
+                        n_frozen += 1
+                print(f"  frozen {n_frozen} RMSNorm gain tensors")
             param_count = count_parameters(model)
             print(f"  Device: {device}, params: {param_count:,}")
 

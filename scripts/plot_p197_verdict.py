@@ -150,7 +150,7 @@ def make_figure(cells, p113, out_pdf):
             alpha=.7, label="median")
     a1.set(xscale="log", xlabel="parameters $P$",
            ylabel="generalisation delay (epochs)",
-           title="$p=113$, inside the dome:\ndelayed generalisation")
+           title="$p=113$, inside the cone:\ndelayed generalisation")
     a1.title.set_fontsize(10)
     a1.legend(fontsize=7.5)
 

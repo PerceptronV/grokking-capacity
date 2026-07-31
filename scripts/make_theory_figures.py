@@ -2,7 +2,7 @@
 """Visual explainer for the theory program -> figures/theory/*.pdf
 1 laws_T_vs_P    - the two timescale laws + rival forms at p=113
 2 gamma_knobs    - what sets gamma: measured vs thermal/geometric predictions
-3 dome           - the grokking dome in (p,P); onsets, re-entrance, p=197 verdict
+3 cone           - the grokking cone in (p,P); onsets, re-entrance, p=197 verdict
 4 tgen_lambda    - T_gen ~ lambda^-1/2 vs rejected 1/lambda prediction
 """
 import json, math, sqlite3
@@ -57,7 +57,7 @@ a2.set(xlabel=r"weight decay $\lambda$", ylabel=r"$\gamma_\lambda$",
        title=r"decay knob: $\gamma$ doubles, $\lambda=0\to1$")
 st(a2); fig.savefig(OUT/"gamma_knobs.pdf", bbox_inches="tight"); plt.close(fig)
 
-# ---- 3: the dome -------------------------------------------------------------
+# ---- 3: the cone -------------------------------------------------------------
 from grokking_capacity.analysis import forecast_onset as fo
 def roots(pp):
     Rp = (gen["lnA"]+gen["a"]*math.log(pp)-mem["ln_b"]) - gen["beta"]*math.log(mem["gamma"]*K(pp)/C)
@@ -86,9 +86,9 @@ p197P = [10**x for x in np.linspace(5.03, 7.0, 18)]
 ax.plot([197]*18, p197P, "x", color=RED, ms=6, mew=1.6,
         label="p=197: zero delay everywhere (verdict A)")
 ax.set(xlabel="prime $p$", ylabel="parameters $P$", yscale="log",
-       title="The grokking dome: bounded region, closing at $p^*$")
+       title="The grokking cone: bounded region, closing at $p^*$")
 ax.legend(fontsize=7.5, loc="upper left"); st(ax)
-fig.savefig(OUT/"dome.pdf", bbox_inches="tight"); plt.close(fig)
+fig.savefig(OUT/"cone.pdf", bbox_inches="tight"); plt.close(fig)
 
 # ---- 4: T_gen vs lambda ------------------------------------------------------
 con = sqlite3.connect("runs.db"); con.row_factory = sqlite3.Row
@@ -107,7 +107,46 @@ ax.set(xscale="log", yscale="log", xlabel=r"weight decay $\lambda$", ylabel=r"$T
        title=r"$T_{\rm gen}\propto\lambda^{-1/2}$, not $1/\lambda$  (p=113)")
 ax.legend(fontsize=7.5); st(ax)
 fig.savefig(OUT/"tgen_lambda.pdf", bbox_inches="tight"); plt.close(fig)
-print("wrote 4 figures to", OUT)
+
+# ---- 5: p=197 — the curves that never cross ---------------------------------
+import os
+p = 197; Pg = np.logspace(5.0, 7.2, 300); f = K(p)/(C*Pg)
+Tm = mem["b"]*np.exp(mem["gamma"]*f)
+Tg = np.exp(gen["lnA"] + gen["a"]*math.log(p) - gen["beta"]*np.log(Pg))
+fig, ax = plt.subplots(figsize=(6,4.2))
+ax.plot(Pg, Tm, color=BLUE, lw=2.2, label=r"$T_{\rm mem}=b\,e^{\gamma K/CP}$ (extrapolated fit)")
+ax.plot(Pg, Tg, color=ORANGE, lw=2.2, label=r"$T_{\rm gen}=A\,p^a P^{-\beta}$ (extrapolated fit)")
+# measured T_gen cells from the pre-registered sweep (seed-mean grok epoch)
+db197 = os.path.expanduser("~/p197_runs.db")
+if os.path.exists(db197):
+    con197 = sqlite3.connect(db197); con197.row_factory = sqlite3.Row
+    cells197 = {}
+    for r in con197.execute("select param_count pc, grokking_epoch g from runs "
+                            "where experiment_type='groks' and status='completed' "
+                            "and grokking_epoch is not null"):
+        cells197.setdefault(r["pc"], []).append(r["g"])
+    pcs = sorted(cells197)
+    ax.plot(pcs, [np.mean(cells197[pc]) for pc in pcs], "o", color=ORANGE,
+            ms=5, mec="w", mew=.8, zorder=5,
+            label=r"measured $T_{\rm gen}$, $p=197$ sweep")
+# rival power-law null: predicted onset band, falsified
+ax.axvspan(10**5.83, 10**6.10, color=MUTED, alpha=.15, lw=0)
+ax.text(10**5.965, 8e3, "rival power law:\nonset predicted here\n(falsified: zero delay)",
+        ha="center", fontsize=7.5, color=MUTED)
+# closest approach of the two curves
+gap = np.log(Tm) - np.log(Tg)
+i = int(np.argmin(gap))
+ax.annotate(f"closest approach: $T_{{\\rm mem}}/T_{{\\rm gen}}"
+            f" = {math.exp(gap[i]):.1f}\\times$ — no crossing",
+            (Pg[i], math.sqrt(Tm[i]*Tg[i])), xytext=(1.6e5, 2.2),
+            fontsize=8, color=INK,
+            arrowprops=dict(arrowstyle="-", color=MUTED, lw=.8))
+ax.set(xscale="log", yscale="log", xlabel="parameters $P$", ylabel="epochs",
+       ylim=(0.8, 3e5),
+       title="p=197 > $p^*$: memorisation never overtakes generalisation")
+ax.legend(fontsize=7.5, loc="upper right"); st(ax)
+fig.savefig(OUT/"laws_T_vs_P_p197.pdf", bbox_inches="tight"); plt.close(fig)
+print("wrote 5 figures to", OUT)
 
 # sync into the writeup repo (docs/ is a sparse checkout of writings.git)
 import shutil

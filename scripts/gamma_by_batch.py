@@ -116,7 +116,8 @@ def main():
             f = r["n_samples"] * math.log2(r["p"] + 2) / (C * r["param_count"])
             if not (F_LO <= f <= F_HI):
                 continue
-            spe = math.ceil(r["n_samples"] / B)
+            # batch_size -1 = full batch: one optimiser step per epoch
+            spe = 1 if B == -1 else math.ceil(r["n_samples"] / B)
             # sqlite returns 0/1 ints for the saturated flag, not booleans
             if r["saturated"] and r["saturation_epoch"] is not None:
                 sel.append((f, math.log(r["saturation_epoch"]),
@@ -157,10 +158,12 @@ def main():
         out["per_batch"][B] = res
 
     # thermal-vs-geometric verdict on the steps-unit gammas
+    # (B = -1 full-batch rows are the direct gamma_inf probe and are
+    # excluded from the B-parametric fits below)
     for key, label in (("steps", "gamma_vs_B_loglog_slope"),
                        ("tobit_steps", "gamma_vs_B_loglog_slope_tobit")):
         gs = {B: v[key]["gamma"] for B, v in out["per_batch"].items()
-              if key in v}
+              if key in v and B != -1}
         if len(gs) >= 3:
             Bs = sorted(gs)
             lgB = np.log([float(b) for b in Bs])
@@ -173,7 +176,7 @@ def main():
     # interference-model form gamma(B) = gamma_inf + c'/sqrt(B), on the
     # tobit gammas (needs all three arms)
     gs = {B: v["tobit_steps"]["gamma"] for B, v in out["per_batch"].items()
-          if "tobit_steps" in v}
+          if "tobit_steps" in v and B != -1}
     if len(gs) >= 3:
         Bs = sorted(gs)
         X = np.column_stack([np.ones(len(Bs)),

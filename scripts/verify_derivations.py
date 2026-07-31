@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Numerical verification of every claim in derivations.tex.
+"""Numerical verification of every claim in consequences.tex (né derivations.tex).
 
 Run from the repo root:  python scripts/verify_derivations.py
 Reads the frozen fits (results/theory/forecast_onset.json) and the registry.
