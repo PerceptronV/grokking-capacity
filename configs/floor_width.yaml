@@ -1,0 +1,32 @@
+name: floor_width
+description: >
+  Experiment 1 (T_gen floor, docs/todo.md): does generalisation time have a
+  minimum in width? Extends the p=197 grid past the observed upturn
+  (T_gen bottomed ~24 ep at d=236, drifted up through d=492). Outcomes:
+  resumes falling = no floor; flat = true minimum speed; persistent rise =
+  lazy-regime U-shape. Groks runs only, central protocol.
+
+defaults:
+  operation: "/"
+  train_fraction: 0.5
+  split_type: random
+  depth: 2
+  heads: 1
+  weight_decay: 1.0
+  dropout: 0.2
+  lr: 0.001
+  beta1: 0.9
+  beta2: 0.98
+  batch_size: 512
+  max_epochs: 2000
+  primes: [197]
+  seeds: [42, 43, 44, 45, 46, 47, 48, 49, 50, 51]
+
+experiments:
+  groks:
+    type: groks
+    dims: [620, 700, 800, 900, 1000, 1100, 1200, 1400]
+
+analysis:
+  use_default_capacity_constant: true
+  intersection_figures: []

@@ -1,0 +1,41 @@
+name: mup_lr_arm
+description: >
+  Discriminator for the width-U's rising wall (trunk 6e): is the ~linear-in-P
+  slowdown an lr-vs-width mis-scaling? Global-lr proxy for muP: at wide dims,
+  test lr scaled down as (236/d) and sqrt(236/d) (muP-Adam direction) and up
+  as sqrt(d/236) (signal-dilution-compensation direction), vs the existing
+  lr=1e-3 baselines in ~/floor_width_runs.db (d=620: 101 ep; d=1400: 447 ep,
+  1/10 censored). Prediction if lr-mis-scaling: one direction restores
+  T_gen toward the 24-ep floor and the correct exponent flattens the wall.
+  Caveat: global lr, not per-layer muP — a positive result licenses the full
+  muP implementation, a negative one does not fully kill it.
+
+defaults:
+  operation: "/"
+  train_fraction: 0.5
+  split_type: random
+  depth: 2
+  heads: 1
+  weight_decay: 1.0
+  dropout: 0.2
+  beta1: 0.9
+  beta2: 0.98
+  batch_size: 512
+  max_epochs: 2000
+  primes: [197]
+  seeds: [42, 43, 44]
+
+experiments:
+  d620:
+    type: groks
+    dims: [620]
+    lr: [0.00038, 0.00062, 0.0016]
+
+  d1400:
+    type: groks
+    dims: [1400]
+    lr: [0.00017, 0.00041, 0.0024]
+
+analysis:
+  use_default_capacity_constant: true
+  intersection_figures: []
