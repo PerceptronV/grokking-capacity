@@ -1,0 +1,32 @@
+name: p197_alpha025
+description: >
+  Completes the alpha-cone registration (issue: alpha=0.25 was registered in
+  alpha-cone.md with predicted onset ~1.7e5 params but never run — 2-of-3
+  reporting). Widths bracket the prediction (true convention P ~ 32 d^2:
+  predicted d ~ 73). Near the critical fraction, delays and convergence
+  failures are themselves informative.
+
+defaults:
+  operation: "/"
+  train_fraction: 0.25
+  split_type: random
+  depth: 2
+  heads: 1
+  weight_decay: 1.0
+  dropout: 0.2
+  lr: 0.001
+  beta1: 0.9
+  beta2: 0.98
+  batch_size: 512
+  max_epochs: 4000
+  primes: [197]
+  seeds: [42, 43, 44, 45, 46]
+
+experiments:
+  groks:
+    type: groks
+    dims: [40, 52, 64, 76, 92, 108, 124, 148]
+
+analysis:
+  use_default_capacity_constant: true
+  intersection_figures: []
