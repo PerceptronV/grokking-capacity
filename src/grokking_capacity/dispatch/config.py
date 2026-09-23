@@ -165,6 +165,7 @@ def _common_hparams(cfg: dict) -> dict:
         'beta2': cfg.get('beta2', 0.98),
         'batch_size': cfg.get('batch_size', 512),
         'max_epochs': cfg.get('max_epochs', 5000),
+        'mup_base': int(cfg.get('mup_base', 0)),
     }
 
 

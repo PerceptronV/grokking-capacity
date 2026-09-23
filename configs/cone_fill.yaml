@@ -1,0 +1,40 @@
+name: cone_fill
+description: >
+  Fill the (p, P) plane around the cone's apex (paste 2026-08-10): primes
+  151-179 bracketing p* = 167.5 on a log-spaced width grid to d = 1000
+  (P ~ 3.2e7, the p=139 maximum), plus the wide extension of p = 149 (which
+  stops at d = 256). Purpose: map both cone boundaries (seed-mean AND
+  seed-min conventions, per the 2026-08-05 re-entrance correction) through
+  the apex region where the fitted laws predict the onset branch bends up
+  and terminates. 5 seeds per cell (thinner than central's 10 — noted);
+  cap 2500 (censored delays still certify delta-E > 0).
+
+defaults:
+  operation: "/"
+  train_fraction: 0.5
+  split_type: random
+  depth: 2
+  heads: 1
+  weight_decay: 1.0
+  dropout: 0.2
+  lr: 0.001
+  beta1: 0.9
+  beta2: 0.98
+  batch_size: 512
+  max_epochs: 2500
+  seeds: [42, 43, 44, 45, 46]
+
+experiments:
+  apex_primes:
+    type: groks
+    primes: [151, 157, 163, 167, 173, 179]
+    dims: [64, 80, 100, 124, 156, 196, 244, 304, 380, 476, 596, 744, 880, 1000]
+
+  p149_wide:
+    type: groks
+    primes: [149]
+    dims: [304, 380, 476, 596, 744, 880, 1000]
+
+analysis:
+  use_default_capacity_constant: true
+  intersection_figures: []

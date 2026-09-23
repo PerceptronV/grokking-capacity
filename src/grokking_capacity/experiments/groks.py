@@ -15,6 +15,7 @@ from tqdm import tqdm
 from ..data import grokking_data_torch
 from ..models import TransformerTorch, count_parameters
 from ..registry import build_identifying, run_lifecycle, AlreadyCompleted
+from ..utils.optim import build_adamw
 from ..utils.cli_args import (
     add_model_args, add_optimizer_args, add_device_args, add_io_args, add_registry_args,
 )
@@ -251,7 +252,7 @@ def main():
         dropout=args.dropout, init_scale=args.init_scale,
         lr=args.lr, weight_decay=args.weight_decay,
         beta1=args.beta1, beta2=args.beta2, batch_size=args.batch_size,
-        max_epochs=args.epochs, seed=args.seed,
+        max_epochs=args.epochs, seed=args.seed, mup_base=args.mup_base,
     )
 
     print(f"=== groks p={args.p} op={args.operation} seed={args.seed} | "
@@ -306,9 +307,9 @@ def main():
                             {k: v.cpu() for k, v in model.state_dict().items()}},
                            init_path)
 
-            optimizer = optim.AdamW(model.parameters(), lr=args.lr,
-                                     betas=(args.beta1, args.beta2),
-                                     weight_decay=args.weight_decay)
+            optimizer = build_adamw(model, lr=args.lr, betas=(args.beta1, args.beta2),
+                                    weight_decay=args.weight_decay,
+                                    mup_base=args.mup_base, dim=args.dim)
             trainer = GrokkingTrainer(model=model, optimizer=optimizer, n_tokens=n_tokens,
                                        batch_size=args.batch_size, device=device,
                                        baseline_model=baseline_model,

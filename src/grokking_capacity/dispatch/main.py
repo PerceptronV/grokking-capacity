@@ -102,6 +102,7 @@ def build_worker_cmd(
         '--beta2', str(run['beta2']),
         '--batch-size', str(run['batch_size']),
         '--epochs', str(run['max_epochs']),
+        '--mup-base', str(int(run.get('mup_base', 0))),
         '--node-rank', str(node_rank),
     ]
     if db_path:

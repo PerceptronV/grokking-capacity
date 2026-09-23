@@ -1,0 +1,42 @@
+name: mup_laws
+description: >
+  Matched-protocol re-measurement (registered 2026-09-22) of both timescale
+  laws under per-layer scaling (muP, lr-only, base 236), replacing the
+  harness rows (mupM/mupLawM/mupG/mupLawG) whose memorisation clock was the
+  lenient eval-mode one. Speed: random labels at n_equiv = p(p-1)/2 on the
+  gc-speed clock (train-mode running accuracy >= 99 %). Groks: the task at
+  the same primes and widths. Six window widths per prime, three seeds.
+  Only after this can gamma, b, beta, a under muP be compared with the
+  fixed-rate constants.
+
+defaults:
+  operation: "/"
+  train_fraction: 0.5
+  split_type: random
+  depth: 2
+  heads: 1
+  weight_decay: 1.0
+  dropout: 0.2
+  lr: 0.001
+  beta1: 0.9
+  beta2: 0.98
+  batch_size: 512
+  mup_base: 236
+  seeds: [42, 43, 44]
+
+experiments:
+  mem_law:
+    type: speed
+    primes: [97, 113, 139, 151, 197, 251, 311]
+    dims: [64, 92, 124, 172, 236, 300, 364, 428]
+    n_samples: auto
+    max_epochs: 5000
+  gen_law:
+    type: groks
+    primes: [97, 113, 139, 151, 197, 251, 311]
+    dims: [64, 92, 124, 172, 236, 300, 364, 428]
+    max_epochs: 2500
+
+analysis:
+  use_default_capacity_constant: true
+  intersection_figures: []

@@ -14,6 +14,7 @@ from tqdm import tqdm
 from ..data import random_target_data_torch
 from ..models import TransformerTorch, count_parameters
 from ..registry import build_identifying, run_lifecycle, AlreadyCompleted
+from ..utils.optim import build_adamw
 from ..utils.cli_args import (
     add_model_args, add_optimizer_args, add_device_args, add_io_args, add_registry_args,
 )
@@ -112,8 +113,9 @@ def _train_speed(args, *, device: str) -> Dict:
         optimizer = optim.SGD(model.parameters(), lr=args.lr,
                               momentum=args.momentum, weight_decay=args.weight_decay)
     else:
-        optimizer = optim.AdamW(model.parameters(), lr=args.lr,
-                                betas=(args.beta1, args.beta2), weight_decay=args.weight_decay)
+        optimizer = build_adamw(model, lr=args.lr, betas=(args.beta1, args.beta2),
+                                weight_decay=args.weight_decay,
+                                mup_base=getattr(args, 'mup_base', 0), dim=args.dim)
     trainer = SpeedTrainer(model=model, optimizer=optimizer,
                            batch_size=args.batch_size, device=device)
     results = trainer.train(
@@ -172,6 +174,7 @@ def main():
         lr=args.lr, weight_decay=args.weight_decay,
         beta1=args.beta1, beta2=args.beta2, batch_size=args.batch_size,
         max_epochs=args.epochs, seed=args.seed,
+        mup_base=getattr(args, 'mup_base', 0),
     )
 
     print(f"=== speed p={args.p} op={args.operation} seed={args.seed} | "

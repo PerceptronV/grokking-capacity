@@ -1,0 +1,31 @@
+name: band_gaps
+description: >
+  Fixed-rate apex band, canonical gc-groks conventions: the three primes the
+  cone fill skipped (181, 191, 193), previously covered only by the retired
+  harness (apexGen rows). Same grid and seeds as cone_fill so the band
+  149..197 is one protocol end to end.
+
+defaults:
+  operation: "/"
+  train_fraction: 0.5
+  split_type: random
+  depth: 2
+  heads: 1
+  weight_decay: 1.0
+  dropout: 0.2
+  lr: 0.001
+  beta1: 0.9
+  beta2: 0.98
+  batch_size: 512
+  max_epochs: 2500
+  seeds: [42, 43, 44, 45, 46]
+
+experiments:
+  gap_primes:
+    type: groks
+    primes: [181, 191, 193]
+    dims: [64, 80, 100, 124, 156, 196, 244, 304, 380, 476, 596, 744, 880, 1000]
+
+analysis:
+  use_default_capacity_constant: true
+  intersection_figures: []

@@ -19,6 +19,7 @@ from tqdm import tqdm
 from ..data import grokking_data_torch, random_target_data_torch
 from ..models import TransformerTorch, count_parameters
 from ..registry import build_identifying, run_lifecycle, AlreadyCompleted
+from ..utils.optim import build_adamw
 from ..utils.cli_args import (
     add_model_args, add_optimizer_args, add_device_args, add_io_args, add_registry_args,
 )
@@ -140,8 +141,9 @@ def _train_capacity(args, *, device: str) -> Dict:
     param_count = count_parameters(model)
     print(f"  n_samples={args.n_samples} dim={args.dim} params={param_count:,}")
 
-    optimizer = optim.AdamW(model.parameters(), lr=args.lr,
-                             betas=(args.beta1, args.beta2), weight_decay=args.weight_decay)
+    optimizer = build_adamw(model, lr=args.lr, betas=(args.beta1, args.beta2),
+                            weight_decay=args.weight_decay,
+                            mup_base=getattr(args, 'mup_base', 0), dim=args.dim)
     trainer = CapacityTrainer(model=model, optimizer=optimizer, n_tokens=n_tokens,
                                batch_size=args.batch_size, device=device)
     results = trainer.train(
@@ -188,6 +190,7 @@ def main():
         lr=args.lr, weight_decay=args.weight_decay,
         beta1=args.beta1, beta2=args.beta2, batch_size=args.batch_size,
         max_epochs=args.epochs, seed=args.seed,
+        mup_base=getattr(args, 'mup_base', 0),
     )
 
     print(f"=== capacity p={args.p} type={args.dataset_type_raw} seed={args.seed} | "

@@ -1,6 +1,7 @@
 from .device import get_device, gpu_type
 from .compute import compute_dataset_size_bits
 from .checkpoints import load_model, save_model
+from .optim import build_adamw
 
 __all__ = [
     "get_device",
@@ -8,4 +9,5 @@ __all__ = [
     "compute_dataset_size_bits",
     "load_model",
     "save_model",
+    "build_adamw",
 ]

@@ -24,6 +24,9 @@ ap.add_argument("--mup-base", type=int, default=0,
                      "matrix params at lr*(mup_base/dim). 0 = off. Init is "
                      "left standard (lr-only muP).")
 ap.add_argument("--epochs", type=int, default=1500)
+ap.add_argument("--random-labels", action="store_true",
+                help="T_mem mode: fit n_equiv random labels; t_train is the "
+                     "measurement, t_gen is meaningless.")
 ap.add_argument("--tag", default="")
 a = ap.parse_args()
 DEV = "cuda"
@@ -55,9 +58,16 @@ def colour(W, boost, keep):
     W2 = W.clone(); W2[ORDER, :] = Y + X.mean(0, keepdim=True)
     return W2
 
+ap2 = a  # (parsed above)
 np.random.seed(a.seed); torch.manual_seed(a.seed)
-Xtr, Ttr, Xva, Tva = grokking_data_torch(P, op="/", split_type="random",
-                                         train_fraction=0.5, device="cpu")
+if getattr(a, "random_labels", False):
+    from grokking_capacity.data import random_target_data_torch
+    n_eq = P * (P - 1) // 2          # n_equiv at alpha = 0.5
+    Xtr, Ttr = random_target_data_torch(n_eq, P, seq_len=4, device="cpu")
+    Xva, Tva = Xtr[:1], Ttr[:1]      # dummy val; t_gen meaningless here
+else:
+    Xtr, Ttr, Xva, Tva = grokking_data_torch(P, op="/", split_type="random",
+                                             train_fraction=0.5, device="cpu")
 model = TransformerTorch(depth=2, dim=a.dim, heads=1, n_tokens=P + 2,
                          seq_len=4, dropout=0.2, init_scale=1.0).to(DEV)
 if a.char_boost != "1":
@@ -85,7 +95,9 @@ else:
 Xtr, Ttr, Xva, Tva = Xtr.to(DEV), Ttr.to(DEV), Xva.to(DEV), Tva.to(DEV)
 n = Xtr.shape[0]; B = 512
 t_train = t_gen = None; steps = 0; t0 = time.time()
+t_train_tm = None   # train-mode running accuracy >= 99 % (gc-speed convention)
 for ep in range(a.epochs):
+    tm_correct = 0
     if len(sched) > 1 and ep == sched[1][0]:
         for g in opt.param_groups: g["weight_decay"] = sched[1][1]
     model.train()
@@ -93,19 +105,31 @@ for ep in range(a.epochs):
     for i in range(0, n, B):
         idx = perm[i:i + B]
         opt.zero_grad()
-        F.cross_entropy(model(Xtr[idx]) * a.logit_scale, Ttr[idx]).backward()
+        logits = model(Xtr[idx])
+        F.cross_entropy(logits * a.logit_scale, Ttr[idx]).backward()
         opt.step(); steps += 1
+        tm_correct += (logits.argmax(-1) == Ttr[idx]).sum().item()
+    if t_train_tm is None and tm_correct / n >= 0.99: t_train_tm = ep + 1
     model.eval()
     with torch.no_grad():
-        ta = (model(Xtr).argmax(-1) == Ttr).float().mean().item()
-        va = (model(Xva).argmax(-1) == Tva).float().mean().item()
+        # chunked accuracy: identical to a single forward pass, but bounds
+        # peak memory so large-p (large-n) evals do not OOM. Chunk = 8192.
+        def _acc(X, T):
+            correct = 0
+            for j in range(0, X.shape[0], 8192):
+                correct += (model(X[j:j+8192]).argmax(-1) == T[j:j+8192]).sum().item()
+            return correct / X.shape[0]
+        ta = _acc(Xtr, Ttr)
+        va = _acc(Xva, Tva)
     if t_train is None and ta >= 0.99: t_train = ep + 1
     if t_gen is None and va >= 0.99: t_gen = ep + 1
-    if t_gen is not None and ep >= t_gen + 10: break
+    if a.random_labels:
+        if t_train is not None and (t_train_tm is not None or ep + 1 >= 5 * t_train): break
+    elif t_gen is not None and ep >= t_gen + 10: break
 row = dict(p=P, dim=a.dim, seed=a.seed, lr=a.lr, char_boost=a.char_boost,
            wd_schedule=a.wd_schedule, logit_scale=a.logit_scale,
            mup_base=a.mup_base, tag=a.tag,
-           t_train=t_train, t_gen=t_gen,
+           t_train=t_train, t_gen=t_gen, t_train_tm=t_train_tm,
            steps_gen=None if t_gen is None else t_gen * math.ceil(n / B),
            final_val=va, wall_s=round(time.time() - t0, 1))
 with open("results/speedrun/runs.jsonl", "a") as fh:

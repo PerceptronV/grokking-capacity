@@ -92,6 +92,11 @@ default = 5000
 type = "int"
 default = 42
 
+[identifying.mup_base]
+type = "int"
+default = 0
+doc = "Per-layer Adam learning-rate scaling (muP, lr-only): 0 = off (every parameter at lr); N > 0 = embeddings and norm gains at lr, all matrix parameters at lr * N / dim. Added 2026-09-22 so per-layer-scaled runs live in the same registry and code path as the fixed-rate runs."
+
 [identifying.architecture_family]
 type = "string"
 default = "transformer_gated"

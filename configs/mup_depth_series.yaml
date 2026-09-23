@@ -1,0 +1,37 @@
+name: mup_depth_series
+description: >
+  Matched-protocol re-run (registered 2026-09-22) of the per-layer-scaled
+  (muP, lr-only, base 236) grokking depth series that had been measured with
+  the retired speedrun harness on a lenient memorisation clock. Canonical
+  gc-groks conventions: train-mode running accuracy, eval-mode validation,
+  early stop at train >= 99 % and val >= 99 %, trace saved. Primes from the
+  calibration window through the far probe; the two matched wide widths;
+  ten seeds; cap 1500 as before. Decides, on the framework's own
+  conventions, whether the muP delay fades to zero at a finite prime (the
+  fold, p* ~ 278 on the confounded fit) or persists as a tail.
+
+defaults:
+  operation: "/"
+  train_fraction: 0.5
+  split_type: random
+  depth: 2
+  heads: 1
+  weight_decay: 1.0
+  dropout: 0.2
+  lr: 0.001
+  beta1: 0.9
+  beta2: 0.98
+  batch_size: 512
+  max_epochs: 1500
+  mup_base: 236
+  seeds: [42, 43, 44, 45, 46, 47, 48, 49, 50, 51]
+
+experiments:
+  depth_series:
+    type: groks
+    primes: [97, 113, 139, 197, 223, 251, 281, 311, 313, 317, 331, 337, 347, 359, 367, 383, 449]
+    dims: [880, 2000]
+
+analysis:
+  use_default_capacity_constant: true
+  intersection_figures: []

@@ -22,6 +22,10 @@ def add_optimizer_args(parser, *, weight_decay_default: float, epochs_default: i
     parser.add_argument('-b', '--batch-size', type=int, default=512, help='Batch size')
     parser.add_argument('-e', '--epochs', type=int, default=epochs_default,
                         help='Maximum training epochs')
+    parser.add_argument('--mup-base', type=int, default=0,
+                        help='Per-layer Adam lr scaling (muP, lr-only). 0 = off. N > 0: '
+                             'embeddings and norm gains at --lr, all matrix parameters at '
+                             'lr * N / dim. Identifying field (wallow.toml: mup_base).')
 
 
 def add_device_args(parser):
