@@ -81,21 +81,21 @@ def plot_grokking_delay_with_speed(
     colours = np.array([r["colour"] for r in delay_records], dtype=float)
     delays = np.array([r["delay"] for r in delay_records], dtype=float)
 
-    fig, ax1 = plt.subplots(figsize=(10, 7))
+    fig, ax1 = plt.subplots(figsize=(7, 5.2))
 
     crest = sns.color_palette("crest", as_cmap=True)
     scatter = ax1.scatter(
-        xs, delays, c=colours, cmap=crest, s=80, alpha=0.7, edgecolors="none",
+        xs, delays, c=colours, cmap=crest, s=55, alpha=0.7, edgecolors="none",
         label=f"Generalisation delay (val≥{threshold_val:.0f}% − train≥{threshold_train:.0f}%)",
     )
-    ax1.set_xlabel(x_label, fontsize=14)
-    ax1.set_ylabel("Generalisation delay (epochs)", fontsize=14, color="#1b7a3d")
+    ax1.set_xlabel(x_label, fontsize=17)
+    ax1.set_ylabel("Generalisation delay (epochs)", fontsize=17, color="#1b7a3d")
     ax1.set_xscale("log")
-    ax1.tick_params(axis="y", labelcolor="#1b7a3d")
+    ax1.tick_params(axis="y", labelcolor="#1b7a3d", labelsize=14); ax1.tick_params(axis="x", labelsize=14)
     ax1.axhline(y=0, color="gray", linestyle="--", alpha=0.5, linewidth=1)
     ax1.grid(True, alpha=0.3)
     cbar = plt.colorbar(scatter, ax=ax1, label=colour_label, pad=0.12)
-    cbar.ax.tick_params(labelsize=10)
+    cbar.ax.tick_params(labelsize=13)
 
     ax2 = ax1.twinx()
     speed_x = np.array(sorted(speed_curve.keys()), dtype=float)
@@ -110,9 +110,9 @@ def plot_grokking_delay_with_speed(
         speed_x, speed_y, "-", color="#7570b3", linewidth=2, alpha=0.85,
         label=f"Epochs to memorise (train≥{mem_curve_threshold:.0f}%)",
     )
-    ax2.set_ylabel("Epochs", fontsize=14, color="#d95f02")
+    ax2.set_ylabel("Epochs", fontsize=17, color="#d95f02")
     ax2.set_yscale("log")
-    ax2.tick_params(axis="y", labelcolor="#d95f02")
+    ax2.tick_params(axis="y", labelcolor="#d95f02", labelsize=14)
 
     intersection = find_intersection(speed_curve, groks_curve)
     if intersection is not None:
@@ -122,19 +122,19 @@ def plot_grokking_delay_with_speed(
         ax1.annotate(
             f"{ix:,.0f}", xy=(ix, ax1.get_ylim()[0]),
             xytext=(0, -16), textcoords="offset points",
-            ha="center", va="bottom", fontsize=11, color="#8B0000",
+            ha="center", va="bottom", fontsize=13, color="#8B0000",
         )
         ax2.annotate(
             f"{iy:,.0f}", xy=(ax2.get_xlim()[1], iy),
             xytext=(-5, 5), textcoords="offset points",
-            ha="right", va="bottom", fontsize=11, color="#8B0000",
+            ha="right", va="bottom", fontsize=13, color="#8B0000",
         )
 
     h1, l1 = ax1.get_legend_handles_labels()
     h2, l2 = ax2.get_legend_handles_labels()
-    ax2.legend(h1 + h2, l1 + l2, loc="upper right", fontsize=11)
+    ax2.legend(h1 + h2, l1 + l2, loc="upper right", fontsize=13)
     if title:
-        ax1.set_title(title, fontsize=15)
+        ax1.set_title(title, fontsize=17)
 
     plt.tight_layout()
     if save_path:

@@ -1,0 +1,29 @@
+name: capacity_defaults
+description: >
+  Capacity constant re-measurement (2026-09-26) on random labels at p = 113,
+  widths 10..22 and the paper's dataset-size grid, dropout 0.0, weight decay 0.01
+  (defaults protocol). Replaces the unrecoverable provenance of C = 2.16.
+
+defaults:
+  operation: random
+  depth: 2
+  heads: 1
+  dropout: 0.0
+  weight_decay: 0.01
+  lr: 0.001
+  beta1: 0.9
+  beta2: 0.98
+  batch_size: 512
+  max_epochs: 5000
+  seeds: [42]
+
+experiments:
+  random_labels:
+    type: capacity
+    primes: [113]
+    dims: [10, 12, 14, 16, 18, 20, 22]
+    n_samples: [1000, 1374, 1891, 2601, 3576, 4917, 6761, 9300]
+
+analysis:
+  use_default_capacity_constant: true
+  intersection_figures: []
