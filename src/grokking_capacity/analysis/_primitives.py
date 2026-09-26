@@ -81,7 +81,7 @@ def plot_grokking_delay_with_speed(
     colours = np.array([r["colour"] for r in delay_records], dtype=float)
     delays = np.array([r["delay"] for r in delay_records], dtype=float)
 
-    fig, ax1 = plt.subplots(figsize=(7, 5.2))
+    fig, ax1 = plt.subplots(figsize=(7, 6.2))
 
     crest = sns.color_palette("crest", as_cmap=True)
     scatter = ax1.scatter(
@@ -132,7 +132,7 @@ def plot_grokking_delay_with_speed(
 
     h1, l1 = ax1.get_legend_handles_labels()
     h2, l2 = ax2.get_legend_handles_labels()
-    ax2.legend(h1 + h2, l1 + l2, loc="upper right", fontsize=13)
+    ax2.legend(h1 + h2, l1 + l2, loc="upper center", bbox_to_anchor=(0.5, -0.2), ncol=1, fontsize=13, frameon=False)
     if title:
         ax1.set_title(title, fontsize=17)
 

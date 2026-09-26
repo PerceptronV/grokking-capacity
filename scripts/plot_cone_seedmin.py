@@ -50,26 +50,28 @@ def law_onset_P(p):
     return g * K(p) / (C * x)
 FIXED_ONLY = "--fixed-only" in sys.argv
 if FIXED_ONLY:
-    fig, ax0 = plt.subplots(1, 1, figsize=(7.2, 5.4)); axs = np.array([ax0]); panels = ((ax0, 0, "fixed learning rate"),)
+    fig, ax0 = plt.subplots(1, 1, figsize=(5.0, 4.0)); axs = np.array([ax0]); panels = ((ax0, 0, "fixed learning rate"),)
 else:
     fig, axs = plt.subplots(1, 2, figsize=(13, 5.2), sharey=True); panels = ((axs[0], 0, "fixed learning rate"), (axs[1], 236, "per-layer scaling (base 236)"))
 for ax, mb, title in panels:
     cs = cells[mb]; ps = [k[0] for k in cs]; Ps = [Pof[k] for k in cs]
     mn = np.array([min(v) for v in cs.values()]); mean = np.array([np.mean(v) for v in cs.values()])
     grok = mn > 0
-    sc = ax.scatter(np.array(ps)[grok], np.array(Ps)[grok], c=np.clip(mean[grok], 1, None), cmap="viridis", norm=LogNorm(1, 1500), s=28, edgecolors="k", linewidths=.3, label="seed-min delay > 0 (grokking)")
-    ax.scatter(np.array(ps)[~grok], np.array(Ps)[~grok], facecolors="none", edgecolors="grey", s=22, linewidths=.7, label="seed-min delay = 0")
+    ms = 16 if FIXED_ONLY else 28
+    sc = ax.scatter(np.array(ps)[grok], np.array(Ps)[grok], c=np.clip(mean[grok], 1, None), cmap="viridis", norm=LogNorm(1, 1500), s=ms, edgecolors="k", linewidths=.3, label="seed-min delay > 0 (grokking)")
+    ax.scatter(np.array(ps)[~grok], np.array(Ps)[~grok], facecolors="none", edgecolors="grey", s=ms*0.8, linewidths=.6, label="seed-min delay = 0")
     ax.set(yscale="log", xlabel="prime $p$", title=f"{title}: {len(cs)} cells, {sum(len(v) for v in cs.values())} runs")
     ax.set_xticks(sorted(set(ps))[::2]); ax.tick_params(axis="x", labelsize=8 if FIXED_ONLY else 7, rotation=90)
     if FIXED_ONLY:
-        ax.xaxis.label.set_size(13); ax.title.set_size(12); ax.tick_params(axis="y", labelsize=11)
+        ax.xaxis.label.set_size(12); ax.set_title(""); ax.tick_params(axis="y", labelsize=10)
+        ax.set_xticks([97, 113, 139, 149, 163, 179, 197]); ax.tick_params(axis="x", labelsize=10, rotation=0)
     if mb == 0:
         pp = np.arange(97, 168); Pl = [law_onset_P(p) for p in pp]
         ax.plot([p for p, P in zip(pp, Pl) if P], [P for P in Pl if P], "r-", lw=1.5, label="law-derived onset crossing")
         ax.axvline(167.5, color="r", ls="--", lw=1, label="$p^* = 167.5$")
     ax.legend(fontsize=9 if FIXED_ONLY else 7, loc="upper left")
 axs.flat[0].set_ylabel("parameters $P$", fontsize=13 if FIXED_ONLY else 10)
-cb = fig.colorbar(sc, ax=axs, fraction=.04 if FIXED_ONLY else .03, pad=.02); cb.set_label("seed-mean generalisation delay (epochs)", fontsize=11 if FIXED_ONLY else 10)
+cb = fig.colorbar(sc, ax=axs, fraction=.04 if FIXED_ONLY else .03, pad=.02); cb.set_label("seed-mean delay (epochs)", fontsize=10 if FIXED_ONLY else 10)
 name = "cone_seedmin_fixed" if FIXED_ONLY else "cone_seedmin"
 fig.savefig(f"figures/theory/{name}.pdf", bbox_inches="tight"); fig.savefig(f"/tmp/{name}.png", dpi=90, bbox_inches="tight")
 dst = f"docs/papers/2026 Grokking Capacity/media/theory/{name}.pdf"
