@@ -75,6 +75,22 @@ def comparison(rows):
     return aggregates, pairs
 
 
+def first_passage_delay(records):
+    """Supplementary paper-style delay on the run's primary evaluation policy.
+
+    Crossings are first observations, not sustained crossings. Missing events
+    stay missing, and validation preceding training gives zero delay.
+    """
+    train = next((r for r in records if r['train_acc'] >= .99), None)
+    heldout = next((r for r in records if r['val_acc'] >= .98), None)
+    return dict(first_train_99_step=train['step'] if train else None,
+                first_generalise_98_step=heldout['step'] if heldout else None,
+                first_passage_delay_99_98_steps=(max(0, heldout['step'] - train['step'])
+                                                if train and heldout else None),
+                first_passage_delay_99_98_epochs=(max(0, heldout['epochs'] - train['epochs'])
+                                                 if train and heldout else None))
+
+
 def control_config_matches(actual, expected):
     """Ignore only the descriptive control label; require scientific equality."""
     if actual.get('purpose') not in (None, 'capacity_control'):
@@ -204,6 +220,7 @@ def validate(root, c_paths):
                    longest_observed_memorisation_steps=max((r['observed_steps'] for r in intervals), default=0),
                    memorisation_observations=sum(r['observations'] for r in intervals),
                    memorisation_end_censored=any(r['end_censored'] for r in intervals))
+        row.update(first_passage_delay(primary_data))
         for field in ('train_95','train_99','generalise_95','generalise_99'):
             crossing = calculated['metrics'][field]
             for unit in ('step','examples','epochs','wall_seconds'):
@@ -306,6 +323,15 @@ def report(root, output, c_paths):
                 tail_relative_drift=row['tail_relative_drift'],
                 dataset_limited=row['best_bits'] >= .95*row['config']['n_samples']*math.log2(row['config']['p']+2)))
     write_csv(output/'capacity.csv',capacities)
+    write_json(output/'delay_definitions.json', {
+        'registered_sustained_99': 'delay_steps_99 is held-out 99% minus training 99%, each sustained for three evaluations; signed difference; missing crossings stay null.',
+        'registered_large_gap': 'Observed intervals with training >=99% and held-out <90%; not a universal binary definition of grokking.',
+        'supplementary_first_passage_99_98': 'max(0, first held-out >=98% time - first training >=99% time); missing crossings stay null; uses each run primary evaluation policy.',
+        'supplementary_registration': 'Added after scalar confirmation and before categorical confirmation, for comparison with the paper; does not change selection, stopping, or primary outcomes.',
+        'observation_resolution_updates': 100,
+        'resolution_note': 'Crossings are measured on recorded evaluations. Sub-100-update delays are unresolved.',
+        'paper': 'https://arxiv.org/html/2605.09724v2#S4.SS3',
+        'protocol_difference': 'These comparisons use dropout 0; the paper grokking baseline used dropout 0.2 and epoch-level evaluation.'})
     control = read(root/'selection.json').get('control', 'compressed_continuous')
     unrestricted = control in {'unrestricted', 'fullwidth_unrestricted'}
     categorical = calibration['B'][0]['config']['model'] == 'categorical'

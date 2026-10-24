@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from scripts.report_discrete import comparison, control_config_matches, validate
+from scripts.report_discrete import comparison, control_config_matches, first_passage_delay, validate
 
 
 def test_report_keeps_censored_crossings_out_of_ratios_and_labels_observed_medians():
@@ -44,3 +44,24 @@ def test_control_metadata_label_does_not_change_scientific_pairing():
                        ('n_samples', 32768), ('max_steps', 60000), ('lr', .0003)]:
         assert not control_config_matches({**expected, 'purpose': 'capacity_control', key: value}, expected)
     assert not control_config_matches({**expected, 'data_seed': 62}, expected)
+
+
+def test_paper_delay_uses_first_crossings_even_when_they_are_not_sustained():
+    rows = [dict(step=0, epochs=0., train_acc=.5, val_acc=.5),
+            dict(step=100, epochs=4., train_acc=.99, val_acc=.97),
+            dict(step=200, epochs=8., train_acc=.8, val_acc=.98),
+            dict(step=300, epochs=12., train_acc=.8, val_acc=.7)]
+    result = first_passage_delay(rows)
+    assert result == dict(first_train_99_step=100, first_generalise_98_step=200,
+                          first_passage_delay_99_98_steps=100,
+                          first_passage_delay_99_98_epochs=4.)
+
+
+def test_paper_delay_clamps_validation_first_to_zero_but_preserves_missing_events():
+    rows = [dict(step=100, epochs=4., train_acc=.97, val_acc=.98),
+            dict(step=200, epochs=8., train_acc=.99, val_acc=.99)]
+    assert first_passage_delay(rows)['first_passage_delay_99_98_steps'] == 0
+    for incomplete in [rows[:1], [dict(step=100, epochs=4., train_acc=.99, val_acc=.97)]]:
+        result = first_passage_delay(incomplete)
+        assert result['first_passage_delay_99_98_steps'] is None
+        assert result['first_passage_delay_99_98_epochs'] is None

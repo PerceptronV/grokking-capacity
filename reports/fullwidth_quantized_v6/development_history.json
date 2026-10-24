@@ -5212,6 +5212,150 @@
     }
   },
   {
+    "path": "fullwidth-capacity-v5/B_categorical_d62_ff216_k8_rms_t01_mode_n16384_s61",
+    "config": {
+      "task": "random",
+      "p": 149,
+      "operation": "/",
+      "train_fraction": 0.5,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.0,
+      "seed": 61,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "max_steps": 120000,
+      "eval_every": 200,
+      "checkpoint_every": 2000,
+      "sustained_evals": 3,
+      "stop_on_success": false,
+      "dim": 62,
+      "model": "categorical",
+      "alphabet": 8,
+      "categorical_temperature": 0.1,
+      "categorical_normalization": "rms",
+      "categorical_evaluation": "hard_mode",
+      "mlp_dim": 216,
+      "n_samples": 16384
+    },
+    "gate": {
+      "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-learning-v5/B_categorical_d62_ff216_k8_rms_t01_mode_s42",
+      "summary_sha256": "cd8cc382f039a5db929fcec339f7383827ab8e8c590a0793e8a45c1268264da0"
+    },
+    "params": 253146
+  },
+  {
+    "path": "fullwidth-capacity-v5/B_categorical_d62_ff216_k8_rms_t01_mode_n16384_s62",
+    "config": {
+      "task": "random",
+      "p": 149,
+      "operation": "/",
+      "train_fraction": 0.5,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.0,
+      "seed": 62,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "max_steps": 120000,
+      "eval_every": 200,
+      "checkpoint_every": 2000,
+      "sustained_evals": 3,
+      "stop_on_success": false,
+      "dim": 62,
+      "model": "categorical",
+      "alphabet": 8,
+      "categorical_temperature": 0.1,
+      "categorical_normalization": "rms",
+      "categorical_evaluation": "hard_mode",
+      "mlp_dim": 216,
+      "n_samples": 16384
+    },
+    "gate": {
+      "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-learning-v5/B_categorical_d62_ff216_k8_rms_t01_mode_s42",
+      "summary_sha256": "cd8cc382f039a5db929fcec339f7383827ab8e8c590a0793e8a45c1268264da0"
+    },
+    "params": 253146
+  },
+  {
+    "path": "fullwidth-capacity-v5/B_categorical_d62_ff216_k8_rms_t01_mode_n32768_s61",
+    "config": {
+      "task": "random",
+      "p": 149,
+      "operation": "/",
+      "train_fraction": 0.5,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.0,
+      "seed": 61,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "max_steps": 120000,
+      "eval_every": 200,
+      "checkpoint_every": 2000,
+      "sustained_evals": 3,
+      "stop_on_success": false,
+      "dim": 62,
+      "model": "categorical",
+      "alphabet": 8,
+      "categorical_temperature": 0.1,
+      "categorical_normalization": "rms",
+      "categorical_evaluation": "hard_mode",
+      "mlp_dim": 216,
+      "n_samples": 32768
+    },
+    "gate": {
+      "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-learning-v5/B_categorical_d62_ff216_k8_rms_t01_mode_s42",
+      "summary_sha256": "cd8cc382f039a5db929fcec339f7383827ab8e8c590a0793e8a45c1268264da0"
+    },
+    "params": 253146
+  },
+  {
+    "path": "fullwidth-capacity-v5/B_categorical_d62_ff216_k8_rms_t01_mode_n32768_s62",
+    "config": {
+      "task": "random",
+      "p": 149,
+      "operation": "/",
+      "train_fraction": 0.5,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.0,
+      "seed": 62,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "max_steps": 120000,
+      "eval_every": 200,
+      "checkpoint_every": 2000,
+      "sustained_evals": 3,
+      "stop_on_success": false,
+      "dim": 62,
+      "model": "categorical",
+      "alphabet": 8,
+      "categorical_temperature": 0.1,
+      "categorical_normalization": "rms",
+      "categorical_evaluation": "hard_mode",
+      "mlp_dim": 216,
+      "n_samples": 32768
+    },
+    "gate": {
+      "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-learning-v5/B_categorical_d62_ff216_k8_rms_t01_mode_s42",
+      "summary_sha256": "cd8cc382f039a5db929fcec339f7383827ab8e8c590a0793e8a45c1268264da0"
+    },
+    "params": 253146
+  },
+  {
     "path": "fullwidth-capacity-v5/B_categorical_d62_ff232_k8_rms_t01_mode_n16384_s61",
     "config": {
       "task": "random",
@@ -8283,7 +8427,243 @@
       "categorical_evaluation": "hard_mode"
     },
     "gate": null,
-    "params": 232314
+    "params": 232314,
+    "summary": {
+      "config": {
+        "task": "modular",
+        "p": 149,
+        "operation": "/",
+        "train_fraction": 0.5,
+        "depth": 2,
+        "heads": 1,
+        "dropout": 0.0,
+        "seed": 42,
+        "lr": 0.001,
+        "weight_decay": 1.0,
+        "beta1": 0.9,
+        "beta2": 0.98,
+        "batch_size": 512,
+        "max_steps": 120000,
+        "eval_every": 100,
+        "checkpoint_every": 2000,
+        "sustained_evals": 3,
+        "stop_on_success": true,
+        "dim": 62,
+        "mlp_dim": 160,
+        "model": "categorical",
+        "alphabet": 8,
+        "categorical_temperature": 0.1,
+        "categorical_normalization": "rms",
+        "categorical_evaluation": "hard_mode"
+      },
+      "param_count": 232314,
+      "final": {
+        "step": 120000,
+        "examples": 60141948,
+        "epochs": 5454.557228369309,
+        "train_loss": 0.8366544246673584,
+        "train_acc": 0.6691457033157349,
+        "train_bits": 66501.85860541431,
+        "val_loss": 0.8713654279708862,
+        "val_acc": 0.6548159122467041,
+        "train_mode_loss": 0.6438435316085815,
+        "train_mode_acc": 0.7726283669471741,
+        "train_mode_bits": 69568.93146741264,
+        "val_mode_loss": 0.6742647290229797,
+        "val_mode_acc": 0.7505895495414734,
+        "wall_seconds": 777.9653351660818
+      },
+      "best_train_bits": 67907.17043119128,
+      "arithmetic_gate_passed": false,
+      "metrics": {
+        "train_95": null,
+        "train_99": null,
+        "generalise_95": null,
+        "generalise_99": null,
+        "delay_steps_99": null,
+        "max_train_val_gap": 0.06375840306282043
+      },
+      "primary_evaluation": "hard_mode",
+      "evaluation_metrics": {
+        "sampled": {
+          "train_95": null,
+          "train_99": null,
+          "generalise_95": null,
+          "generalise_99": null,
+          "delay_steps_99": null,
+          "max_train_val_gap": 0.05214947462081909
+        },
+        "hard_mode": {
+          "train_95": null,
+          "train_99": null,
+          "generalise_95": null,
+          "generalise_99": null,
+          "delay_steps_99": null,
+          "max_train_val_gap": 0.06375840306282043
+        }
+      },
+      "termination": "budget",
+      "peak_cuda_memory_bytes": 144507904
+    }
+  },
+  {
+    "path": "fullwidth-learning-v5/B_categorical_d62_ff216_k8_rms_t01_mode_s42",
+    "config": {
+      "task": "modular",
+      "p": 149,
+      "operation": "/",
+      "train_fraction": 0.5,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.0,
+      "seed": 42,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "max_steps": 120000,
+      "eval_every": 100,
+      "checkpoint_every": 2000,
+      "sustained_evals": 3,
+      "stop_on_success": true,
+      "dim": 62,
+      "mlp_dim": 216,
+      "model": "categorical",
+      "alphabet": 8,
+      "categorical_temperature": 0.1,
+      "categorical_normalization": "rms",
+      "categorical_evaluation": "hard_mode"
+    },
+    "gate": null,
+    "params": 253146,
+    "summary": {
+      "config": {
+        "task": "modular",
+        "p": 149,
+        "operation": "/",
+        "train_fraction": 0.5,
+        "depth": 2,
+        "heads": 1,
+        "dropout": 0.0,
+        "seed": 42,
+        "lr": 0.001,
+        "weight_decay": 1.0,
+        "beta1": 0.9,
+        "beta2": 0.98,
+        "batch_size": 512,
+        "max_steps": 120000,
+        "eval_every": 100,
+        "checkpoint_every": 2000,
+        "sustained_evals": 3,
+        "stop_on_success": true,
+        "dim": 62,
+        "mlp_dim": 216,
+        "model": "categorical",
+        "alphabet": 8,
+        "categorical_temperature": 0.1,
+        "categorical_normalization": "rms",
+        "categorical_evaluation": "hard_mode"
+      },
+      "param_count": 253146,
+      "final": {
+        "step": 14900,
+        "examples": 7467674,
+        "epochs": 677.2786141846544,
+        "train_loss": 0.06402000784873962,
+        "train_acc": 0.9866679310798645,
+        "train_bits": 78792.2744345029,
+        "val_loss": 0.07821069657802582,
+        "val_acc": 0.9808634519577026,
+        "train_mode_loss": 0.029113607481122017,
+        "train_mode_acc": 0.9940142035484314,
+        "train_mode_bits": 79347.53597382337,
+        "val_mode_loss": 0.03347522020339966,
+        "val_mode_acc": 0.9924723505973816,
+        "wall_seconds": 100.08137938659638
+      },
+      "best_train_bits": 78792.2744345029,
+      "arithmetic_gate_passed": true,
+      "metrics": {
+        "train_95": {
+          "step": 4500,
+          "examples": 2255448,
+          "epochs": 204.55722836930892,
+          "wall_seconds": 30.472915440797806
+        },
+        "train_99": {
+          "step": 10900,
+          "examples": 5462990,
+          "epochs": 495.4643569744241,
+          "wall_seconds": 72.86748274415731
+        },
+        "generalise_95": {
+          "step": 4500,
+          "examples": 2255448,
+          "epochs": 204.55722836930892,
+          "wall_seconds": 30.472915440797806
+        },
+        "generalise_99": {
+          "step": 14700,
+          "examples": 7367416,
+          "epochs": 668.1857427897696,
+          "wall_seconds": 98.68133499566466
+        },
+        "delay_steps_99": 3800,
+        "max_train_val_gap": 0.1683293879032135
+      },
+      "primary_evaluation": "hard_mode",
+      "evaluation_metrics": {
+        "sampled": {
+          "train_95": {
+            "step": 6200,
+            "examples": 3107522,
+            "epochs": 281.83584255396335,
+            "wall_seconds": 41.962429326958954
+          },
+          "train_99": null,
+          "generalise_95": {
+            "step": 7700,
+            "examples": 3859100,
+            "epochs": 350.0,
+            "wall_seconds": 51.67698952462524
+          },
+          "generalise_99": null,
+          "delay_steps_99": null,
+          "max_train_val_gap": 0.12134954333305359
+        },
+        "hard_mode": {
+          "train_95": {
+            "step": 4500,
+            "examples": 2255448,
+            "epochs": 204.55722836930892,
+            "wall_seconds": 30.472915440797806
+          },
+          "train_99": {
+            "step": 10900,
+            "examples": 5462990,
+            "epochs": 495.4643569744241,
+            "wall_seconds": 72.86748274415731
+          },
+          "generalise_95": {
+            "step": 4500,
+            "examples": 2255448,
+            "epochs": 204.55722836930892,
+            "wall_seconds": 30.472915440797806
+          },
+          "generalise_99": {
+            "step": 14700,
+            "examples": 7367416,
+            "epochs": 668.1857427897696,
+            "wall_seconds": 98.68133499566466
+          },
+          "delay_steps_99": 3800,
+          "max_train_val_gap": 0.1683293879032135
+        }
+      },
+      "termination": "sustained_success",
+      "peak_cuda_memory_bytes": 144839680
+    }
   },
   {
     "path": "fullwidth-learning-v5/B_categorical_d62_ff232_k8_rms_t01_mode_s42",
@@ -10673,6 +11053,148 @@
       },
       "termination": "budget",
       "peak_cuda_memory_bytes": 203700224
+    }
+  },
+  {
+    "path": "fullwidth-random-learning-v5/B_categorical_d62_ff216_k8_random_learning_n2048_s61",
+    "config": {
+      "task": "random",
+      "p": 149,
+      "operation": "/",
+      "train_fraction": 0.5,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.0,
+      "seed": 61,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "max_steps": 10000,
+      "eval_every": 100,
+      "checkpoint_every": 1000,
+      "sustained_evals": 3,
+      "stop_on_success": false,
+      "dim": 62,
+      "model": "categorical",
+      "alphabet": 8,
+      "categorical_temperature": 0.1,
+      "categorical_normalization": "rms",
+      "categorical_evaluation": "hard_mode",
+      "mlp_dim": 216,
+      "n_samples": 2048,
+      "purpose": "learning_validation"
+    },
+    "gate": {
+      "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-learning-v5/B_categorical_d62_ff216_k8_rms_t01_mode_s42",
+      "summary_sha256": "cd8cc382f039a5db929fcec339f7383827ab8e8c590a0793e8a45c1268264da0"
+    },
+    "params": 253146,
+    "summary": {
+      "config": {
+        "task": "random",
+        "p": 149,
+        "operation": "/",
+        "train_fraction": 0.5,
+        "depth": 2,
+        "heads": 1,
+        "dropout": 0.0,
+        "seed": 61,
+        "lr": 0.001,
+        "weight_decay": 1.0,
+        "beta1": 0.9,
+        "beta2": 0.98,
+        "batch_size": 512,
+        "max_steps": 10000,
+        "eval_every": 100,
+        "checkpoint_every": 1000,
+        "sustained_evals": 3,
+        "stop_on_success": false,
+        "dim": 62,
+        "model": "categorical",
+        "alphabet": 8,
+        "categorical_temperature": 0.1,
+        "categorical_normalization": "rms",
+        "categorical_evaluation": "hard_mode",
+        "mlp_dim": 216,
+        "n_samples": 2048,
+        "purpose": "learning_validation"
+      },
+      "param_count": 253146,
+      "final": {
+        "step": 10000,
+        "examples": 5120000,
+        "epochs": 2500.0,
+        "train_loss": 0.047305718064308167,
+        "train_acc": 0.994140625,
+        "train_bits": 14684.481565630484,
+        "train_mode_loss": 0.007392319850623608,
+        "train_mode_acc": 1.0,
+        "train_mode_bits": 14802.411266326362,
+        "wall_seconds": 63.36072672344744
+      },
+      "best_train_bits": 14739.895641530791,
+      "arithmetic_gate_passed": false,
+      "metrics": {
+        "train_95": {
+          "step": 200,
+          "examples": 102400,
+          "epochs": 50.0,
+          "wall_seconds": 1.5498679215088487
+        },
+        "train_99": {
+          "step": 200,
+          "examples": 102400,
+          "epochs": 50.0,
+          "wall_seconds": 1.5498679215088487
+        },
+        "generalise_95": null,
+        "generalise_99": null,
+        "delay_steps_99": null,
+        "max_train_val_gap": null
+      },
+      "primary_evaluation": "hard_mode",
+      "evaluation_metrics": {
+        "sampled": {
+          "train_95": {
+            "step": 300,
+            "examples": 153600,
+            "epochs": 75.0,
+            "wall_seconds": 2.150261113420129
+          },
+          "train_99": {
+            "step": 400,
+            "examples": 204800,
+            "epochs": 100.0,
+            "wall_seconds": 2.743155744858086
+          },
+          "generalise_95": null,
+          "generalise_99": null,
+          "delay_steps_99": null,
+          "max_train_val_gap": null
+        },
+        "hard_mode": {
+          "train_95": {
+            "step": 200,
+            "examples": 102400,
+            "epochs": 50.0,
+            "wall_seconds": 1.5498679215088487
+          },
+          "train_99": {
+            "step": 200,
+            "examples": 102400,
+            "epochs": 50.0,
+            "wall_seconds": 1.5498679215088487
+          },
+          "generalise_95": null,
+          "generalise_99": null,
+          "delay_steps_99": null,
+          "max_train_val_gap": null
+        }
+      },
+      "termination": "budget",
+      "peak_cuda_memory_bytes": 144037888
     }
   },
   {

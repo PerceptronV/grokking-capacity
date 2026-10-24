@@ -24,8 +24,11 @@ audited. B is slower than A and C on every seed at95% held-out accuracy; median
 update counts are A2,800, B19,300, C1,800. At99%, A and C succeed on3/3 seeds,
 B on2/3. B reduces the transient train-test gap relative to C, but does not
 provide the proposed speed advantage. No run exhibits the registered
-train>=99%/held-out<90% memorization condition. See the completed scalar result
-section and reports/fullwidth_quantized_v6 for the full evidence. A has75,460
+train>=99%/held-out<90% memorization condition. The supplementary paper-style
+first train99/held-out98 delay is100 updates for C on every seed and0 for A/B;
+this distinguishes a short measured delay from a large memorization plateau.
+See the completed scalar result section and reports/fullwidth_quantized_v6 for
+the full evidence. A has75,460
 parameters; B and unrestricted C each have229,360 with identical initial tensors.
 All checkpoints supporting this scalar comparison are independently audited.
 
@@ -1493,3 +1496,31 @@ accuracy and99.4140625% sampled accuracy. This is learning evidence, not a
 capacity estimate. After its first n16384/seed61 screen reached the target
 band, start the remaining three registered capacity cells. All four use
 paired A datasets and the unchanged120k budgets and matching criteria.
+
+
+## Supplementary delay measure aligned with the paper
+
+The strict train>=99%/held-out<90% interval is not the paper's definition of
+generalization delay. Add a separate descriptive measure, computed from the
+unchanged saved traces: max(0, first held-out>=98% time minus first train>=99%
+time), as in [the paper, section4.3](https://arxiv.org/html/2605.09724v2#S4.SS3).
+This supplement is introduced after scalar confirmation and before categorical
+confirmation. It changes no capacity selection, stopping rule, or registered
+sustained95/99 outcome. The original signed sustained99 delay remains available.
+
+| Scalar seed | A delay (updates) | B delay (updates) | C delay (updates) |
+|---|---:|---:|---:|
+| 73 | 0 | 0 | 100 |
+| 74 | 0 | 0 | 100 |
+| 75 | 0 | 0 | 100 |
+
+Thus C has a small positive measured delay under the paper's thresholds, while
+A and B have zero measured delay. The desired contrast appears in this limited
+sense; B still fails to provide the proposed generalization speed advantage.
+The100-update delay is about4.5 epochs and equals one evaluation interval.
+Sub-100-update delays are unresolved, so zero measured delay does not prove
+simultaneous crossings. The paper evaluated every epoch and used dropout0.2
+in grokking runs; these registered comparisons use dropout0. Five reporting
+tests pass, including censoring and separation of first and sustained crossings.
+The regenerated scalar report validates all nine checkpoints and all exported
+artifact hashes. Both delay definitions will also be reported for categorical B.
