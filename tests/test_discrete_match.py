@@ -15,16 +15,17 @@ def rows(model, capacity):
             for seed in [61,62] for n in [16384,32768]]
 
 
-def test_match_requires_models_and_fixed_dataset():
+@pytest.mark.parametrize('family', ['discrete', 'quantized', 'categorical'])
+def test_match_requires_models_and_fixed_dataset(family):
     target = 11026 * math.log2(151)
-    result = assess(rows('baseline', target), rows('discrete', target * 1.02))
+    result = assess(rows('baseline', target), rows(family, target * 1.02))
     assert result['accepted']
     # Equal capacities alone must fail when both exceed the dataset target.
-    result = assess(rows('baseline', target * 1.2), rows('discrete', target * 1.2))
+    result = assess(rows('baseline', target * 1.2), rows(family, target * 1.2))
     assert not result['accepted']
     assert any('fixed dataset' in x for x in result['issues'])
     # Each within 10% of the dataset is insufficient if they disagree by >10%.
-    assert not assess(rows('baseline', target * .91), rows('discrete', target * 1.09))['accepted']
+    assert not assess(rows('baseline', target * .91), rows(family, target * 1.09))['accepted']
 
 
 def test_requires_paired_repeated_complete_evidence():
@@ -62,3 +63,12 @@ def test_confirmation_uses_new_paired_modular_seeds_and_rotates_order():
         assert all(all(cfg[k]==shared[k] for k in shared) for cfg in configs)
         bc=[cfg for cfg in configs if cfg['model']!='baseline']
         assert {k:v for k,v in bc[0].items() if k!='model'}=={k:v for k,v in bc[1].items() if k!='model'}
+
+
+def test_distinct_full_width_alphabets_cannot_be_pooled():
+    a, b = rows('baseline', 80000), rows('categorical', 80000)
+    for row in b:
+        row['config']['alphabet'] = 4
+    b[1]['config']['alphabet'] = 2
+    assert not assess(a, b)['accepted']
+    assert not assess(a, rows('continuous', 80000))['accepted']

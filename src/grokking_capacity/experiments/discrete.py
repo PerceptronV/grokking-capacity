@@ -31,8 +31,10 @@ from ..models.transformer import count_parameters
 ROOT = Path(__file__).resolve().parents[3]
 SOURCES = [Path(__file__).resolve(),
            ROOT / 'src/grokking_capacity/models/discrete.py',
+           ROOT / 'src/grokking_capacity/models/fullwidth_discrete.py',
            ROOT / 'src/grokking_capacity/models/transformer.py',
            ROOT / 'src/grokking_capacity/data/modular.py']
+DISCRETE_MODELS = {'discrete', 'quantized', 'categorical'}
 BOUND_SOURCES = {p: p.read_bytes() for p in SOURCES}
 DEFAULTS = dict(task='modular', p=97, operation='/', train_fraction=0.5,
                 depth=2, heads=1, dropout=0.0, seed=42, lr=0.001,
@@ -84,12 +86,12 @@ def tensor_digest(tensors):
 
 
 @torch.no_grad()
-def evaluate(model, x, y, batch_size=1024):
+def evaluate(model, x, y, batch_size=1024, *, categorical_mode=False):
     model.eval()
     loss, correct = torch.zeros((), device=x.device), torch.zeros((), device=x.device)
     for start in range(0, len(x), batch_size):
         xb, yb = x[start:start + batch_size], y[start:start + batch_size]
-        logits = model(xb)
+        logits = model(xb, sample=False) if categorical_mode else model(xb)
         loss += F.cross_entropy(logits, yb, reduction='sum')
         correct += (logits.argmax(-1) == yb).sum()
     return float(loss / len(x)), float(correct / len(x))
@@ -117,7 +119,7 @@ def summarise(config, trace, param_count):
     return dict(config=config, param_count=param_count, final=trace[-1],
                 best_train_bits=max(r['train_bits'] for r in trace),
                 arithmetic_gate_passed=(config['task'] == 'modular'
-                    and config['model'] == 'discrete' and gen is not None),
+                    and config['model'] in DISCRETE_MODELS and gen is not None),
                 metrics=metrics)
 
 
@@ -132,8 +134,9 @@ def check_gate(path, candidate=None):
     recomputed = summarise(summary['config'], trace, summary['param_count'])
     if not recomputed['arithmetic_gate_passed'] or not summary['arithmetic_gate_passed']:
         raise ValueError('Discrete arithmetic gate has not passed')
-    if candidate is not None and candidate['model'] == 'discrete':
-        keys = ['p', 'operation', 'depth', 'heads', 'dim', 'latent_dim', 'levels', 'dropout']
+    if candidate is not None and candidate['model'] in DISCRETE_MODELS:
+        keys = ['model', 'p', 'operation', 'train_fraction', 'depth', 'heads', 'dim',
+                'latent_dim', 'levels', 'alphabet', 'quantizer_clip', 'dropout']
         if any(candidate.get(k) != summary['config'].get(k) for k in keys):
             raise ValueError('This discrete architecture has not passed the arithmetic gate')
     if manifest['source_hashes'] != source_hashes():
@@ -236,6 +239,14 @@ def run(config, output, device, *, resume=False, gate=None):
         tmp.replace(output / 'checkpoint.pt')
 
     def observe():
+        # Evaluation draws never change subsequent training randomness. Re-seed
+        # per observation so sustained categorical success spans fresh samples.
+        devices = [device.index] if device.type == 'cuda' else []
+        with torch.random.fork_rng(devices=devices):
+            torch.manual_seed(config['seed'] + 1000003 + step)
+            observe_with_rng()
+
+    def observe_with_rng():
         train_loss, train_acc = evaluate(model, x, y)
         record = dict(step=step, examples=examples, epochs=examples / len(x),
                       train_loss=train_loss, train_acc=train_acc,
@@ -243,6 +254,14 @@ def run(config, output, device, *, resume=False, gate=None):
         if xv is not None:
             val_loss, val_acc = evaluate(model, xv, yv)
             record.update(val_loss=val_loss, val_acc=val_acc)
+        if config['model'] == 'categorical':
+            mode_loss, mode_acc = evaluate(model, x, y, categorical_mode=True)
+            record.update(train_mode_loss=mode_loss, train_mode_acc=mode_acc,
+                          train_mode_bits=len(x) * (math.log2(config['p'] + 2)
+                                                   - mode_loss / math.log(2)))
+            if xv is not None:
+                mode_loss, mode_acc = evaluate(model, xv, yv, categorical_mode=True)
+                record.update(val_mode_loss=mode_loss, val_mode_acc=mode_acc)
         sync(device)
         record['wall_seconds'] = elapsed + time.perf_counter() - started
         if not all(math.isfinite(v) for v in record.values()):

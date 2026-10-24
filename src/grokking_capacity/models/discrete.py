@@ -73,6 +73,16 @@ def make_model(config: dict):
                 seq_len=4, dropout=config.get("dropout", 0.0))
     if config["model"] == "baseline":
         return TransformerTorch(**spec)
+    if config["model"] in {"quantized", "categorical"}:
+        from .fullwidth_discrete import (
+            FullWidthQuantizedTransformer, FullWidthCategoricalTransformer,
+        )
+        if "latent_dim" in config:
+            raise ValueError("Full-width models do not accept a compressed latent_dim")
+        if config["model"] == "quantized":
+            return FullWidthQuantizedTransformer(
+                **spec, levels=config["levels"], quantizer_clip=config.get("quantizer_clip", 1.0))
+        return FullWidthCategoricalTransformer(**spec, alphabet=config["alphabet"])
     if config["model"] not in {"discrete", "continuous"}:
         raise ValueError("Unknown model")
     if config["latent_dim"] * math.log2(config["levels"]) < math.log2(config["p"]):

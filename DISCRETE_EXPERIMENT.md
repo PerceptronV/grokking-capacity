@@ -8,23 +8,61 @@ and avoid the generalisation delay of an equally large continuous control?
 A positive result is not assumed. Lack of learning is not evidence of reduced
 capacity, and failure to grok is not success unless generalisation succeeds.
 
-## Current experiment status
+## Current experiment status — architecture correction
 
-The fixed task is **p149 modular division, 50% training split**, with a
-79,810.65-bit label-information target. The completed calibration accepts A44 and
-B14q64 under the registered empirical criterion. A's per-seed peak estimates are
-78,516.19/78,755.65 bits; B's are 81,896.76/82,972.08. Both match the dataset and
-each other within 10%, with two sizes and two seeds, 60k updates, and late drift
-below 5%. A has 75,460 parameters; B/C have 329,952 (ratio 4.3725).
+**The user rejected the 14-coordinate architecture. Every earlier learned
+low-dimensional channel experiment, including confirmation-p149-v1/v2, is
+superseded as evidence for the requested discrete transformer.** Preserve these
+runs as historical attempts. Their gate and capacity match do not validate the
+new architectures. The unfinished old B seed was scope-stopped, not declared a
+learning failure. The ordinary continuous controls remain ordinary-model data.
 
-This is a finite-budget empirical match, not a proved representational limit.
-The larger random datasets yield lower learned memory, a retained optimisation
-limitation. B14q64 passed its own arithmetic gate and CPU audit before calibration.
-The pair is now frozen for fresh modular seeds43/44/45, with the exact continuous
-C14 control and rotated execution order on one GPU. **No fresh-seed conclusion
-is claimed before those runs finish.** All unsuccessful exploratory recipes stay
-in the record. Use the run manifests and confirmation orchestrator state for
-current progress.
+The fixed task remains **p149 modular division, 50% training split** and a
+79,810.65-bit label-information target. New A/B/C comparisons are required for
+BOTH full-width categorical and full-width scalar-quantized models. A is an
+ordinary small continuous transformer. B keeps a full-width discrete state at
+every complete transformer block boundary. C is an ordinary unrestricted
+continuous transformer; soft categorical probabilities are not the C control.
+
+Categorical B follows DreamerV2 Algorithm 1: one categorical variable per hidden
+coordinate, K logits per variable, categorical sampling, hard one-hot forward,
+and softmax-probability surrogate gradient. At width 96 it has **96 variables**,
+not 96/K or 14. A learned full-width readout produces 96*K logits; concatenated
+one-hots feed a learned linear embedding into the next stage. No other state
+crosses the boundary. Count both logits and embedding matrices in B's parameters.
+Training and primary evaluation sample hard categories; argmax evaluation is
+reported separately. Evaluation RNG is isolated from training RNG. No Dreamer
+world-model prior, KL objective, or deterministic recurrent state is added.
+
+Quantized B rounds all 96 residual coordinates onto a fixed uniform grid after
+each complete block. Initial pilots use clip range [-1,1] and identity STE
+through rounding/clipping. There is no learned compression, expansion, or
+input-dependent scale. This B and its ordinary C have identical parameter
+shapes, counts, and initial values. For categorical B, choose an ordinary C width
+whose total parameter count is closest (record the difference explicitly).
+
+Validation before launch: 35 focused checks passed, including exact hard forward
+values, softmax/identity surrogate gradients, no bypass at either boundary,
+full-width shapes, and exact interrupted/resumed sampled training. Independent
+checkpoint audit smoke checks passed for both families on CPU.
+
+Arithmetic-only development registration: width 96, depth 2, one head, p149,
+50% split, seed 42, lr 0.001, AdamW betas (0.9,0.98), weight decay 1, dropout 0,
+batch 512, budget 60,000 optimizer updates, evaluation every 100 updates,
+checkpoint every 2,000, held-out >=99% for three consecutive evaluations.
+Quantized pilot levels: 2, 4, 16. Categorical pilot alphabets: 2, 4, 16. Primary
+categorical arithmetic gate uses sampled evaluation, not just argmax. Failed
+recipes remain excluded from random-label testing. Each new recipe needs its
+own gate and checkpoint audit before calibration. Capacity is measured with
+random labels, never inferred from the finite state alphabet. Parameter ratio,
+dataset match, and paired fresh-seed requirements below remain in force.
+
+Sources checked against official implementation:
+[DreamerV2 Algorithm 1 and Appendix D](https://arxiv.org/pdf/2010.02193),
+[OneHotDist](https://github.com/danijar/dreamerv2/blob/main/dreamerv2/common/dists.py),
+[latent readout and embedding](https://github.com/danijar/dreamerv2/blob/main/dreamerv2/common/nets.py).
+Dreamer's published latent has 32 variables with 32 categories each; the
+mechanism is adapted here, rather than copying its dimensions or recurrent model.
 
 ## Mandatory order
 
@@ -42,15 +80,16 @@ current progress.
    10% of the fixed modular training-set label complexity AND within 10% of each
    other, with B/A parameter ratio >=4. Matching A to B alone is insufficient.
    Keep the training split fixed at 50%; tune models to the dataset. Freeze selection
-   before fresh modular seed comparisons. C has B's architecture/parameter
-   tensors/initial weights, with quantisation disabled. If no defensible match
+   before fresh modular seed comparisons. C is an ordinary unrestricted continuous transformer. Quantized B/C share
+   parameters and initialization; categorical B/C match total parameter count
+   as closely as the ordinary architecture permits, with the difference reported. If no defensible match
    is found, report that and continue calibration rather than claiming a match.
 4. Compare A/B/C on identical modular train/held-out splits and batch orders for
    >=3 fresh seeds. Report steps, examples seen, epochs and wall seconds to
    sustained 95% and 99% accuracy, train-to-held-out delay and maximal gap.
    Never replace censored runs with a fabricated threshold-crossing time.
 
-## Architecture and estimator
+## Historical architecture and estimator — superseded
 
 Start with the repository's two-block, one-head transformer. After each complete
 residual block, replace the entire residual stream by a learned scalar channel:
@@ -69,7 +108,7 @@ is therefore measured, never inferred from the message bit count. Repeated
 quantisation may also alter optimisation; random-label failures alone cannot
 establish a representational ceiling.
 
-## Development and evidence
+## Historical development and evidence — superseded
 
 Start on modular division, p=97, random 50% split, depth=2, width=96 for B/C,
 AdamW lr=1e-3, betas=(0.9,0.98), weight decay=1, batch=512. Use no dropout in

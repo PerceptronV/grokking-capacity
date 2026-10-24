@@ -12,7 +12,7 @@ from pathlib import Path
 
 SHARED = ('p', 'operation', 'depth', 'heads', 'dropout', 'lr', 'weight_decay',
           'beta1', 'beta2', 'batch_size', 'max_steps')
-ARCH = ('model', 'dim', 'latent_dim', 'levels')
+ARCH = ('model', 'dim', 'latent_dim', 'levels', 'alphabet', 'quantizer_clip')
 
 
 def load_run(path):
@@ -48,7 +48,8 @@ def assess(a, b, *, p=149, fraction=.5, tolerance=.1, min_steps=60000, max_drift
     if not a or not b:
         return dict(accepted=False, target_bits=target, issues=['Both arms are required'])
     reference = a[0]
-    for arm, rows, model in [('A', a, 'baseline'), ('B', b, 'discrete')]:
+    for arm, rows, models in [('A', a, {'baseline'}),
+                              ('B', b, {'discrete', 'quantized', 'categorical'})]:
         arm_ref = rows[0]
         cells[arm] = {}
         for row in rows:
@@ -57,7 +58,7 @@ def assess(a, b, *, p=149, fraction=.5, tolerance=.1, min_steps=60000, max_drift
             if cell in cells[arm]:
                 issues.append(f'{arm}: duplicate seed/size {cell}')
             cells[arm][cell] = row
-            if cfg['model'] != model or any(cfg.get(k) != arm_ref['config'].get(k) for k in ARCH):
+            if cfg['model'] not in models or any(cfg.get(k) != arm_ref['config'].get(k) for k in ARCH):
                 issues.append(f'{arm}: inconsistent architecture')
             if cfg['p'] != p or cfg['operation'] != '/' or any(cfg.get(k) != reference['config'].get(k) for k in SHARED):
                 issues.append(f'{arm}: task/optimiser/horizon mismatch')

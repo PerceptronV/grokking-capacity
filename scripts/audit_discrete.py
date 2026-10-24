@@ -33,14 +33,80 @@ def audit(path):
     assert count_parameters(model) == manifest['param_count']
     model.load_state_dict(saved['model'])
     x, y, xv, yv = tensors
-    train, heldout = evaluate(model, x, y), evaluate(model, xv, yv)
+    categorical = config['model'] == 'categorical'
+    train = evaluate(model, x, y, categorical_mode=categorical)
+    heldout = evaluate(model, xv, yv, categorical_mode=categorical)
     for metric, observed in [('train_acc', train[1]), ('val_acc', heldout[1])]:
-        assert abs(summary['final'][metric] - observed) < 1e-6
+        recorded_key = metric.replace('_acc', '_mode_acc') if categorical else metric
+        assert abs(summary['final'][recorded_key] - observed) < 1e-6
     result = dict(run=str(path.resolve()), checkpoint_step=saved['step'],
                   train_acc=train[1], val_acc=heldout[1], param_count=count_parameters(model),
                   dataset_sha256=manifest['dataset_sha256'],
                   initial_weights_sha256=manifest['initial_weights_sha256'],
                   arithmetic_gate_passed=summary['arithmetic_gate_passed'])
+    if categorical:
+        # Reproduce the original sampled measurements on their original device.
+        # CPU argmax accuracy above remains an independent-device check.
+        device = torch.device(manifest['device'])
+        model.to(device)
+        devices = [device.index] if device.type == 'cuda' else []
+        with torch.random.fork_rng(devices=devices):
+            torch.manual_seed(config['seed'] + 1000003 + saved['step'])
+            sampled_train = evaluate(model, x.to(device), y.to(device))
+            sampled_val = evaluate(model, xv.to(device), yv.to(device))
+            for label, observed in [('train', sampled_train), ('val', sampled_val)]:
+                assert abs(summary['final'][label + '_acc'] - observed[1]) < 1e-6
+                assert abs(summary['final'][label + '_loss'] - observed[0]) < 1e-5
+            # Fresh independent draws measure evaluation noise without changing
+            # the recorded primary metric or substituting mode for sampling.
+            repeats = []
+            for seed in [91241, 91242, 91243]:
+                torch.manual_seed(seed)
+                repeats.append(evaluate(model, xv.to(device), yv.to(device))[1])
+        result['cpu_mode_train_acc'], result['cpu_mode_val_acc'] = train[1], heldout[1]
+        result['train_acc'], result['val_acc'] = sampled_train[1], sampled_val[1]
+        result['sampled_heldout_repeats'] = repeats
+        result['sampled_repeat_mean'] = sum(repeats) / len(repeats)
+        if summary['arithmetic_gate_passed']:
+            assert result['sampled_repeat_mean'] >= 0.99
+        model.cpu()
+    if config['model'] in {'categorical', 'quantized'}:
+        states = model.categorical_states if categorical else model.quantizers
+        codes = [[] for _ in states]
+        def capture(index):
+            def hook(module, _args, state):
+                if categorical:
+                    assert state.shape[-2:] == (config['dim'], config['alphabet'])
+                    assert torch.all((state == 0) | (state == 1))
+                    assert torch.all(state.sum(-1) == 1)
+                    ids = state.argmax(-1)
+                else:
+                    assert state.shape[-1] == config['dim']
+                    ids = ((state + module.clip) * ((module.levels - 1) /
+                                                    (2 * module.clip))).round().long()
+                    assert torch.equal(state, ids.to(state) * (2 * module.clip /
+                                                               (module.levels - 1)) - module.clip)
+                codes[index].append(ids[:, -1].detach())
+            return hook
+        handles = [module.register_forward_hook(capture(i)) for i, module in enumerate(states)]
+        try:
+            evaluate(model, xv, yv, categorical_mode=categorical)
+        finally:
+            for handle in handles:
+                handle.remove()
+        result['hard_code_audit'] = []
+        for module, chunks in zip(states, codes):
+            ids = torch.cat(chunks)
+            _, counts = torch.unique(ids, dim=0, return_counts=True)
+            probs = counts.float() / counts.sum()
+            result['hard_code_audit'].append(dict(
+                width=config['dim'], bits_per_token=module.bits_per_token,
+                unique_final_position_codes=len(counts),
+                empirical_code_entropy=float(-(probs * probs.log2()).sum()),
+                mean_used_symbols_per_coordinate=sum(len(torch.unique(column))
+                                                     for column in ids.T) / ids.shape[1]))
+        if summary['arithmetic_gate_passed']:
+            result['gate'] = check_gate(path)
     if config['model'] == 'discrete':
         codes = []
         with torch.no_grad():
