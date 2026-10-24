@@ -130,12 +130,13 @@ def test_source_equivalence_is_limited_to_verified_runner_pair():
 
 def test_unused_quantizer_equivalence_does_not_admit_new_model_or_data_code():
     from scripts.discrete_source_compatibility import (
-        RUNNER, FULLWIDTH, VERIFIED_UNUSED_QUANTIZER_MODULES,
+        RUNNER, FULLWIDTH, VERIFIED_UNUSED_QUANTIZER_MODULES, VERIFIED_BASELINE_DEPENDENCIES,
         baseline_random_sources_compatible)
     old, new = sorted(VERIFIED_UNUSED_QUANTIZER_MODULES)
-    a = {RUNNER: 'same', FULLWIDTH: old, 'transformer': 'same', 'data': 'same'}
+    a = {**VERIFIED_BASELINE_DEPENDENCIES, RUNNER: 'same', FULLWIDTH: old}
     b = {**a, FULLWIDTH: new}
     assert baseline_random_sources_compatible(a, b)
-    assert not baseline_random_sources_compatible(a, {**b, 'transformer': 'changed'})
-    assert not baseline_random_sources_compatible(a, {**b, 'data': 'changed'})
+    for dependency in VERIFIED_BASELINE_DEPENDENCIES:
+        assert not baseline_random_sources_compatible(a, {**b, dependency: 'changed'})
+        assert not baseline_random_sources_compatible({**a, dependency: 'changed'}, {**b, dependency: 'changed'})
     assert not baseline_random_sources_compatible(a, {**b, FULLWIDTH: 'unverified'})

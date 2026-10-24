@@ -50,5 +50,10 @@
   "checkpoint_sha256": {
     "v5": "3483cebbbf5904052722d4697aafe53a2ebf0e659c6a4860b1cac17c46174b4f",
     "v6": "48d424305433518a377f5bb58c3d6f856ce32a37c5e59de3e4048c89fb3c3929"
+  },
+  "baseline_dependency_hashes": {
+    "src/grokking_capacity/models/discrete.py": "5ec7a68fbd27fa923b933bcbecb4652ef9b76a47146db1c399938a31dfc024d3",
+    "src/grokking_capacity/models/transformer.py": "691dd08dc7febb2449ae200051d5a323068d8bfe40e554928923450dd84a926c",
+    "src/grokking_capacity/data/modular.py": "8d5dfe63984b75cb931cbc91c98d0925e422e9cae2ace3e32752d3ee05361f65"
   }
 }

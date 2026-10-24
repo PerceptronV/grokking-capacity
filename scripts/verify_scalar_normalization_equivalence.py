@@ -61,6 +61,7 @@ run(json.loads(sys.argv[1]),Path(sys.argv[2]),torch.device('cuda:0'))
     result=dict(scope='Baseline equivalence only. Baseline does not instantiate FullWidthQuantizer; no discrete gate is transferred to a new surrogate.',
                 changed_class='FullWidthQuantizer', unaffected_module_ast_equal=True,
                 unchanged_source_files=unchanged,
+                baseline_dependency_hashes={name:hashlib.sha256((ROOT/name).read_bytes()).hexdigest() for name in unchanged if 'experiments/discrete.py' not in name},
                 fullwidth_sha256={name:hashlib.sha256((root/FULLWIDTH).read_bytes()).hexdigest() for name,root in roots.items()},
                 validation_config=cfg, exact_checkpoint_checks=checks,
                 checkpoint_sha256={name:hashlib.sha256((output/name/'checkpoint.pt').read_bytes()).hexdigest() for name in roots})
