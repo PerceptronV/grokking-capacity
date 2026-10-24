@@ -1,0 +1,31 @@
+{
+  "run": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-confirmation-v6-quantized-rms/B_s73",
+  "checkpoint_step": 19900,
+  "train_acc": 0.9956466555595398,
+  "val_acc": 0.9934699535369873,
+  "param_count": 229360,
+  "dataset_sha256": "832b0749bac5c446df1d8811fd432c12e7611efdfd9075162f85f25a62e9512d",
+  "initial_weights_sha256": "efbd7186e0bc376819ee1da04d4bf9a7a9f6b2e1bf19d88e7125225121849ec1",
+  "arithmetic_gate_passed": true,
+  "primary_evaluation": "deterministic",
+  "hard_code_audit": [
+    {
+      "width": 80,
+      "bits_per_token": 80.0,
+      "unique_final_position_codes": 8224,
+      "empirical_code_entropy": 12.915318489074707,
+      "mean_used_symbols_per_coordinate": 2.0
+    },
+    {
+      "width": 80,
+      "bits_per_token": 80.0,
+      "unique_final_position_codes": 10974,
+      "empirical_code_entropy": 13.41887378692627,
+      "mean_used_symbols_per_coordinate": 2.0
+    }
+  ],
+  "gate": {
+    "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-confirmation-v6-quantized-rms/B_s73",
+    "summary_sha256": "5f9ce1cd69794cab162280df80125a53afc854c25a2b5ac141fbee1cbdeebbca"
+  }
+}

@@ -17,16 +17,17 @@ runs as historical attempts. Their gate and capacity match do not validate the
 new architectures. The unfinished old B seed was scope-stopped, not declared a
 learning failure. The ordinary continuous controls remain ordinary-model data.
 
-Current full-width evidence: both categorical and scalar-quantized models have
-passed independent arithmetic audits and small random-label learning checks.
-The normalized binary scalar width80/FF320 model now has an accepted capacity
-match to A44 and the fixed dataset: per-seed B estimates79,986.88 and79,816.66
-bits versus A's80,552.69 and80,438.20. All four B120k cells are complete and
-independently audited, with late drift1.10--1.26%. The frozen scalar A/B/C
-confirmation is running on newly registered seeds73/74/75. A has75,460
-parameters; B and unrestricted C each have229,360, with identical B/C tensors.
-The scalar C capacity control completed120k; its independent audit and final
-comparison report follow the confirmation queue.
+Current full-width evidence: the normalized binary scalar width80/FF320 model
+has an accepted capacity match to A44 and the fixed dataset. All nine scalar
+A/B/C confirmations on registered seeds73/74/75 are complete and independently
+audited. B is slower than A and C on every seed at95% held-out accuracy; median
+update counts are A2,800, B19,300, C1,800. At99%, A and C succeed on3/3 seeds,
+B on2/3. B reduces the transient train-test gap relative to C, but does not
+provide the proposed speed advantage. No run exhibits the registered
+train>=99%/held-out<90% memorization condition. See the completed scalar result
+section and reports/fullwidth_quantized_v6 for the full evidence. A has75,460
+parameters; B and unrestricted C each have229,360 with identical initial tensors.
+All checkpoints supporting this scalar comparison are independently audited.
 
 Categorical width58/K16,width62/K8 and width72/K4 have independently audited
 above-target checkpoint witnesses of92,238.31,88,381.03 and88,283.57 bits.
@@ -1428,3 +1429,29 @@ parameters (-0.932%). The arithmetic gate and independent audit remain
 mandatory before random labels. If qualified, use the same120k,two-size,
 two-seed capacity grid and unchanged10% matching rules. The scalar confirmation
 continues under its frozen selection; none of its results changes this target.
+
+## Completed full-width scalar comparison
+
+The normalized binary model does not provide the proposed speedup under this recipe. All nine registered runs on seeds 73/74/75 are complete and independently audited. A and B match the fixed dataset capacity within 1%, while B has 3.0395x A's parameters. B is slower than both A and C on every seed at the 95% threshold.
+
+All times below are actual optimizer updates. A crossing requires three consecutive evaluations, spaced 100 updates apart. Training uses p=149 division, 50% split, AdamW lr=0.001, betas=(0.9,0.98), weight decay=1, dropout=0, batch=512, and a 120k-update ceiling.
+
+| Seed | A to 95% | B to 95% | C to 95% | A to 99% | B to 99% | C to 99% |
+|---|---:|---:|---:|---:|---:|---:|
+| 73 | 2,900 | 19,300 | 1,800 | 3,000 | 19,700 | 2,200 |
+| 74 | 2,700 | 5,800 | 1,900 | 2,900 | Not reached by 120,000 | 2,100 |
+| 75 | 2,800 | 98,400 | 1,700 | 4,100 | 101,800 | 1,800 |
+
+| Model | Parameters | Median updates to 95% | Median epochs to 95% | Median seconds to 95% | Seeds reaching 99% |
+|---|---:|---:|---:|---:|---:|
+| A | 75,460 | 2,800 | 127.28 | 13.15 | 3/3 |
+| B | 229,360 | 19,300 | 877.28 | 110.48 | 2/3 |
+| C | 229,360 | 1,800 | 81.84 | 8.31 | 3/3 |
+
+The median per-run maximum train-minus-held-out gap is A:24.02, B:17.39, C:50.81 percentage points. B reduces this transient gap relative to C, but loses the generalization speed advantage. None of the nine runs has a recorded observation with train>=99% and held-out<90%; the intended strong contrast between C grokking and B avoiding grokking therefore did not appear under this criterion. B's long low-accuracy plateaus precede simultaneous improvements in training and held-out accuracy, rather than near-perfect memorization.
+
+B seed74 ended at 98.957% held-out accuracy. Its 99% crossing remains unobserved; the budget is not substituted as a crossing time. No aggregate 99% median across all three B seeds is claimed.
+
+C stores at least 117,696.50 bits in the descriptive random-label control. That run is limited by its dataset, so this is a lower bound, not a saturated C capacity estimate. A/B matching uses the registered random-label protocol and 120k budget; it does not prove an intrinsic information bound or guarantee absent grokking. Wall times were recorded sequentially on a shared GPU and are descriptive.
+
+Full evidence: [confirmation table](reports/fullwidth_quantized_v6/confirmation.csv), [learning curves](reports/fullwidth_quantized_v6/learning_curves.png), [capacity curves](reports/fullwidth_quantized_v6/capacity_curves.png), [validation](reports/fullwidth_quantized_v6/validation.json). The categorical family remains unfinished and is not covered by this scalar conclusion.

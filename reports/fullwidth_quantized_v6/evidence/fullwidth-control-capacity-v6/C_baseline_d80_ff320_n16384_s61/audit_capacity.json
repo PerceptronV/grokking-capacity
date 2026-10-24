@@ -1,0 +1,31 @@
+{
+  "run": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-control-capacity-v6/C_baseline_d80_ff320_n16384_s61",
+  "checkpoint_step": 120000,
+  "checkpoint_sha256": "2dbcd8b89a1ab101b3342626163dcb41702a453ad41f7bddd2effae630f87c8c",
+  "param_count": 229360,
+  "dataset_sha256": "ea438e8c3ef9005ad39c6521546473c68804db5239bd053a80a23daa36728c31",
+  "scientific_source_hashes": {
+    "src/grokking_capacity/experiments/discrete.py": "6e3016ef2a6d104415966b0ce6ef8350eb1a4d7247c25647382d58264d0a7669",
+    "src/grokking_capacity/models/discrete.py": "5ec7a68fbd27fa923b933bcbecb4652ef9b76a47146db1c399938a31dfc024d3",
+    "src/grokking_capacity/models/fullwidth_discrete.py": "9497d94ee93d04e28100f0dd4d8b07fbdd92a4c21d0d09ba7bed017264be1ff9",
+    "src/grokking_capacity/models/transformer.py": "691dd08dc7febb2449ae200051d5a323068d8bfe40e554928923450dd84a926c",
+    "src/grokking_capacity/data/modular.py": "8d5dfe63984b75cb931cbc91c98d0925e422e9cae2ace3e32752d3ee05361f65"
+  },
+  "cpu_loss": 0.06768891960382462,
+  "cpu_accuracy": 0.999755859375,
+  "cpu_mode_evaluation": false,
+  "cpu_loss_difference": -7.450580596923828e-09,
+  "cpu_accuracy_difference": 0.0,
+  "cpu_accuracy_tolerance": 1e-06,
+  "cpu_loss_tolerance": 0.0001,
+  "original_device_mode_loss": 0.06768892705440521,
+  "sampled_loss": 0.06768892705440521,
+  "sampled_accuracy": 0.999755859375,
+  "checkpoint_capacity_bits": 116994.05243497691,
+  "cpu_original_mode_capacity_difference_bits": 0.000176110232132487,
+  "fixed_dataset_target_bits": 79810.65065579832,
+  "gate": {
+    "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-learning-v6/B_quantized_d80_ff320_q2_rms_s42",
+    "summary_sha256": "30d0b7111cc8e263acdd05a4c876484df121f6ecb1539d127fdcc28c4a0d14a8"
+  }
+}

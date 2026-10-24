@@ -5,7 +5,7 @@
     {
       "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-confirmation-v6-quantized-rms",
       "capacity_match_accepted": true,
-      "phase": "confirming"
+      "phase": "complete"
     }
   ],
   "counts": {

@@ -1,0 +1,68 @@
+{
+  "config": {
+    "task": "modular",
+    "p": 149,
+    "operation": "/",
+    "train_fraction": 0.5,
+    "depth": 2,
+    "heads": 1,
+    "dropout": 0.0,
+    "seed": 74,
+    "lr": 0.001,
+    "weight_decay": 1.0,
+    "beta1": 0.9,
+    "beta2": 0.98,
+    "batch_size": 512,
+    "max_steps": 120000,
+    "eval_every": 100,
+    "checkpoint_every": 2000,
+    "sustained_evals": 3,
+    "stop_on_success": true,
+    "model": "quantized",
+    "dim": 80,
+    "mlp_dim": 320,
+    "levels": 2,
+    "quantizer_clip": 1.0,
+    "quantizer_surrogate": "rms_clipped"
+  },
+  "param_count": 229360,
+  "final": {
+    "step": 120000,
+    "examples": 60141948,
+    "epochs": 5454.557228369309,
+    "train_loss": 0.04815087839961052,
+    "train_acc": 0.9922909736633301,
+    "train_bits": 79044.70714463058,
+    "val_loss": 0.05512690544128418,
+    "val_acc": 0.989570140838623,
+    "wall_seconds": 665.635584499687
+  },
+  "best_train_bits": 79457.39435964993,
+  "arithmetic_gate_passed": false,
+  "metrics": {
+    "train_95": {
+      "step": 5400,
+      "examples": 2706490,
+      "epochs": 245.46435697442408,
+      "wall_seconds": 28.313319203443825
+    },
+    "train_99": {
+      "step": 15000,
+      "examples": 7517922,
+      "epochs": 681.8358425539634,
+      "wall_seconds": 78.56612552795559
+    },
+    "generalise_95": {
+      "step": 5800,
+      "examples": 2907006,
+      "epochs": 263.6500997641937,
+      "wall_seconds": 30.399325787089765
+    },
+    "generalise_99": null,
+    "delay_steps_99": null,
+    "max_train_val_gap": 0.10139670968055725
+  },
+  "primary_evaluation": "deterministic",
+  "termination": "budget",
+  "peak_cuda_memory_bytes": 114951168
+}

@@ -42,7 +42,7 @@ def write_json(path, value):
 
 def write_csv(path, rows):
     with path.open('w') as file:
-        writer = csv.DictWriter(file, fieldnames=list(rows[0]))
+        writer = csv.DictWriter(file, fieldnames=list(rows[0]), lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
 
@@ -265,8 +265,10 @@ def plots(output, rows, records, calibration, target):
             config = row['config']
             ax = axes[config['seed']-61, [16384,32768].index(config['n_samples'])]
             data = trace(Path(row['path']))
+            data_limited = row['best_bits'] >= .95 * config['n_samples'] * math.log2(config['p'] + 2)
+            label = f'{arm} (data limited)' if data_limited else arm
             ax.plot([r['step'] for r in data],[max(r['train_bits'], r.get('train_mode_bits', r['train_bits']))/1000 for r in data],
-                    label=arm,color=colors[arm],lw=1.2)
+                    label=label,color=colors[arm],lw=1.2)
     for i, seed in enumerate((61,62)):
         for j, n in enumerate((16384,32768)):
             ax=axes[i,j]
@@ -277,8 +279,11 @@ def plots(output, rows, records, calibration, target):
             ax.grid(alpha=.15)
             ax.legend(frameon=False,loc='lower right')
     for ax in axes[-1]: ax.set_xlabel('Optimizer updates')
-    for ax in axes[:,0]: ax.set_ylabel('Learned label information (kbits)')
-    fig.suptitle('Finite-budget capacity measurements\nGrey: fixed target ±10%; categorical memory uses max(sampled, mode); C descriptive',fontsize=12)
+    fig.supylabel('Learned label information (kbits)', fontsize=12)
+    capacity_note = 'Grey: fixed target ±10%; C is a descriptive control'
+    if any(row['config']['model'] == 'categorical' for row in calibration['B']):
+        capacity_note += '; categorical memory uses max(sampled, mode)'
+    fig.suptitle('Finite-budget capacity measurements\n' + capacity_note, fontsize=12)
     fig.tight_layout(rect=(0,0,1,.92))
     for suffix in ('png','pdf'): fig.savefig(output/f'capacity_curves.{suffix}',dpi=170)
     plt.close(fig)
