@@ -1,0 +1,23 @@
+runs:
+  - name: C_plain_d96_n16384_s61
+    task: random
+    p: 149
+    operation: /
+    model: baseline
+    dim: 96
+    depth: 2
+    heads: 1
+    dropout: 0.0
+    seed: 61
+    n_samples: 16384
+    train_fraction: 0.5
+    lr: 0.001
+    weight_decay: 1.0
+    beta1: 0.9
+    beta2: 0.98
+    batch_size: 512
+    max_steps: 60000
+    eval_every: 200
+    checkpoint_every: 2000
+    sustained_evals: 3
+    stop_on_success: false

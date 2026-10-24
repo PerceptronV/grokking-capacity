@@ -737,3 +737,31 @@ trend. B/C use a new14-coordinate bottleneck after every block, and the current
 comparison uses dropout0. The new result concerns that channel architecture and
 matched finite-budget capacity; it is not a pure width-scaling replication.
 Reference: https://arxiv.org/pdf/2605.09724v2 (Appendices A.2,A.6,C.2).
+
+## User correction: C must have no channel bottleneck
+
+Before the remaining confirmation runs completed, the user clarified that C must
+be an unrestricted continuous model. The original C was continuous but still
+passed through14 coordinates after every block. It is retained as an auxiliary
+quantisation-only control, not the intended ordinary-large-transformer baseline.
+The user explicitly chose a plain width96 transformer (324,384 parameters),
+accepting its1.69% smaller parameter count relative to B's329,952. No channel or
+learned compression is added to this corrected C. A/B remain unchanged.
+
+Register confirmation-p149-v2 with the same modular data, optimiser, dropout0,
+seeds43/44/45 and60k update budgets. Completed A/B results are inherited verbatim
+with file hashes; the active B_s44 is allowed to finish before the old queue stops
+at its next C run. All other old C attempts remain in the record. Corrected C's
+shared base parameter tensors initialise identically to B's under each paired
+seed, but total parameter counts and whole-state hashes intentionally differ.
+This is an explicit amendment after observing partial original results, not an
+unchanged original registration. A/B calibration and model selection stay frozen.
+Launcher: scripts/confirm_discrete_unrestricted.py.
+
+Also register one descriptive memory check of unrestricted C: n16384,seed61,60k
+updates, on the same random data and optimiser as A/B. This tests whether C can
+store more than the modular dataset's79,811 bits. If it interpolates, report the
+measurement as a lower bound; no saturated C capacity or universal constant is
+inferred. Config: configs/discrete_capacity_p149_plain_c.yaml. The existing B14q64
+arithmetic gate precedes this check. Original compressed-C capacity remains an
+auxiliary measurement and must not be attributed to unrestricted C.
