@@ -1,0 +1,37 @@
+{
+  "run": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-learning-v7-slotnorm/B_categorical_d62_ff216_k8_rms_slotnorm_t1_mode_s42",
+  "checkpoint_step": 120000,
+  "train_acc": 0.8960638642311096,
+  "val_acc": 0.8875385522842407,
+  "param_count": 253146,
+  "dataset_sha256": "a264e4c81df9fad21527012a8cb1a9bea50b1bf3568eda4ce80565bc5cd1c544",
+  "initial_weights_sha256": "1ccf23943905ba0fa49338d56570f6f53ce834ddfbdb2ec873ad11f9e61f6cbc",
+  "arithmetic_gate_passed": false,
+  "primary_evaluation": "hard_mode",
+  "cpu_mode_train_acc": 0.8960638642311096,
+  "cpu_mode_val_acc": 0.8875385522842407,
+  "sampled_train_acc": 0.8182477951049805,
+  "sampled_val_acc": 0.8059133291244507,
+  "sampled_heldout_repeats": [
+    0.8018320798873901,
+    0.8025575876235962,
+    0.801378607749939
+  ],
+  "sampled_repeat_mean": 0.8019227584203085,
+  "hard_code_audit": [
+    {
+      "width": 62,
+      "bits_per_token": 186.0,
+      "unique_final_position_codes": 5722,
+      "empirical_code_entropy": 12.085512161254883,
+      "mean_used_symbols_per_coordinate": 3.903225806451613
+    },
+    {
+      "width": 62,
+      "bits_per_token": 186.0,
+      "unique_final_position_codes": 7966,
+      "empirical_code_entropy": 12.673771858215332,
+      "mean_used_symbols_per_coordinate": 4.887096774193548
+    }
+  ]
+}

@@ -2,6 +2,12 @@
 
 Branch: `idea/discrete`. Registered 2026-10-24 before new training.
 
+Latest follow-up: pre-softmax logit LayerNorm is implemented and tested. Both
+normalized seed-42 pilots completed 120k updates without passing arithmetic
+validation (19.34% at temperature 0.1; 88.75% at temperature 1). See the
+[normalization evidence](reports/categorical_slot_normalization_v7/comparison.csv)
+and the exact binary speed/grokking comparison near the end of this record.
+
 Question: can a large transformer with discrete internal representations match a
 small continuous model's empirical memorisation capacity, generalise sooner,
 and avoid the generalisation delay of an equally large continuous control?
@@ -1820,3 +1826,52 @@ only run, and retains Dreamer-style categorical sampling. Temperature 1 matches
 the reference's softmax scale; it does not copy its deterministic/no-noise
 forward estimator. Both pilot outcomes will be retained. Neither the old
 capacity match nor the old arithmetic gate applies to either new recipe.
+
+
+## Completed normalization follow-up
+
+The per-slot pre-softmax LayerNorm implementation passed 32 focused tests.
+All three comparison checkpoints (the earlier RMS-only seed 42 and both new
+normalized pilots) passed independent audits. The two new runs completed all
+120,000 updates. Both failed sustained 95% and 99% held-out thresholds, so no
+random-label training or new capacity matching was performed for them.
+
+| Seed42 recipe | Final updates | Hard-mode train | Hard-mode held-out | Sampled held-out | Arithmetic gate |
+|---|---:|---:|---:|---:|---|
+| Original residual RMS, temperature 0.1 | 14,900 | 99.4014% | 99.2472% | 98.0863% | Passed |
+| Residual RMS + logit LayerNorm, temperature 0.1 | 120,000 | 33.0673% | 19.3361% | 19.2726% | Failed |
+| Residual RMS + logit LayerNorm, temperature 1.0 | 120,000 | 89.6064% | 88.7539% | 80.5913% | Failed |
+
+The new pilots' best recorded hard-mode held-out accuracies were 39.0259% and
+92.2184%; neither reached 95% even transiently. The original run's sustained
+99% crossing starts at 14,700 and is confirmed by its final 14,900 evaluation.
+All three have 253,146 parameters, identical initial tensors and identical
+data. Only categorical normalization differs between the original and the
+new temperature-0.1 run. Temperature is the only configuration difference
+between the two new runs. They retain sampled training and hard-mode primary
+evaluation. The temperature-1 variant was registered after the intermediate
+temperature-0.1 saturation diagnostic; these are development trials, not three
+fresh confirmation seeds or a general conclusion about logit normalization.
+
+The final checkpoint diagnostics retain the first 512 held-out examples and
+all token positions. With temperature 0.1, 98.17%/57.35% of categorical slots
+in layers 1/2 exceed 99% confidence. At temperature 1, none do, and mean maximum
+probabilities are 0.6765/0.4864. Thus the higher temperature removes the observed
+softmax saturation, but successful arithmetic learning still did not follow
+within the declared budget. The intermediate 20k checkpoint used for the earlier
+diagnostic was not separately retained; final diagnostics are bound to saved
+checkpoint hashes and are reproducible.
+
+The implementation remains available through
+`categorical_normalization: rms_slot_layernorm`, or `slot_layernorm` without
+residual RMS. The old `none` and `rms` behavior remains available for reproducing
+previous runs. Full-width hard states and the softmax surrogate through the
+normalization are preserved; no learned affine parameters are introduced.
+
+Evidence: [comparison](reports/categorical_slot_normalization_v7/comparison.csv),
+[curves](reports/categorical_slot_normalization_v7/learning_curves.png),
+[provenance and audits](reports/categorical_slot_normalization_v7/comparison.json),
+[final diagnostics](reports/categorical_slot_normalization_v7/normalization_diagnostics.json).
+All 17 exported artifacts were checksum-verified. The completed binary report
+also passed source-bound revalidation using its new frozen v6 worktree; its
+training results are unchanged.

@@ -1,0 +1,4 @@
+variant,seed,params,normalization,temperature,final_update,hard_train_accuracy,hard_heldout_accuracy,sampled_heldout_accuracy,best_hard_heldout_accuracy,sustained_95_update,sustained_99_update,arithmetic_gate_passed,termination
+"Original RMS, T=0.1",42,253146,rms,0.1,14900,0.9940142035484314,0.9924723505973816,0.9808634519577026,0.9934700131416321,4500,14700,True,sustained_success
+"Logit LN, T=0.1",42,253146,rms_slot_layernorm,0.1,120000,0.3306729793548584,0.19336114823818207,0.1927262842655182,0.39025938510894775,,,False,budget
+"Logit LN, T=1.0",42,253146,rms_slot_layernorm,1.0,120000,0.8960638642311096,0.8875385522842407,0.8059133291244507,0.9221839308738708,,,False,budget

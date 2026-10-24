@@ -1,0 +1,112 @@
+{
+  "stage": "Paired development seed42, not fresh-seed confirmation or a new capacity match. T=1 was registered after the T=0.1 intermediate saturation diagnostic.",
+  "runs": [
+    {
+      "variant": "Original RMS, T=0.1",
+      "seed": 42,
+      "params": 253146,
+      "normalization": "rms",
+      "temperature": 0.1,
+      "final_update": 14900,
+      "hard_train_accuracy": 0.9940142035484314,
+      "hard_heldout_accuracy": 0.9924723505973816,
+      "sampled_heldout_accuracy": 0.9808634519577026,
+      "best_hard_heldout_accuracy": 0.9934700131416321,
+      "sustained_95_update": 4500,
+      "sustained_99_update": 14700,
+      "arithmetic_gate_passed": true,
+      "termination": "sustained_success"
+    },
+    {
+      "variant": "Logit LN, T=0.1",
+      "seed": 42,
+      "params": 253146,
+      "normalization": "rms_slot_layernorm",
+      "temperature": 0.1,
+      "final_update": 120000,
+      "hard_train_accuracy": 0.3306729793548584,
+      "hard_heldout_accuracy": 0.19336114823818207,
+      "sampled_heldout_accuracy": 0.1927262842655182,
+      "best_hard_heldout_accuracy": 0.39025938510894775,
+      "sustained_95_update": null,
+      "sustained_99_update": null,
+      "arithmetic_gate_passed": false,
+      "termination": "budget"
+    },
+    {
+      "variant": "Logit LN, T=1.0",
+      "seed": 42,
+      "params": 253146,
+      "normalization": "rms_slot_layernorm",
+      "temperature": 1.0,
+      "final_update": 120000,
+      "hard_train_accuracy": 0.8960638642311096,
+      "hard_heldout_accuracy": 0.8875385522842407,
+      "sampled_heldout_accuracy": 0.8059133291244507,
+      "best_hard_heldout_accuracy": 0.9221839308738708,
+      "sustained_95_update": null,
+      "sustained_99_update": null,
+      "arithmetic_gate_passed": false,
+      "termination": "budget"
+    }
+  ],
+  "paired_dataset": true,
+  "paired_initial_tensors": true,
+  "independent_checkpoint_audits": 3,
+  "new_random_label_runs": 0,
+  "new_capacity_match_established": false,
+  "focused_tests": {
+    "passed": 32,
+    "command": "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=src:. python -m pytest -q tests/test_fullwidth_discrete.py tests/test_discrete_report.py"
+  },
+  "reference": {
+    "path": "/home/ubuntu/vincent-in-georgia/language-regularisation/experiments/object_selection/model.py",
+    "observed_git_commit": "3670c8d482f946c4b92f24742f15d146a130fbe3",
+    "observed_file_sha256": "00c700d01d08398edf83d256b586b0f221b195be919441c122f2ca7e838af051",
+    "mechanism": "ScaledSlotLayerNorm at unit scale: per-alphabet LayerNorm, eps=1e-4, elementwise_affine=False; applied before temperature scaling."
+  },
+  "evidence": [
+    {
+      "path": "results/discrete/fullwidth-learning-v5/B_categorical_d62_ff216_k8_rms_t01_mode_s42",
+      "checkpoint_sha256": "98bebf0ffa5e61b2ca78b5d1b74727c755a2a457e08edb9b61de2875409a3f13",
+      "audit_sha256": "3b9d2129a76198add043c2ac66bceac74b2240e76ef3056acb5d70991866903a",
+      "source_hashes": {
+        "src/grokking_capacity/experiments/discrete.py": "6e3016ef2a6d104415966b0ce6ef8350eb1a4d7247c25647382d58264d0a7669",
+        "src/grokking_capacity/models/discrete.py": "5ec7a68fbd27fa923b933bcbecb4652ef9b76a47146db1c399938a31dfc024d3",
+        "src/grokking_capacity/models/fullwidth_discrete.py": "b147a59bc2c4edf6657ec576f0035ec925dc5a254b97516d86c7cbf46dd35f33",
+        "src/grokking_capacity/models/transformer.py": "691dd08dc7febb2449ae200051d5a323068d8bfe40e554928923450dd84a926c",
+        "src/grokking_capacity/data/modular.py": "8d5dfe63984b75cb931cbc91c98d0925e422e9cae2ace3e32752d3ee05361f65"
+      },
+      "saved_trace_matches_export": true,
+      "source_snapshots_verified": true
+    },
+    {
+      "path": "results/discrete/fullwidth-learning-v7-slotnorm/B_categorical_d62_ff216_k8_rms_slotnorm_t01_mode_s42",
+      "checkpoint_sha256": "ca464f295efcfe2ad71851660846e53e346ba7fd8498dbe6461a2563255767cf",
+      "audit_sha256": "9f0400c70a47030ef24bb07f97154ac51866eb2f70bb8a108451abd13a777438",
+      "source_hashes": {
+        "src/grokking_capacity/experiments/discrete.py": "6e3016ef2a6d104415966b0ce6ef8350eb1a4d7247c25647382d58264d0a7669",
+        "src/grokking_capacity/models/discrete.py": "5ec7a68fbd27fa923b933bcbecb4652ef9b76a47146db1c399938a31dfc024d3",
+        "src/grokking_capacity/models/fullwidth_discrete.py": "da11dd2d747f9731eed96b6cc2ef9ec072ac8689e1768626a405080639822f9c",
+        "src/grokking_capacity/models/transformer.py": "691dd08dc7febb2449ae200051d5a323068d8bfe40e554928923450dd84a926c",
+        "src/grokking_capacity/data/modular.py": "8d5dfe63984b75cb931cbc91c98d0925e422e9cae2ace3e32752d3ee05361f65"
+      },
+      "saved_trace_matches_export": true,
+      "source_snapshots_verified": true
+    },
+    {
+      "path": "results/discrete/fullwidth-learning-v7-slotnorm/B_categorical_d62_ff216_k8_rms_slotnorm_t1_mode_s42",
+      "checkpoint_sha256": "7356b51f2bf9f5bcbd36b60391b7cca93ad5c7fa536ece6edd95e13e6484f5d1",
+      "audit_sha256": "58c90b1a090df82c5e4a3565b8a612e56c7af5681653dccbddb3ff9959561702",
+      "source_hashes": {
+        "src/grokking_capacity/experiments/discrete.py": "6e3016ef2a6d104415966b0ce6ef8350eb1a4d7247c25647382d58264d0a7669",
+        "src/grokking_capacity/models/discrete.py": "5ec7a68fbd27fa923b933bcbecb4652ef9b76a47146db1c399938a31dfc024d3",
+        "src/grokking_capacity/models/fullwidth_discrete.py": "da11dd2d747f9731eed96b6cc2ef9ec072ac8689e1768626a405080639822f9c",
+        "src/grokking_capacity/models/transformer.py": "691dd08dc7febb2449ae200051d5a323068d8bfe40e554928923450dd84a926c",
+        "src/grokking_capacity/data/modular.py": "8d5dfe63984b75cb931cbc91c98d0925e422e9cae2ace3e32752d3ee05361f65"
+      },
+      "saved_trace_matches_export": true,
+      "source_snapshots_verified": true
+    }
+  ]
+}

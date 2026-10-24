@@ -1,0 +1,19 @@
+{
+  "comparison.csv": "28c6de12ee3b1f03d7b2a54dba360936e94905aa5202545293c5cfb1b1cbfd11",
+  "comparison.json": "2dcc483de6209a13ca7163e44f3cb99a96326b994a2c32037275f22dd601e69b",
+  "evidence/B_categorical_d62_ff216_k8_rms_slotnorm_t01_mode_s42/audit.json": "9f0400c70a47030ef24bb07f97154ac51866eb2f70bb8a108451abd13a777438",
+  "evidence/B_categorical_d62_ff216_k8_rms_slotnorm_t01_mode_s42/manifest.json": "de5d1411cc00532cbcd42ab60466397b3d0174b68e89bd2a376f450191f2ad21",
+  "evidence/B_categorical_d62_ff216_k8_rms_slotnorm_t01_mode_s42/summary.json": "b8d6766069aed329c636802777b871b7ec12e086ca35cd68128c09f35f81e6ee",
+  "evidence/B_categorical_d62_ff216_k8_rms_slotnorm_t01_mode_s42/trace.jsonl": "7d061a6cec17c255763ebb25b21e622acee4e625f93f89a0aa05acbf36a48652",
+  "evidence/B_categorical_d62_ff216_k8_rms_slotnorm_t1_mode_s42/audit.json": "58c90b1a090df82c5e4a3565b8a612e56c7af5681653dccbddb3ff9959561702",
+  "evidence/B_categorical_d62_ff216_k8_rms_slotnorm_t1_mode_s42/manifest.json": "5c4887e4105043a0f2da0312a40012c00eac64392a0a2fa4465fe0bf1be61ea6",
+  "evidence/B_categorical_d62_ff216_k8_rms_slotnorm_t1_mode_s42/summary.json": "ebd61d168058b408addadeb63780f9ae56f2dc4a7dc3579a870515e28064b172",
+  "evidence/B_categorical_d62_ff216_k8_rms_slotnorm_t1_mode_s42/trace.jsonl": "0f9f426d1b8cc6680378041b893b8b04c79974804caecbf76e9f4f97da564fb1",
+  "evidence/B_categorical_d62_ff216_k8_rms_t01_mode_s42/audit.json": "3b9d2129a76198add043c2ac66bceac74b2240e76ef3056acb5d70991866903a",
+  "evidence/B_categorical_d62_ff216_k8_rms_t01_mode_s42/manifest.json": "2764517e00d00f38554b6f5d437a5ea05f5396d3a0858e3cd59acb16505e13e4",
+  "evidence/B_categorical_d62_ff216_k8_rms_t01_mode_s42/summary.json": "cd8cc382f039a5db929fcec339f7383827ab8e8c590a0793e8a45c1268264da0",
+  "evidence/B_categorical_d62_ff216_k8_rms_t01_mode_s42/trace.jsonl": "f25a53c2d55e41f347c369592154e811f1312ad1bc2dc05e121f19d71935f862",
+  "learning_curves.pdf": "1b9e07cdff6db5088c749c592519428ef3759d41b8f3bff3175bdbde76c1ce18",
+  "learning_curves.png": "9cbde58400c3a6ddfcf58b100a56b4ece3fb2d566b08f8d24c738f363d8388a6",
+  "normalization_diagnostics.json": "6ae0fe9331067c87281a673afa0ecb17876db1c75797393e61ba61a9c8a90b79"
+}

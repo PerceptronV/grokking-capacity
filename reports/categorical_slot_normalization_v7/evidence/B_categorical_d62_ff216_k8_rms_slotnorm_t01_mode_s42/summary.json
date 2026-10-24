@@ -1,0 +1,77 @@
+{
+  "config": {
+    "task": "modular",
+    "p": 149,
+    "operation": "/",
+    "train_fraction": 0.5,
+    "depth": 2,
+    "heads": 1,
+    "dropout": 0.0,
+    "seed": 42,
+    "lr": 0.001,
+    "weight_decay": 1.0,
+    "beta1": 0.9,
+    "beta2": 0.98,
+    "batch_size": 512,
+    "max_steps": 120000,
+    "eval_every": 100,
+    "checkpoint_every": 2000,
+    "sustained_evals": 3,
+    "stop_on_success": true,
+    "dim": 62,
+    "mlp_dim": 216,
+    "model": "categorical",
+    "alphabet": 8,
+    "categorical_temperature": 0.1,
+    "categorical_normalization": "rms_slot_layernorm",
+    "categorical_evaluation": "hard_mode"
+  },
+  "param_count": 253146,
+  "final": {
+    "step": 120000,
+    "examples": 60141948,
+    "epochs": 5454.557228369309,
+    "train_loss": 1.489351749420166,
+    "train_acc": 0.326773077249527,
+    "train_bits": 56119.300752534065,
+    "val_loss": 1.576319694519043,
+    "val_acc": 0.1927262842655182,
+    "train_mode_loss": 1.4369630813598633,
+    "train_mode_acc": 0.3306729793548584,
+    "train_mode_bits": 56952.65544289906,
+    "val_mode_loss": 1.5225508213043213,
+    "val_mode_acc": 0.19336114823818207,
+    "wall_seconds": 807.8719324413687
+  },
+  "best_train_bits": 60920.141169954,
+  "arithmetic_gate_passed": false,
+  "metrics": {
+    "train_95": null,
+    "train_99": null,
+    "generalise_95": null,
+    "generalise_99": null,
+    "delay_steps_99": null,
+    "max_train_val_gap": 0.18637767434120178
+  },
+  "primary_evaluation": "hard_mode",
+  "evaluation_metrics": {
+    "sampled": {
+      "train_95": null,
+      "train_99": null,
+      "generalise_95": null,
+      "generalise_99": null,
+      "delay_steps_99": null,
+      "max_train_val_gap": 0.16578996181488037
+    },
+    "hard_mode": {
+      "train_95": null,
+      "train_99": null,
+      "generalise_95": null,
+      "generalise_99": null,
+      "delay_steps_99": null,
+      "max_train_val_gap": 0.18637767434120178
+    }
+  },
+  "termination": "budget",
+  "peak_cuda_memory_bytes": 148507136
+}
