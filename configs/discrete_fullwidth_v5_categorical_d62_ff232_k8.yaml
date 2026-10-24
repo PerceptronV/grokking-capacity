@@ -1,0 +1,26 @@
+defaults:
+  task: modular
+  p: 149
+  operation: /
+  train_fraction: 0.5
+  depth: 2
+  heads: 1
+  dropout: 0.0
+  dim: 62
+  seed: 42
+  lr: 0.001
+  weight_decay: 1.0
+  batch_size: 512
+  max_steps: 120000
+  eval_every: 100
+  checkpoint_every: 2000
+  sustained_evals: 3
+  stop_on_success: true
+  mlp_dim: 232
+runs:
+- name: B_categorical_d62_ff232_k8_rms_t01_mode_s42
+  model: categorical
+  alphabet: 8
+  categorical_temperature: 0.1
+  categorical_normalization: rms
+  categorical_evaluation: hard_mode

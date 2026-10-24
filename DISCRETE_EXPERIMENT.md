@@ -21,9 +21,11 @@ Current full-width evidence: both categorical and scalar-quantized models have
 passed independent arithmetic audits and small random-label learning checks.
 Categorical width58/K16 and width62/K8 have independently audited above-target
 capacity witnesses of92,238.31 and88,381.03 bits, respectively, so neither is a
-match. Width72/K4 passed arithmetic (99.23% hard-mode held-out accuracy) and its
-four-cell capacity calibration is running. Width60/K8 remains in arithmetic
-development and has no random-label runs.
+match. Width72/K4 passed arithmetic (99.23% hard-mode held-out accuracy) but is also
+rejected by an audited88,283.57-bit checkpoint. Width70/FF288/K4 is the current
+categorical arithmetic follow-up. Width60/K8 seed42 completed120k below the
+gate; its second initialization remains in arithmetic development. Neither
+width60 recipe has random-label runs.
 
 Normalized binary scalar width80/FF320 passed arithmetic (99.20% held-out
 accuracy), and its four-cell capacity calibration is running. The normalized
@@ -32,7 +34,9 @@ independently audited20k checkpoint storing98,485.70 bits. Earlier width96,
 larger-FF, and unnormalized four-/sixteen-level scalar candidates also exceed
 the fixed target. Rejection witnesses are lower bounds, not saturated capacity
 estimates. The ordinary width80 scalar C has begun its descriptive capacity
-control. No full-width capacity-matched A/B/C selection exists yet.
+control. No full-width capacity-matched A/B/C selection exists yet. Corrected full-width
+confirmation uses the newly registered seeds73/74/75; seeds43/44/45 were used
+by the superseded narrow-channel experiments.
 
 A44's four120k calibration cells are complete and independently audited. The
 per-seed estimates are80,552.69 and80,438.20 bits, each within1% of the79,810.65-bit
@@ -1273,3 +1277,69 @@ rejection_checkpoint.pt and its SHA; the remaining three registered cells are
 cancelled. This is a demonstrated above-target lower bound, not a completed
 120k calibration. Normalized binary calibration and the common continuous C
 control continue. The width62/K8 categorical96k rejection audit also passed.
+
+The width72/K4 categorical calibration is rejected by an independently audited
+90k checkpoint storing88,283.57 bits. Preserve that witness and cancel the
+other three cells with exact checkpoint snapshots. Register a local refinement
+to width70/K4 before launch, keeping the native feed-forward width at288,
+temperature0.1, RMS normalization, sampled training, hard-mode primary
+evaluation, seed42,120k arithmetic budget and original optimizer unchanged.
+It has260,050 parameters (3.45x A44); ordinary C is width94,FF288
+with261,978 parameters (+0.74%). The width70/default-FF280 preflight
+could not meet the existing1.7% ordinary-C count tolerance and did not start
+training; preserving FF288 meets that tolerance. Run the registered recipe
+under frozen v5 source. It must pass its own arithmetic gate and independent
+checkpoint audit before any random labels. If qualified, use the same120k,
+two-size(n16384/32768),two-seed(61/62) capacity grid and unchanged acceptance
+rules. No fresh confirmation seeds inform this development choice.
+
+Register an additional small random-label learning validation for the qualified
+normalized binary width80/FF320 recipe: n2048,seed61,10k updates,unchanged
+optimizer and v6 source. Its own successful arithmetic audit already precedes
+this run. This checks complete memorization below the measured capacity and
+is not a capacity estimate or model-selection criterion. Preserve the earlier
+un-normalized binary learning check as separate evidence.
+
+Final C configuration validation ignores only the descriptive purpose field
+(capacity_control or absent); all scientific configuration fields remain exact.
+This fixes the independently registered control label without changing any
+training run, source binding, or parameter/data pairing.
+
+The normalized binary learning validation completed10k updates and passed its
+independent checkpoint audit: final random-label accuracy99.7559% (2043/2048),
+with100% observed earlier. The final checkpoint result, not the best trace
+accuracy, is the audited outcome. This is learning evidence rather than a
+capacity estimate.
+
+## Confirmation-seed correction before selection
+
+An audit of the actual manifests found that43/44/45 were used by the superseded
+14-coordinate confirmations. Earlier statements calling these seeds untouched
+were incorrect. Register73/74/75 for BOTH full-width families before either
+capacity selection or new confirmation. The manifest audit confirms no existing
+discrete-experiment run uses these seeds; retain the audit and registration in
+reports/fullwidth_development/confirmation_seed_registration.json. Use rotation
+ABC/BCA/CAB, unchanged paired datasets/batches, and all nine runs. No result
+from these seeds has informed development or capacity selection. Keep legacy
+43/44/45 artifacts unchanged. All prior plans to use43/44/45 for full-width
+confirmation are superseded by this correction.
+
+New full-width confirmation commands must pass --confirmation-seeds 73 74 75. The default43/44/45 remains only for
+legacy compatibility. Pairing validation and plots derive seed indices from
+the frozen configuration. Nineteen focused confirmation/report/matching tests
+pass, and synthetic plotting with73/74/75 renders without indexing errors.
+
+Register a second local categorical capacity refinement while the width70/K4
+arithmetic run completes: retain the already successful width62/K8 residual
+state, but reduce the native FF width from248 to232. The wider-FF recipe has
+an audited88,381-bit capacity witness, just outside tolerance; reducing native
+FF parameters may move the estimate inside the fixed band without changing
+categorical width. Width60/K8 seed42 completed120k below the arithmetic gate,
+and its second initialization also remains below the gate late in training.
+The new width62/FF232/K8 recipe has259,098 parameters (3.43x A44);
+ordinary C is width102/FF232 with256,530 parameters (-0.99%).
+Keep seed42,120k arithmetic budget,RMS,temperature0.1,sampled training,
+hard-mode primary evaluation,original optimizer and frozen v5 source.
+It requires its own arithmetic gate and audit. If qualified, use the registered
+120k capacity grid at n16384/32768,seeds61/62. Capacity matching remains the
+selection criterion; no confirmation result informs this change.

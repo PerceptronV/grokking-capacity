@@ -54,8 +54,10 @@ def fullwidth_control(b):
     return control
 
 
-def confirmation_runs(a, b):
-    """Use new seeds, remove calibration-only fields, and rotate execution order."""
+def confirmation_runs(a, b, *, seeds=(43, 44, 45)):
+    """Use registered seeds, remove calibration-only fields, and rotate execution order."""
+    if len(seeds) != 3 or len(set(seeds)) != 3 or any(type(seed) is not int or seed < 0 for seed in seeds):
+        raise ValueError('Register three distinct nonnegative integer confirmation seeds')
     shared = ('p', 'operation', 'depth', 'heads', 'dropout', 'lr', 'weight_decay',
               'beta1', 'beta2', 'batch_size')
     common = {key: a[key] for key in shared}
@@ -76,12 +78,13 @@ def confirmation_runs(a, b):
                     B={key: b[key] for key in ('model', 'dim', 'latent_dim', 'levels')},
                     C={**{key: b[key] for key in ('dim', 'latent_dim', 'levels')}, 'model':'continuous'})
     return [(f'{arm}_s{seed}', {**common, **arms[arm], 'seed':seed})
-            for seed, order in [(43,'ABC'),(44,'BCA'),(45,'CAB')] for arm in order]
+            for seed, order in zip(seeds, ('ABC', 'BCA', 'CAB')) for arm in order]
 
 
-def confirm(a_paths, b_paths, output, device, *, wait=False, resume=False, min_parameter_ratio=4.):
+def confirm(a_paths, b_paths, output, device, *, wait=False, resume=False, min_parameter_ratio=4., confirmation_seeds=(43, 44, 45)):
     inputs = dict(a_runs=[str(p.resolve()) for p in a_paths],
                   b_runs=[str(p.resolve()) for p in b_paths], device=str(device), min_parameter_ratio=min_parameter_ratio,
+                  confirmation_seeds=list(confirmation_seeds),
                   source_hashes=source_hashes(), script_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest())
     state_path = output / 'orchestrator.json'
     if output.exists():
@@ -130,7 +133,7 @@ def confirm(a_paths, b_paths, output, device, *, wait=False, resume=False, min_p
         audit = json.loads((gate/'audit.json').read_text())
         if not audit['arithmetic_gate_passed']:
             raise ValueError('Discrete arithmetic audit has not passed')
-        runs = confirmation_runs(a[0]['config'], b[0]['config'])
+        runs = confirmation_runs(a[0]['config'], b[0]['config'], seeds=confirmation_seeds)
         frozen = dict(assessment=assessment,
                       runs=[dict(name=name, **cfg) for name,cfg in runs],
                       artifact_hashes={str(p.resolve()):{
@@ -180,8 +183,9 @@ if __name__ == '__main__':
     parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--device',default='cuda:1')
     parser.add_argument('--min-parameter-ratio',type=float,default=4.)
+    parser.add_argument('--confirmation-seeds',type=int,nargs=3,default=(43,44,45))
     parser.add_argument('--wait',action='store_true')
     parser.add_argument('--resume',action='store_true')
     args=parser.parse_args()
     torch.set_num_threads(2)
-    confirm(args.a_runs,args.b_runs,args.output,torch.device(args.device),wait=args.wait,resume=args.resume,min_parameter_ratio=args.min_parameter_ratio)
+    confirm(args.a_runs,args.b_runs,args.output,torch.device(args.device),wait=args.wait,resume=args.resume,min_parameter_ratio=args.min_parameter_ratio,confirmation_seeds=args.confirmation_seeds)

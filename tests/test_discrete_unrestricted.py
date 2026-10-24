@@ -65,3 +65,22 @@ def test_custom_feedforward_control_keeps_architecture_and_parameter_pairing():
             assert cfg['dim'] == 72 and cfg['mlp_dim'] == 576
         else:
             assert cfg['dim'] == 44 and 'mlp_dim' not in cfg
+
+
+def test_registered_confirmation_seeds_are_paired_and_rotate_without_data_overrides():
+    import pytest
+    from scripts.confirm_discrete import confirmation_runs
+    a = {**DEFAULTS, 'p':149, 'dim':44, 'model':'baseline', 'seed':61,
+         'data_seed':42, 'task':'random', 'n_samples':16384}
+    b = {**a, 'model':'quantized', 'dim':80, 'mlp_dim':320, 'levels':2,
+         'quantizer_clip':1., 'quantizer_surrogate':'rms_clipped'}
+    runs = confirmation_runs(a, b, seeds=(73,74,75))
+    assert [name for name, _ in runs] == [
+        'A_s73','B_s73','C_s73','B_s74','C_s74','A_s74','C_s75','A_s75','B_s75']
+    assert all(cfg['task']=='modular' and 'data_seed' not in cfg and 'n_samples' not in cfg
+               for _,cfg in runs)
+    for seed in (73,74,75):
+        assert {name[0] for name,cfg in runs if cfg['seed']==seed} == set('ABC')
+    for invalid in [(73,73,75),(73,74),(-1,74,75),(73.,74,75)]:
+        with pytest.raises(ValueError, match='three distinct'):
+            confirmation_runs(a,b,seeds=invalid)

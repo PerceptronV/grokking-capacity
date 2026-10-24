@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from scripts.report_discrete import comparison, validate
+from scripts.report_discrete import comparison, control_config_matches, validate
 
 
 def test_report_keeps_censored_crossings_out_of_ratios_and_labels_observed_medians():
@@ -32,3 +32,15 @@ def test_final_report_refuses_an_unfinished_queue(tmp_path):
     (tmp_path/'selection.json').write_text('{}')
     with pytest.raises(ValueError,match='All nine frozen runs must finish'):
         validate(tmp_path,[])
+
+
+def test_control_metadata_label_does_not_change_scientific_pairing():
+    expected = dict(model='baseline', dim=80, mlp_dim=320, seed=61,
+                    n_samples=16384, max_steps=120000, lr=.001)
+    assert control_config_matches(expected, expected)
+    assert control_config_matches({**expected, 'purpose': 'capacity_control'}, expected)
+    assert not control_config_matches({**expected, 'purpose': 'learning_validation'}, expected)
+    for key, value in [('dim', 82), ('mlp_dim', 328), ('seed', 62),
+                       ('n_samples', 32768), ('max_steps', 60000), ('lr', .0003)]:
+        assert not control_config_matches({**expected, 'purpose': 'capacity_control', key: value}, expected)
+    assert not control_config_matches({**expected, 'data_seed': 62}, expected)

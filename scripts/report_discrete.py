@@ -75,6 +75,14 @@ def comparison(rows):
     return aggregates, pairs
 
 
+def control_config_matches(actual, expected):
+    """Ignore only the descriptive control label; require scientific equality."""
+    if actual.get('purpose') not in (None, 'capacity_control'):
+        return False
+    scientific = lambda config: {key: value for key, value in config.items() if key != 'purpose'}
+    return scientific(actual) == scientific(expected)
+
+
 def validate(root, c_paths):
     state, frozen = read(root/'orchestrator.json'), read(root/'selection.json')
     if state['phase'] != 'complete':
@@ -98,7 +106,9 @@ def validate(root, c_paths):
             if digest(Path(folder)/name) != expected:
                 raise ValueError(f'Calibration evidence changed: {folder}/{name}')
     builder = unrestricted_runs if unrestricted and not fullwidth else confirmation_runs
-    expected = builder(calibration['A'][0]['config'], calibration['B'][0]['config'])
+    expected = builder(calibration['A'][0]['config'], calibration['B'][0]['config'],
+                       **({'seeds': state['inputs'].get('confirmation_seeds', (43,44,45))}
+                          if builder is confirmation_runs else {}))
     if frozen['runs'] != [dict(name=name, **cfg) for name, cfg in expected]:
         raise ValueError('Frozen confirmation configurations changed')
     calibration['C'] = [load_run(p) for p in c_paths]
@@ -111,7 +121,7 @@ def validate(root, c_paths):
         elif unrestricted:
             expected_config = {key:value for key,value in {**candidate['config'],'model':'baseline'}.items()
                                if key not in ('latent_dim','levels')}
-        if control['config'] != expected_config or control['source_hashes'] != source_hashes():
+        if not control_config_matches(control['config'], expected_config) or control['source_hashes'] != source_hashes():
             raise ValueError('C calibration is not the exact continuous control')
         bm, cm = (read(Path(row['path'])/'manifest.json') for row in (candidate,control))
         if bm['dataset_sha256'] != cm['dataset_sha256']:
@@ -200,7 +210,7 @@ def validate(root, c_paths):
                 row[f'{field}_{unit}'] = crossing[unit] if crossing else None
         rows.append(row)
         records[name], manifests[name] = data, manifest
-    for seed in (43,44,45):
+    for seed in sorted({config['seed'] for _, config in expected}):
         a,b,c = (manifests[f'{arm}_s{seed}'] for arm in 'ABC')
         if len({m['dataset_sha256'] for m in (a,b,c)}) != 1:
             raise ValueError(f'Modular datasets are unpaired: {seed}')
@@ -217,10 +227,11 @@ def validate(root, c_paths):
 def plots(output, rows, records, calibration, target):
     colors = dict(A='#3366a0', B='#d36a25', C='#25856d')
     budget = max(row.get('budget_steps', 60000) for row in rows)
+    seed_rows = {seed: index for index, seed in enumerate(sorted({row['seed'] for row in rows}))}
     fig, axes = plt.subplots(3,3, figsize=(12,8), sharex=True, sharey=True)
     for row in rows:
         name,arm = row['name'],row['arm']
-        ax = axes[row['seed']-43, 'ABC'.index(arm)]
+        ax = axes[seed_rows[row['seed']], 'ABC'.index(arm)]
         data = records[name]
         train_key, val_key = ('train_mode_acc', 'val_mode_acc') if row.get('primary_evaluation') == 'hard_mode' else ('train_acc', 'val_acc')
         for key,style,label in [(train_key,'--','Train'),(val_key,'-','Held out')]:
@@ -240,7 +251,10 @@ def plots(output, rows, records, calibration, target):
     for ax in axes[-1]: ax.set_xlabel('Optimizer updates (linear to 1k, then log)')
     for ax in axes[:,0]: ax.set_ylabel('Accuracy')
     axes[0,0].legend(loc='lower right',frameon=False)
-    fig.suptitle('Frozen p149 comparison: all three fresh seeds\nB categorical: hard-mode primary, sampled dotted; × marks final evaluation',fontsize=12)
+    policy_note = ('B categorical: hard-mode primary, sampled dotted; × marks final evaluation'
+                   if any(row.get('primary_evaluation') == 'hard_mode' for row in rows)
+                   else 'Deterministic evaluation; × marks final evaluation')
+    fig.suptitle('Frozen p149 comparison: all three fresh seeds\n' + policy_note, fontsize=12)
     fig.tight_layout(rect=(0,0,1,.94))
     for suffix in ('png','pdf'): fig.savefig(output/f'learning_curves.{suffix}',dpi=170)
     plt.close(fig)

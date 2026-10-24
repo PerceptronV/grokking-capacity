@@ -19,6 +19,8 @@ def export(root, output):
     groups = {'arithmetic': [], 'capacity': []}
     for path in sorted(root.glob('fullwidth-*/*/manifest.json')):
         folder = path.parent
+        if (folder.parent/'selection.json').exists():
+            continue  # Frozen confirmation has its own report, not development data.
         manifest = read(path)
         cfg = manifest['config']
         if cfg['model'] not in {'baseline', 'quantized', 'categorical'}:
@@ -74,8 +76,19 @@ def export(root, output):
                 writer=csv.DictWriter(file,fieldnames=list(rows[0]),lineterminator="\n")
                 writer.writeheader()
                 writer.writerows(rows)
-    note=dict(scope='Full-width development only; obsolete learned narrow channels excluded.',
-              comparison_status='No accepted full-width capacity-matched A/B/C selection yet.',
+    comparisons = []
+    for selection in sorted(root.glob('fullwidth-*/selection.json')):
+        frozen = read(selection)
+        if frozen.get('control') != 'fullwidth_unrestricted':
+            continue
+        worker = selection.parent/'orchestrator.json'
+        comparisons.append(dict(path=str(selection.parent.resolve()),
+                                capacity_match_accepted=frozen['assessment']['accepted'],
+                                phase=read(worker)['phase'] if worker.exists() else 'unknown'))
+    note=dict(scope='Full-width development only; obsolete learned narrow channels and frozen confirmation runs excluded.',
+              comparison_status=('Frozen full-width selections exist; see comparison phases for completion status.'
+                                 if comparisons else 'No accepted full-width capacity-matched A/B/C selection yet.'),
+              comparisons=comparisons,
               counts={name:len(rows) for name,rows in groups.items()},
               accuracy_note='Categorical raw traces retain sampled and hard-mode metrics separately; primary_evaluation records the registered policy. Null crossings are unobserved, not budget times.',
               capacity_note='Above-target screens establish lower bounds, not saturated capacity estimates. Arithmetic label fit is not a capacity measurement.')
