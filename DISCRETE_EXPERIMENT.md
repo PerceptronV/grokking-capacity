@@ -14,17 +14,19 @@ The user selected **p149 modular division with a fixed 50% split**. The target i
 79,810.65 bits, measured as training examples times log2(p+2). Both A and B must
 match this target and each other within 10%, with B/A parameter ratio at least 4.
 Matching A to B alone is explicitly insufficient. Earlier p97/p163 explorations
-are retained as history and do not redefine the final task.
+remain in the history and do not redefine the final task.
 
-The p149 B_l16_q64 model passed its arithmetic gate and independent CPU audit:
-99.55% held-out accuracy at update 5600, with first sustained 99% train/test crossings
-at 2700/5400. Its initial random-label screen and smaller A44/A46/C16 screens have
-started. There is **no accepted capacity match or fresh-seed comparison yet**.
-The 8- and 16-level p149 recipes exhausted 60k updates below 88% held-out and
-failed their gates. C_l16 reached 100% train/test accuracy at 2000 updates, with
-sustained 99% crossings both at 1800. This development comparison does not support
-a benefit from discretisation; the matched smaller-A comparison remains open.
-Use `python scripts/discrete_status.py --active-only` for live progress.
+The current small-model candidate is A44: 75,460 parameters and 78,516 demonstrated
+bits after 60k updates on n16384,seed61. Repeated sizes and seeds are running.
+B16q64 is rejected: its longer calibration reached 89,670 bits, above 87,792.
+The narrower B14q64 (329,952 parameters) passed its own arithmetic gate and
+independent CPU audit at 99.85% held-out. Its seed61 capacity checks are running
+at both n16384/32768. **No capacity match or fresh-seed comparison is accepted.**
+
+The B16/C16 development comparison favoured C. B14's continuous control and the
+wider coarse-channel arithmetic diagnostics remain separate development runs.
+Failed arithmetic recipes are excluded from random labels. Use
+`python scripts/discrete_status.py --active-only` for verified live progress.
 
 ## Mandatory order
 
@@ -503,3 +505,104 @@ and assessment by scripts/assess_discrete_match.py before fresh modular seeds.
 If B16q64 exceeds the target, a narrower latent width may be probed, but it must
 first pass its own p149 arithmetic gate; do not interpret optimisation failure
 as reduced capacity. Preserve the negative C-vs-B development result regardless.
+
+## p149 calibration horizon continuation
+
+The preceding goal turn made concrete progress: selected the user-approved fixed
+p149 task, completed and independently audited discrete arithmetic learning,
+recorded failed recipes and the stronger continuous-control result, implemented
+and tested the three-way capacity criterion, and started gated calibration.
+All current process identities were revalidated before continuation.
+
+Completed n16384/seed61, 20k-update peaks: A44=72,817.61, A46=78,435.56,
+B16q64=85,090.63, C16=87,698.29 bits. These are finite-budget lower bounds.
+Their late relative drifts are2.59%,2.73%,1.87%,2.56%, respectively.
+A46 and B16q64 provisionally differ by8.48%, with both inside the dataset band,
+but a longer horizon may invalidate that match. Extend A46 and B16q64 from their
+exact20k checkpoints to60k, as already required by the protocol. A44's existing
+extension continues. No new modular outcomes from A44/A46 are inspected.
+Do not launch fresh-seed confirmation merely because the initial20k match passes.
+
+## Wider-channel arithmetic diagnostic from capacity evidence
+
+At the same n16384/seed61/20k budget, the continuous16-coordinate model demonstrated
+87,698 bits versus85,091 for 64-level B, only about3% apart. Together with C's fast
+arithmetic result, this suggests the narrow continuous channel itself accounts
+for much of the effective-capacity reduction. It does not establish an advantage
+from discretisation. Retain and finish current horizon checks rather than hiding
+this negative control.
+
+Before inspecting any fresh modular seeds, register a wider64-coordinate channel
+with2 or4 levels at the fixed p149 task, plus its exact continuous control. This
+tests whether coarse quantisation can limit memory while the corresponding
+continuous channel retains more capacity. The model implementation is unchanged;
+only latent_dim/levels differ. Both candidates require the same sustained99%
+arithmetic gate and CPU audit before random labels. Seed42,60k budget, all other
+optimizer/data settings unchanged. Config: discrete_learning_p149_wide.yaml.
+The79,811-bit target and final selection rules remain fixed. These are exploratory
+arithmetic diagnostics, not assumed capacity matches or claimed positive results.
+
+At38400 updates, B16q64's continuation demonstrated87,959.88 bits, exceeding the
+fixed upper bound87,791.72. This recipe is rejected for the final match even
+though the excess is small; do not relax the registered tolerance. Finish its
+existing horizon as a diagnostic, but do not run independent-seed confirmation
+for this rejected match. A44 finished60k with78,516.19 bits, close to the fixed
+79,810.65-bit target; A46's extension is still running.
+
+Register a capacity-directed14-coordinate/64-level arithmetic probe and its exact
+continuous control, all else unchanged at p149,seed42. This narrows the latent
+width in response to excess measured memory, not in response to fresh modular
+outcomes. It must pass the same arithmetic gate and independent audit before any
+random labels. Config: discrete_learning_p149_l14.yaml. The wider coarse-channel
+diagnostics continue separately; no successful learning or capacity match is
+assumed for either family.
+
+A44 is the preferred small-model candidate for further calibration because its
+completed 60k estimate78,516 bits is close to, and just below, the fixed dataset
+target. This selection uses capacity only; its p149 modular outcomes are unseen.
+Register its remaining n32768/seed61 and n16384/32768 seed62 cells, each60k updates,
+in configs/discrete_capacity_p149_a44_confirm.yaml. These small-model calibration
+runs use the already verified p149 B16q64 arithmetic gate; they do not admit any
+untested discrete architecture. A46's existing extension is retained as a width
+scaling diagnostic. No fresh modular confirmation begins before a valid A/B match.
+
+Before fresh-seed comparisons, add a descriptive memorisation-span statistic to
+scripts/analyse_discrete.py: consecutive sampled evaluations with train>=99% and
+held-out<90%, reporting the longest observed span, observation count and whether
+the span reaches the last evaluation. A single observation has zero observed
+span. Report this alongside95/99 crossing delays and full curves; it is not a
+binary definition of grokking. It prevents interpreting near99% jitter alone as
+an extended memorisation plateau. No unobserved threshold time is imputed for
+censored runs. Fresh seeds43/44/45 remain unseen.
+
+After B14q64 reached isolated >99% held-out observations but not a sustained gate
+through16,900 updates, register a128-level precision follow-up at the same14
+coordinates and all other settings unchanged. This addresses arithmetic stability;
+it does not relax the gate or assume a smaller memory estimate. Either successful
+recipe must still be calibrated against the fixed target and may be rejected if
+its memory is too large. Config: discrete_learning_p149_l14_precision.yaml.
+The initial64-level run retains its60k budget; both results remain in the record.
+
+B14q64 completed its arithmetic gate at24,500 updates: final train99.8368%,
+held-out99.8549%, and maximum accuracy gap8.59 percentage points. Sustained95%
+train/test crossings were2100/2300; sustained99% crossings were24300/9500, yielding
+a negative99%-threshold delay from near-threshold fluctuations. This is not a
+memorisation-then-generalisation plateau. The independent CPU checkpoint audit
+must pass before launching its calibration. The more precise128-level arithmetic
+diagnostic and its continuous14-coordinate control continue separately.
+
+Register the B14q64 calibration grid: n16384/32768, seeds61/62,60k updates, identical
+optimiser/data settings to A44. Config: discrete_capacity_p149_l14_confirm.yaml.
+Start the seed61 sizes after the audit, retain the unchanged79,811-bit target and
+all prior rejection rules, and require the full repeated grid before accepting a
+match. Gate path: results/discrete/learning-p149-l14-v1/B_l14_q64_p149_s42.
+
+The completed 60k horizon checks are A44=78,516.19, A46=83,675.86, B16q64=89,670.24
+bits. Late-window relative drift is approximately 1.37%,1.23%,1.25%, respectively.
+Thus the original A46/B16 pair is still close to each other but fails the user's
+three-way requirement because B exceeds dataset complexity by 12.35%.
+
+B14q64's CPU audit passed with all checked latent values on the finite grid;
+final accuracies agree within 1e-6. Only after that audit were the seed61 random
+capacity runs started. The analysis/integrity tests now pass 17/17. The analysis
+adds no training-source changes, so source-bound arithmetic gates remain valid.

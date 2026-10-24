@@ -12,6 +12,32 @@ import matplotlib.pyplot as plt
 from grokking_capacity.experiments.discrete import summarise
 
 
+
+def memorisation_intervals(records):
+    """Observed spans with >=99% train and <90% held-out accuracy.
+
+    These sampled spans distinguish a memorisation plateau from small fluctuations
+    around a 99% crossing. They do not impose a binary definition of grokking.
+    A single qualifying observation has zero observed duration.
+    """
+    intervals, window = [], []
+
+    def close(censored):
+        if window:
+            intervals.append(dict(start_step=window[0]['step'], end_step=window[-1]['step'],
+                                  observed_steps=window[-1]['step'] - window[0]['step'],
+                                  observations=len(window), end_censored=censored))
+            window.clear()
+
+    for record in records:
+        if record['train_acc'] >= .99 and record.get('val_acc', 1.) < .9:
+            window.append(record)
+        else:
+            close(False)
+    close(True)
+    return intervals
+
+
 def analyse(root):
     rows, traces = [], []
     for path in sorted(root.glob('*/manifest.json')):
@@ -27,6 +53,7 @@ def analyse(root):
         config = manifest['config']
         summary = summarise(config, records, manifest['param_count'])
         last, metrics = records[-1], summary['metrics']
+        intervals = memorisation_intervals(records) if 'val_acc' in last else None
         row = dict(name=path.parent.name, model=config['model'], seed=config['seed'],
                    params=manifest['param_count'], steps=last['step'],
                    completed=(path.parent / 'summary.json').exists(),
@@ -34,7 +61,13 @@ def analyse(root):
                    best_train_bits=summary['best_train_bits'],
                    arithmetic_gate=summary['arithmetic_gate_passed'],
                    delay_steps_99=metrics['delay_steps_99'],
-                   max_train_val_gap=metrics['max_train_val_gap'])
+                   max_train_val_gap=metrics['max_train_val_gap'],
+                   longest_observed_memorisation_steps=(max((r['observed_steps'] for r in intervals), default=0)
+                                                        if intervals is not None else None),
+                   memorisation_observations=(sum(r['observations'] for r in intervals)
+                                              if intervals is not None else None),
+                   memorisation_end_censored=(any(r['end_censored'] for r in intervals)
+                                              if intervals is not None else None))
         for field in ['train_95', 'train_99', 'generalise_95', 'generalise_99']:
             for unit in ['step', 'epochs', 'wall_seconds']:
                 row[f'{field}_{unit}'] = metrics[field][unit] if metrics[field] else None
