@@ -82,6 +82,9 @@ def test_nested_replication_status_and_development_scope(tmp_path):
         (folder/'manifest.json').write_text(json.dumps(manifest))
         (folder/'summary.json').write_text(json.dumps(dict(termination='budget')))
         (folder/'trace.jsonl').write_text(json.dumps(dict(step=120000, train_acc=.6, train_bits=31000., wall_seconds=100.))+'\n')
+    archive=tmp_path/'source-worktrees/archive/reports/evidence/copied/manifest.json'
+    archive.parent.mkdir(parents=True)
+    archive.write_text('{}')  # Not a live run and must never be parsed as one.
     rows=statuses(tmp_path)
     assert len(rows)==2 and all(r['status']=='complete' for r in rows)
     output=tmp_path/'report'

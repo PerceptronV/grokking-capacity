@@ -8,6 +8,10 @@ from pathlib import Path
 def statuses(root):
     rows = []
     for path in sorted(root.rglob('manifest.json')):
+        # Frozen source checkouts and exported evidence also contain manifests;
+        # they are copies, not additional experiment workers.
+        if {'source-worktrees', 'source', 'evidence'} & set(path.relative_to(root).parts[:-1]):
+            continue
         manifest = json.loads(path.read_text())
         directory = path.parent
         process = Path(f'/proc/{manifest["pid"]}/stat')

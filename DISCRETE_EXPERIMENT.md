@@ -2,7 +2,14 @@
 
 Branch: `idea/discrete`. Registered 2026-10-24 before new training.
 
-Latest follow-up: pre-softmax logit LayerNorm is implemented and tested. Both
+Latest follow-up: the p=97 binary A/B/C replication is in capacity calibration.
+A26/FF104 passed arithmetic and is being calibrated. B72/FF64 learned arithmetic
+and random labels but narrowly missed the strict capacity ceiling; B72/FF60 is
+being validated. Architecture matching and the nine confirmation runs are
+not yet complete. See [p97 development evidence](reports/p97_development/status.json)
+and the registered p97 record near the end of this file.
+
+Previous follow-up: pre-softmax logit LayerNorm is implemented and tested. Both
 normalized seed-42 pilots completed 120k updates without passing arithmetic
 validation (19.34% at temperature 0.1; 88.75% at temperature 1). See the
 [normalization evidence](reports/categorical_slot_normalization_v7/comparison.csv)
@@ -2094,3 +2101,43 @@ exporter accepts `--prefix p97-`, preserving its existing full-width default.
 including rejected checkpoints, without implying a capacity match. The48
 focused tests pass, including nested-run status/export coverage. Refresh with:
 `PYTHONPATH=src:. python scripts/report_fullwidth_development.py --prefix p97- --output reports/p97_development`.
+
+
+B60/FF128 exhausted120k arithmetic updates at80.8634% held-out accuracy and
+failed its gate; it has no random-label runs. All arithmetic development jobs
+are now complete. Current compute is the four paired capacity lanes for A26
+and B72. A staged finalizer waits for all eight calibration cells, audits them,
+and requires the fixed target/cross-arm/drift checks before launching the
+registered nine confirmations plus the paired C capacity control. Its command
+log and status are in `results/discrete/p97-v7/finalizer.json`.
+
+
+At89.4k updates, B72/FF64's current peak is33,714.5 bits, still accepted on the
+pointwise target test but close to the33,952.9-bit ceiling. Before observing any
+new outcome, register a contingency B72/FF60 (82,008 parameters,3.047492xA26)
+arithmetic pilot with the same seed42 and settings. Four fewer FF units preserve
+the full72-coordinate binary state. Configs:
+`configs/discrete_p97_v8_{learning,random_learning,capacity_b,capacity_c}.yaml`.
+The incumbent full calibration continues. The contingency's random stages are
+conditional on its own audited learning gates and are needed only if the
+incumbent fails matching. Do not switch candidates based on confirmation data.
+
+
+B72/FF64's completed seed61/n8192 run records a peak33,953.867427 bits, exceeding
+the33,952.912865-bit ceiling by0.954562 bits. The final checkpoint stores
+33,689.424526 bits; peak weights were not separately retained. This is a
+completed full-budget recorded-peak rejection, not a reloaded above-bound
+checkpoint witness. Checkpoint trace equals the exported trace, and its full
+120k summary reproduces the peak. Both seed61 cells completed; remaining seed62
+cells were scope-stopped because they cannot undo the monotone peak rejection.
+Their incomplete traces are censored. The finalizer stopped before confirmation.
+Do not relax the tolerance or switch to final-only capacity for this near miss.
+
+A26's first seed completed with max-over-size31,608.686332 bits and continues
+seed62. Its evidence is independent of which B candidate is eventually selected.
+B72/FF60 seed42 remains in arithmetic development. Register one additional
+development seed41 for exactly the same recipe, before observing its outcome,
+in `configs/discrete_p97_v8_learning_s41.yaml`. Single-seed arithmetic training
+has shown instability across the size candidates. Retain both outcomes; a
+successful gate establishes learnability, not robust multi-seed performance.
+The confirmation seeds remain73/74/75 and have not been run or used for selection.
