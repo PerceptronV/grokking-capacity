@@ -4,8 +4,8 @@ Branch: `idea/discrete`. Registered 2026-10-24 before new training.
 
 Latest follow-up: the p=97 binary A/B/C replication is in capacity calibration.
 A26/FF104 passed arithmetic and is being calibrated. B72/FF64 learned arithmetic
-and random labels but narrowly missed the strict capacity ceiling; B72/FF60 is
-being validated. Architecture matching and the nine confirmation runs are
+and random labels but narrowly missed the strict capacity ceiling; B72/FF62 passed arithmetic on two development seeds and its own random-learning
+check, and is now being calibrated. Architecture matching and the nine confirmation runs are
 not yet complete. See [p97 development evidence](reports/p97_development/status.json)
 and the registered p97 record near the end of this file.
 
@@ -2141,3 +2141,34 @@ in `configs/discrete_p97_v8_learning_s41.yaml`. Single-seed arithmetic training
 has shown instability across the size candidates. Retain both outcomes; a
 successful gate establishes learnability, not robust multi-seed performance.
 The confirmation seeds remain73/74/75 and have not been run or used for selection.
+
+
+Before any outcomes for the intermediate size, register B72/FF62 (82,872
+parameters,3.079599xA26) on development seeds42 and41 together. B72/FF64
+passed learning but missed the capacity cutoff by0.954562 bits; FF60 seed42 is
+still underlearning at39.8k and its seed41 is ongoing. FF62 bisects that size
+change while preserving72 binary coordinates and every optimizer/STE setting.
+Configs:`configs/discrete_p97_v9_{learning,random_learning,capacity_b,capacity_c}.yaml`.
+Use the first completed, independently audited successful development gate for
+any later random tasks. Keep all development outcomes visible. No p97
+confirmation has begun, and confirmation outcomes cannot influence selection.
+
+
+B72/FF62 passed arithmetic on both development seeds: seed42 stopped at13,300
+updates with99.8926% held-out accuracy, seed41 at19,400 with99.0550%. Both
+checkpoints passed independent audits. Seed42 completed first and is the
+registered gate for its own random tasks. Start its small random validation
+under `results/discrete/p97-v9`; conditional on success, run n8192 seeds61/62
+concurrently on cuda:0, then n16384 seeds61/62 on cuda:1 once A's grid completes.
+This schedules the unchanged full four-cell grid using available resources.
+A staged finalizer again requires all complete audits and the strict capacity
+match before any confirmation. Its scripts/status are retained in the results
+folder. B72/FF60 development outcomes remain separate and cannot substitute
+for B72/FF62's gate or capacity evidence.
+
+B72/FF62 completed its own10k-update small random validation at
+99.414062% training accuracy, with a sustained99 crossing and
+passing independent audit. Checkpoint SHA256:`2fc1ecb09e2dce5810a42c0df37563469646c3702b623c2dd881a0075d0f52a9`.
+Its two n8192 capacity seeds are now running; both n16384 seeds are queued for
+the GPU released when A26's full grid completes. Finalizer status and command
+history are in `results/discrete/p97-v9/finalizer.json`.
