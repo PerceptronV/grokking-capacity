@@ -534,7 +534,7 @@ Before inspecting any fresh modular seeds, register a wider64-coordinate channel
 with2 or4 levels at the fixed p149 task, plus its exact continuous control. This
 tests whether coarse quantisation can limit memory while the corresponding
 continuous channel retains more capacity. The model implementation is unchanged;
-only latent_dim/levels differ. Both candidates require the same sustained99%
+only latent_dim/levels differ. Both candidates require the same sustained 99%
 arithmetic gate and CPU audit before random labels. Seed42,60k budget, all other
 optimizer/data settings unchanged. Config: discrete_learning_p149_wide.yaml.
 The79,811-bit target and final selection rules remain fixed. These are exploratory
@@ -583,7 +583,7 @@ The initial64-level run retains its60k budget; both results remain in the record
 
 B14q64 completed its arithmetic gate at24,500 updates: final train99.8368%,
 held-out99.8549%, and maximum accuracy gap8.59 percentage points. Sustained95%
-train/test crossings were2100/2300; sustained99% crossings were24300/9500, yielding
+train/test crossings were2100/2300; sustained 99% crossings were24300/9500, yielding
 a negative99%-threshold delay from near-threshold fluctuations. This is not a
 memorisation-then-generalisation plateau. The independent CPU checkpoint audit
 must pass before launching its calibration. The more precise128-level arithmetic
@@ -631,7 +631,7 @@ the B14 arithmetic gate and audit. They do not determine A/B selection.
 Both wide coarse discrete models exhausted 60k arithmetic updates and failed:
 64-coordinate binary held-out19.21%, four-level21.19%. They are excluded from
 random-label tests. Their exact continuous control reached99.74% held-out at
-24k updates, with95% train/test crossings800/2000 and99% crossings4100/23800.
+24k updates, with95% train/test crossings800/2000 and 99% crossings4100/23800.
 Interpret its99% delay alongside the full curve, not as proof of a long
 memorisation plateau. The14-coordinate continuous and128-level precision
 arithmetic diagnostics remain live; preserve all outcomes, including failures.
@@ -640,7 +640,7 @@ After the calibration grid completes, run scripts/assess_discrete_match.py with
 the four exact A44 directories and four B14q64 directories. If it passes, freeze
 those configurations and run modular seeds43/44/45 in the registered rotating
 order on one GPU, without overlapping our other workers on that GPU. Report
-successful and censored runs, all95/99 metrics, sampled memorisation spans,
+successful and censored runs, all 95/99 metrics, sampled memorisation spans,
 parameter/capacity ratios, paired curves, and shared-hardware timing limitations.
 No A44 modular outcome or fresh confirmation seed has been inspected yet.
 
@@ -670,3 +670,26 @@ Both final checkpoints were independently reloaded, and their data/initial-tenso
 hashes match successful B14q64. More quantisation levels did not monotonically
 improve learning. These development outcomes do not alter the frozen models,
 optimizer, dataset, seed set or capacity criterion.
+
+## Confirmation running after the accepted match
+
+The confirmation worker is live in results/discrete/confirmation-p149-v1;
+PID 1205174, session 87318, device cuda:1 (verify PID/start identity before action).
+Its orchestrator.json is authoritative; selection.json freezes the accepted
+assessment, all input-artifact hashes and all nine model/seed configurations.
+Only this worker uses our confirmation GPU; descriptive control calibration ran
+on GPU0. The worker automatically executes the remaining frozen runs and refuses
+to substitute a different model after seeing fresh outcomes.
+
+A_s43 completed at 3100 updates, final held-out 99.7279%, with sustained 95% at 2700
+and 99% at 2900. B_s43 was still below sustained 99% after 24,900 updates, with train
+and held-out fluctuating together. This early result favours A but is not an
+aggregate conclusion. Retain the registered 60k budget and all remaining seeds;
+failed generalisation is not counted as successful avoidance of grokking.
+
+Remaining work: let all nine confirmation runs complete; independently audit
+final checkpoints and paired data/initial tensors; recompute capacity acceptance;
+analyse all 95/99 crossing metrics, sampled memorisation spans, timing/censoring,
+and paired seed differences; produce reviewable plots/tables and a final report.
+Do not mark the objective complete while any of this is missing. Implementation
+and focused analysis checks: 18 passed. Training scientific sources remain unchanged.
