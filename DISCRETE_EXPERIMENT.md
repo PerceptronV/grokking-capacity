@@ -1948,3 +1948,22 @@ calibration and audits -> capacity match -> frozen confirmations and C capacity
 control -> final audits/report. A failed stage stops advancement. Separate
 processes isolate RNG state across GPU workers. Its pre-random audit guard is
 covered in the47 passing focused tests.
+
+
+Before any random labels, register B64/FF128's own random-learning/capacity
+configs (`configs/discrete_p97_v2_random_learning.yaml`,
+`configs/discrete_p97_v2_capacity_{b,c}.yaml`), with the same A28 capacity grid,
+seeds, horizons and acceptance criteria. Development candidates may enter
+calibration once their own arithmetic/audit gate succeeds; final selection
+still requires the complete fixed-dataset capacity match before confirmation.
+At16,200 updates B64 had reached99.68% best held-out accuracy but had not yet
+satisfied sustained stopping; a single high point is not sufficient.
+
+
+B64/FF128 completed its arithmetic gate at18,200 updates, with99.2483% held-out
+accuracy (the exported audit supplies exact values). Its independent checkpoint
+audit passed before any random-label launch. Start its registered small random
+validation and, conditional on passing sustained99 plus final>=99, its four
+capacity cells. A28 calibration waits for the other arithmetic development job
+to release its GPU. The initial B52 candidate is still running; retain its
+outcome rather than calling an unfinished pilot a failure.
