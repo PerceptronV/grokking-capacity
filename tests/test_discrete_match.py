@@ -92,3 +92,25 @@ def test_sampling_noise_cannot_hide_categorical_memory(tmp_path):
     assert row['best_sampled_bits'] == 80000.
     assert row['best_mode_bits'] == 100000.
     assert row['capacity_evaluation'] == 'max(sampled, hard-mode)'
+
+
+def test_parameter_ratio_amendment_keeps_dataset_matching():
+    a, b = rows('baseline', 80000), rows('quantized', 80000)
+    for row in b: row['params'] = 240000
+    assert not assess(a, b)['accepted']
+    assert assess(a, b, min_parameter_ratio=3.)['accepted']
+    for row in b: row['best_bits'] = 100000
+    assert not assess(a, b, min_parameter_ratio=3.)['accepted']
+
+
+def test_confirmation_preserves_categorical_evaluation_and_continuous_control():
+    from scripts.confirm_discrete import confirmation_runs, fullwidth_control
+    shared=dict(p=149,operation='/',depth=2,heads=1,dropout=0.,lr=.001,
+                weight_decay=1.,beta1=.9,beta2=.98,batch_size=512)
+    a={**shared,'model':'baseline','dim':44}
+    b={**shared,'model':'categorical','dim':58,'alphabet':16,
+       'categorical_evaluation':'hard_mode'}
+    runs=confirmation_runs(a,b)
+    assert all(cfg.get('categorical_evaluation')=='hard_mode' for name,cfg in runs if name[0]=='B')
+    assert all('categorical_evaluation' not in cfg for name,cfg in runs if name[0]!='B')
+    assert 'categorical_evaluation' not in fullwidth_control(b)

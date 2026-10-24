@@ -213,3 +213,20 @@ def test_categorical_rms_normalization_keeps_hard_states_and_correct_gradient():
     assert torch.all((hard == 0) | (hard == 1))
     assert torch.all(hard.sum(-1) == 1)
     assert count_parameters(state) == 4 * 4 * 3
+
+
+def test_hard_mode_policy_does_not_relabel_sampled_results():
+    trace = [dict(step=i, examples=i, epochs=i, wall_seconds=i,
+                  train_acc=.95, val_acc=.94, train_bits=10.,
+                  train_mode_acc=1., val_mode_acc=1., train_mode_bits=12.) for i in range(3)]
+    sampled = summarise(config(), trace, 100)
+    mode = summarise(config(categorical_evaluation='hard_mode'), trace, 100)
+    assert not sampled['arithmetic_gate_passed']
+    assert mode['arithmetic_gate_passed']
+    assert mode['metrics']['generalise_99']['step'] == 0
+    assert mode['evaluation_metrics']['sampled']['generalise_99'] is None
+    assert mode['evaluation_metrics']['hard_mode']['generalise_99']['step'] == 0
+    assert mode['final']['val_acc'] == .94
+    assert mode['primary_evaluation'] == 'hard_mode'
+    trace[-1]['val_mode_acc'] = .9
+    assert not summarise(config(categorical_evaluation='hard_mode'), trace, 100)['arithmetic_gate_passed']

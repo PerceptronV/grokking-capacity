@@ -17,7 +17,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-from grokking_capacity.experiments.discrete import check_gate, source_hashes, summarise
+from grokking_capacity.experiments.discrete import check_gate, primary_accuracy_keys, source_hashes, summarise
 from scripts.analyse_discrete import memorisation_intervals
 from scripts.assess_discrete_match import assess, load_run
 from scripts.confirm_discrete import confirmation_runs, fullwidth_control
@@ -89,7 +89,8 @@ def validate(root, c_paths):
     calibration = {}
     for arm in 'AB':
         calibration[arm] = [load_run(Path(p)) for p in state['inputs'][f'{arm.lower()}_runs']]
-    assessment = assess(calibration['A'], calibration['B'], p=149)
+    assessment = assess(calibration['A'], calibration['B'], p=149,
+                        min_parameter_ratio=frozen['assessment'].get('min_parameter_ratio', 4.))
     if not assessment['accepted'] or assessment != frozen['assessment'] or assessment != read(root/'capacity_assessment.json'):
         raise ValueError('Frozen capacity match changed or failed')
     for folder, hashes in frozen['artifact_hashes'].items():
@@ -166,8 +167,10 @@ def validate(root, c_paths):
             raise ValueError(f'Configuration/source changed: {name}')
         if any(summary[key] != calculated[key] for key in calculated):
             raise ValueError(f'Saved summary does not reproduce: {name}')
+        train_key, val_key = primary_accuracy_keys(config)
         if audit['checkpoint_step'] != data[-1]['step'] or any(
-            abs(audit[key] - data[-1][key]) >= 1e-6 for key in ('train_acc','val_acc')):
+            abs(audit[key] - data[-1][recorded]) >= 1e-6
+            for key, recorded in [('train_acc', train_key), ('val_acc', val_key)]):
             raise ValueError(f'Independent checkpoint audit disagrees: {name}')
         if any(audit[key] != manifest[key] for key in ('param_count','dataset_sha256','initial_weights_sha256')):
             raise ValueError(f'Independent provenance audit disagrees: {name}')
@@ -178,10 +181,14 @@ def validate(root, c_paths):
         if summary['termination'] == 'sustained_success' and any(
             calculated['metrics'][key] is None for key in ('train_99','generalise_99')):
             raise ValueError(f'Success incorrectly recorded: {name}')
-        intervals = memorisation_intervals(data)
+        primary_data = [dict(r, train_acc=r[train_key], val_acc=r[val_key]) for r in data]
+        intervals = memorisation_intervals(primary_data)
         row = dict(name=name, arm=name[0], seed=config['seed'], params=manifest['param_count'],
-                   budget_steps=config['max_steps'], final_step=data[-1]['step'], final_train_acc=data[-1]['train_acc'],
-                   final_val_acc=data[-1]['val_acc'], termination=summary['termination'],
+                   budget_steps=config['max_steps'], final_step=data[-1]['step'], final_train_acc=data[-1][train_key],
+                   final_val_acc=data[-1][val_key], termination=summary['termination'],
+                   primary_evaluation=calculated['primary_evaluation'],
+                   final_sampled_val_acc=data[-1]['val_acc'] if config['model']=='categorical' else None,
+                   final_hard_mode_val_acc=data[-1].get('val_mode_acc'),
                    delay_steps_99=calculated['metrics']['delay_steps_99'],
                    max_train_val_gap=calculated['metrics']['max_train_val_gap'],
                    longest_observed_memorisation_steps=max((r['observed_steps'] for r in intervals), default=0),
@@ -215,10 +222,14 @@ def plots(output, rows, records, calibration, target):
         name,arm = row['name'],row['arm']
         ax = axes[row['seed']-43, 'ABC'.index(arm)]
         data = records[name]
-        for key,style,label in [('train_acc','--','Train'),('val_acc','-','Held out')]:
+        train_key, val_key = ('train_mode_acc', 'val_mode_acc') if row.get('primary_evaluation') == 'hard_mode' else ('train_acc', 'val_acc')
+        for key,style,label in [(train_key,'--','Train'),(val_key,'-','Held out')]:
             ax.plot([r['step'] for r in data],[r[key] for r in data],style,
                     color=colors[arm],lw=1.1,alpha=.85 if style=='-' else .6,label=label)
-        ax.scatter([data[-1]['step']],[data[-1]['val_acc']],s=22,color=colors[arm],marker='x')
+        if row.get('primary_evaluation') == 'hard_mode':
+            ax.plot([r['step'] for r in data],[r['val_acc'] for r in data], ':',
+                    color=colors[arm], alpha=.45, lw=.8, label='Sampled held out')
+        ax.scatter([data[-1]['step']],[data[-1][val_key]],s=22,color=colors[arm],marker='x')
         ax.set_xscale('symlog', linthresh=1000)
         ax.set_xlim(0,budget)
         ax.set_xticks([0,1000,10000,budget],['0','1k','10k',f'{budget//1000}k'])
@@ -229,7 +240,7 @@ def plots(output, rows, records, calibration, target):
     for ax in axes[-1]: ax.set_xlabel('Optimizer updates (linear to 1k, then log)')
     for ax in axes[:,0]: ax.set_ylabel('Accuracy')
     axes[0,0].legend(loc='lower right',frameon=False)
-    fig.suptitle('Frozen p149 comparison: all three fresh seeds\nCurves stop at completion; × marks the final evaluation',fontsize=12)
+    fig.suptitle('Frozen p149 comparison: all three fresh seeds\nB categorical: hard-mode primary, sampled dotted; × marks final evaluation',fontsize=12)
     fig.tight_layout(rect=(0,0,1,.94))
     for suffix in ('png','pdf'): fig.savefig(output/f'learning_curves.{suffix}',dpi=170)
     plt.close(fig)

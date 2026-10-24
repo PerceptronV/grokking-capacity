@@ -1025,3 +1025,38 @@ of accuracy difference while retaining loss tolerance1e-4 and the strict
 original-device checks. Both CPU and GPU must independently exceed the target
 for rejection. This numerical tolerance amendment follows the observed
 cross-device discrepancy; it changes no training, source model, or match bound.
+
+## Explicit follow-up: deterministic categorical evaluation and 3x size ratio
+
+The sampled-only arithmetic criterion and >=4x parameter threshold were agent
+choices, not user requirements. After reporting the two alternatives and allowing
+response time, proceed with hard argmax as the primary categorical inference
+policy and >=3x parameters for the next comparison. This follows the user's
+requested finite categorical activations and much-larger B. It is an explicit
+post-development amendment, not a claim that old sampled gates passed. Original
+sampled-primary results and >=4x assessments remain unchanged. Scalar inference
+is still deterministic. Neither the fixed p149 dataset nor any capacity tolerance
+changes. Training remains sampled, with the same Dreamer-style estimator.
+
+Register source-v5 arithmetic pilots before launch: categorical width58/K16,
+RMS normalization, temperature0.1, hard-mode primary; scalar width80/FF320,
+binary clipped-STE. Original optimizer, seed42,120k budget, eval100. The latter
+has229,360 parameters versus A44's75,460 (3.04x), with an exact ordinary C.
+The categorical model has340,750 parameters, with ordinary C width98 (337,414).
+Both need fresh source-v5 successful checkpoints and independent audits before
+random labels. Old v4 sources are frozen at99f4637 for ongoing work.
+
+Summary/gate/success stopping now explicitly use the registered evaluation
+policy. Raw sampled and hard-mode traces remain distinct; both sets of crossing
+metrics are exported. Success stopping requires the latest three observations
+of both train and held-out accuracy to exceed99%, and a passed gate requires
+its saved final checkpoint to retain held-out99%. Categorical capacity continues
+to use max(sampled,hard-mode) information, so inference noise cannot create a
+spurious capacity match. Independent audits reproduce sampled GPU results and
+CPU hard-mode results, and apply99% to the registered primary policy.
+
+Register 120k capacity calibration at sizes16,384/32,768 and seeds61/62 after
+each source-v5 arithmetic gate. A44 is repeated under the same source. Keep
+late drift<=5%, all A/B/dataset comparisons within10%, and a >=3x parameter
+ratio. Exclude candidates early only with an audited saved above-target witness.
+Freeze selected architectures before fresh paired arithmetic seeds43/44/45.

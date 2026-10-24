@@ -106,21 +106,43 @@ def sustained_crossing(trace, key, threshold, count=3):
     return None
 
 
+def primary_accuracy_keys(config):
+    policy = config.get('categorical_evaluation', 'sampled')
+    if policy not in {'sampled', 'hard_mode'}:
+        raise ValueError('Unknown categorical evaluation policy')
+    if config['model'] == 'categorical' and policy == 'hard_mode':
+        return 'train_mode_acc', 'val_mode_acc'
+    return 'train_acc', 'val_acc'
+
+
 def summarise(config, trace, param_count):
-    metrics = {}
-    for label, key in [('train', 'train_acc'), ('generalise', 'val_acc')]:
-        for percent in [95, 99]:
-            metrics[f'{label}_{percent}'] = sustained_crossing(
-                trace, key, percent / 100, config['sustained_evals'])
-    train, gen = metrics['train_99'], metrics['generalise_99']
-    metrics['delay_steps_99'] = gen['step'] - train['step'] if gen and train else None
-    metrics['max_train_val_gap'] = max(
-        (r['train_acc'] - r['val_acc'] for r in trace if 'val_acc' in r), default=None)
-    return dict(config=config, param_count=param_count, final=trace[-1],
-                best_train_bits=max(r['train_bits'] for r in trace),
-                arithmetic_gate_passed=(config['task'] == 'modular'
-                    and config['model'] in DISCRETE_MODELS and gen is not None),
-                metrics=metrics)
+    train_key, val_key = primary_accuracy_keys(config)
+    def metrics_for(train_key, val_key):
+        metrics = {}
+        for label, key in [('train', train_key), ('generalise', val_key)]:
+            for percent in [95, 99]:
+                metrics[f'{label}_{percent}'] = sustained_crossing(
+                    trace, key, percent / 100, config['sustained_evals'])
+        train, gen = metrics['train_99'], metrics['generalise_99']
+        metrics['delay_steps_99'] = gen['step'] - train['step'] if gen and train else None
+        metrics['max_train_val_gap'] = max(
+            (r[train_key] - r[val_key] for r in trace if val_key in r), default=None)
+        return metrics
+    metrics = metrics_for(train_key, val_key)
+    result = dict(config=config, param_count=param_count, final=trace[-1],
+                  best_train_bits=max(r['train_bits'] for r in trace),
+                  arithmetic_gate_passed=(config['task'] == 'modular'
+                      and config['model'] in DISCRETE_MODELS
+                      and metrics['generalise_99'] is not None
+                      and trace[-1].get(val_key, -1) >= .99),
+                  metrics=metrics)
+    result['primary_evaluation'] = (config.get('categorical_evaluation', 'sampled')
+                                    if config['model'] == 'categorical' else 'deterministic')
+    if config['model'] == 'categorical':
+        result['evaluation_metrics'] = {
+            'sampled': metrics_for('train_acc', 'val_acc'),
+            'hard_mode': metrics_for('train_mode_acc', 'val_mode_acc')}
+    return result
 
 
 def check_gate(path, candidate=None):
@@ -136,7 +158,7 @@ def check_gate(path, candidate=None):
         raise ValueError('Discrete arithmetic gate has not passed')
     if candidate is not None and candidate['model'] in DISCRETE_MODELS:
         keys = ['model', 'p', 'operation', 'train_fraction', 'depth', 'heads', 'dim', 'mlp_dim',
-                'latent_dim', 'levels', 'alphabet', 'categorical_temperature', 'categorical_normalization',
+                'latent_dim', 'levels', 'alphabet', 'categorical_temperature', 'categorical_normalization', 'categorical_evaluation',
                 'quantizer_clip', 'quantizer_surrogate', 'dropout',
                 'lr', 'weight_decay', 'beta1', 'beta2', 'batch_size']
         if any(candidate.get(k) != summary['config'].get(k) for k in keys):
@@ -153,6 +175,7 @@ def sync(device):
 
 def run(config, output, device, *, resume=False, gate=None):
     config = {**DEFAULTS, **config}
+    primary_accuracy_keys(config)
     if config['max_steps'] < 1 or config['eval_every'] < 1 or config['checkpoint_every'] < 1:
         raise ValueError('Positive budgets and intervals required')
     gate_evidence = check_gate(gate, config) if config['task'] == 'random' else None
@@ -292,8 +315,8 @@ def run(config, output, device, *, resume=False, gate=None):
         if step % config['eval_every'] == 0 or step == config['max_steps']:
             observe()
             if config['stop_on_success'] and config['task'] == 'modular':
-                terminal = all(sustained_crossing(trace, key, .99, config['sustained_evals'])
-                               for key in ['train_acc', 'val_acc'])
+                terminal = all(sustained_crossing(trace[-config['sustained_evals']:], key, .99, config['sustained_evals'])
+                               for key in primary_accuracy_keys(config))
         if step % config['checkpoint_every'] == 0 or terminal:
             checkpoint()
         if terminal:

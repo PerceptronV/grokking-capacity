@@ -12,7 +12,7 @@ from pathlib import Path
 
 SHARED = ('p', 'operation', 'depth', 'heads', 'dropout', 'lr', 'weight_decay',
           'beta1', 'beta2', 'batch_size', 'max_steps')
-ARCH = ('model', 'dim', 'mlp_dim', 'latent_dim', 'levels', 'alphabet', 'categorical_temperature', 'categorical_normalization', 'quantizer_clip', 'quantizer_surrogate')
+ARCH = ('model', 'dim', 'mlp_dim', 'latent_dim', 'levels', 'alphabet', 'categorical_temperature', 'categorical_normalization', 'categorical_evaluation', 'quantizer_clip', 'quantizer_surrogate')
 
 
 def load_run(path):
@@ -49,7 +49,7 @@ def load_run(path):
                 tail_relative_drift=drift)
 
 
-def assess(a, b, *, p=149, fraction=.5, tolerance=.1, min_steps=60000, max_drift=.05):
+def assess(a, b, *, p=149, fraction=.5, tolerance=.1, min_steps=60000, max_drift=.05, min_parameter_ratio=4.):
     if p < 2 or any(p % d == 0 for d in range(2, math.isqrt(p) + 1)):
         raise ValueError('This assessment is for prime-modulus division')
     if not 0 < fraction < 1 or not 0 < tolerance < 1:
@@ -106,11 +106,13 @@ def assess(a, b, *, p=149, fraction=.5, tolerance=.1, min_steps=60000, max_drift
         estimates.append(dict(seed=seed, a_bits=ca, b_bits=cb,
                               a_to_dataset=ca / target, b_to_dataset=cb / target))
     ratio = b[0]['params'] / a[0]['params']
-    if ratio < 4:
-        issues.append('B/A parameter ratio is below four')
+    if min_parameter_ratio <= 1:
+        raise ValueError('B must have more parameters than A')
+    if ratio < min_parameter_ratio:
+        issues.append(f'B/A parameter ratio is below {min_parameter_ratio:g}')
     return dict(accepted=not issues, target_bits=target, p=p, train_fraction=fraction,
                 tolerance=tolerance, min_steps=min_steps, max_tail_relative_drift=max_drift,
-                parameter_ratio=ratio, estimates=estimates, issues=sorted(set(issues)),
+                parameter_ratio=ratio, min_parameter_ratio=min_parameter_ratio, estimates=estimates, issues=sorted(set(issues)),
                 interpretation='Finite-budget empirical estimate; does not guarantee absent grokking',
                 a_runs=[r.get('path') for r in a], b_runs=[r.get('path') for r in b])
 
@@ -120,9 +122,10 @@ if __name__ == '__main__':
     parser.add_argument('--a-runs', type=Path, nargs='+', required=True)
     parser.add_argument('--b-runs', type=Path, nargs='+', required=True)
     parser.add_argument('--p', type=int, default=149)
+    parser.add_argument('--min-parameter-ratio', type=float, default=4.)
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
-    result = assess([load_run(p) for p in args.a_runs], [load_run(p) for p in args.b_runs], p=args.p)
+    result = assess([load_run(p) for p in args.a_runs], [load_run(p) for p in args.b_runs], p=args.p, min_parameter_ratio=args.min_parameter_ratio)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + '\n')
     print(json.dumps(result, indent=2))

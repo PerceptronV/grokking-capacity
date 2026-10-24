@@ -7,7 +7,7 @@ from pathlib import Path
 import torch
 
 from grokking_capacity.experiments.discrete import (
-    check_gate, dataset, evaluate, source_hashes, summarise, tensor_digest,
+    check_gate, dataset, evaluate, primary_accuracy_keys, source_hashes, summarise, tensor_digest,
 )
 from grokking_capacity.models.discrete import make_model
 from grokking_capacity.models.transformer import count_parameters
@@ -34,6 +34,7 @@ def audit(path):
     model.load_state_dict(saved['model'])
     x, y, xv, yv = tensors
     categorical = config['model'] == 'categorical'
+    hard_mode_primary = categorical and config.get('categorical_evaluation', 'sampled') == 'hard_mode'
     train = evaluate(model, x, y, categorical_mode=categorical)
     heldout = evaluate(model, xv, yv, categorical_mode=categorical)
     for metric, observed in [('train_acc', train[1]), ('val_acc', heldout[1])]:
@@ -43,7 +44,8 @@ def audit(path):
                   train_acc=train[1], val_acc=heldout[1], param_count=count_parameters(model),
                   dataset_sha256=manifest['dataset_sha256'],
                   initial_weights_sha256=manifest['initial_weights_sha256'],
-                  arithmetic_gate_passed=summary['arithmetic_gate_passed'])
+                  arithmetic_gate_passed=summary['arithmetic_gate_passed'],
+                  primary_evaluation=summary.get('primary_evaluation', 'sampled' if categorical else 'deterministic'))
     if categorical:
         # Reproduce the original sampled measurements on their original device.
         # CPU argmax accuracy above remains an independent-device check.
@@ -64,11 +66,13 @@ def audit(path):
                 torch.manual_seed(seed)
                 repeats.append(evaluate(model, xv.to(device), yv.to(device))[1])
         result['cpu_mode_train_acc'], result['cpu_mode_val_acc'] = train[1], heldout[1]
-        result['train_acc'], result['val_acc'] = sampled_train[1], sampled_val[1]
+        result['sampled_train_acc'], result['sampled_val_acc'] = sampled_train[1], sampled_val[1]
+        if not hard_mode_primary:
+            result['train_acc'], result['val_acc'] = sampled_train[1], sampled_val[1]
         result['sampled_heldout_repeats'] = repeats
         result['sampled_repeat_mean'] = sum(repeats) / len(repeats)
         if summary['arithmetic_gate_passed']:
-            assert result['sampled_repeat_mean'] >= 0.99
+            assert (heldout[1] if hard_mode_primary else result['sampled_repeat_mean']) >= 0.99
         model.cpu()
     if config['model'] in {'categorical', 'quantized'}:
         states = model.categorical_states if categorical else model.quantizers

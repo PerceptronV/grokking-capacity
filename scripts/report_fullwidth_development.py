@@ -43,6 +43,7 @@ def export(root, output):
                    quantizer_surrogate=cfg.get('quantizer_surrogate', 'identity') if cfg['model']=='quantized' else None,
                    quantizer_clip=cfg.get('quantizer_clip', 1.) if cfg['model']=='quantized' else None,
                    lr=cfg['lr'], weight_decay=cfg['weight_decay'], seed=cfg['seed'],
+                   primary_evaluation=cfg.get('categorical_evaluation', 'sampled') if cfg['model']=='categorical' else 'deterministic',
                    budget_updates=cfg['max_steps'], last_update=final['step'],
                    train_accuracy=final['train_acc'], wall_seconds=final['wall_seconds'],
                    scientific_source_hashes=json.dumps(manifest['source_hashes'], sort_keys=True))
@@ -76,7 +77,7 @@ def export(root, output):
     note=dict(scope='Full-width development only; obsolete learned narrow channels excluded.',
               comparison_status='No accepted full-width capacity-matched A/B/C selection yet.',
               counts={name:len(rows) for name,rows in groups.items()},
-              accuracy_note='Categorical primary traces are sampled; hard-mode traces are separate. Null crossings are unobserved, not budget times.',
+              accuracy_note='Categorical raw traces retain sampled and hard-mode metrics separately; primary_evaluation records the registered policy. Null crossings are unobserved, not budget times.',
               capacity_note='Above-target screens establish lower bounds, not saturated capacity estimates. Arithmetic label fit is not a capacity measurement.')
     (output/'status.json').write_text(json.dumps(note,indent=2)+'\n')
     print(json.dumps(note,indent=2))

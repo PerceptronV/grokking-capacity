@@ -30,7 +30,7 @@ def fullwidth_control(b):
     """Ordinary continuous C, with the nearest valid width by total parameters."""
     if b['model'] not in {'quantized', 'categorical'}:
         raise ValueError('Expected a full-width discrete model')
-    extra = {'levels', 'alphabet', 'categorical_temperature', 'categorical_normalization', 'quantizer_clip', 'quantizer_surrogate', 'latent_dim'}
+    extra = {'levels', 'alphabet', 'categorical_temperature', 'categorical_normalization', 'categorical_evaluation', 'quantizer_clip', 'quantizer_surrogate', 'latent_dim'}
     control = {key: value for key, value in b.items() if key not in extra}
     control['model'] = 'baseline'
     if b['model'] == 'categorical':
@@ -64,7 +64,7 @@ def confirmation_runs(a, b):
                   max_steps=max(60000, a.get('max_steps', 60000), b.get('max_steps', 60000)), eval_every=100,
                   checkpoint_every=2000, sustained_evals=3, stop_on_success=True)
     if b['model'] in {'quantized', 'categorical'}:
-        keys = ('model', 'dim', 'mlp_dim', 'levels', 'alphabet', 'categorical_temperature', 'categorical_normalization', 'quantizer_clip', 'quantizer_surrogate')
+        keys = ('model', 'dim', 'mlp_dim', 'levels', 'alphabet', 'categorical_temperature', 'categorical_normalization', 'categorical_evaluation', 'quantizer_clip', 'quantizer_surrogate')
         discrete = {key: b[key] for key in keys if key in b}
         control = fullwidth_control(b)
         ordinary_keys = ('model', 'dim', 'mlp_dim')
@@ -78,9 +78,9 @@ def confirmation_runs(a, b):
             for seed, order in [(43,'ABC'),(44,'BCA'),(45,'CAB')] for arm in order]
 
 
-def confirm(a_paths, b_paths, output, device, *, wait=False, resume=False):
+def confirm(a_paths, b_paths, output, device, *, wait=False, resume=False, min_parameter_ratio=4.):
     inputs = dict(a_runs=[str(p.resolve()) for p in a_paths],
-                  b_runs=[str(p.resolve()) for p in b_paths], device=str(device),
+                  b_runs=[str(p.resolve()) for p in b_paths], device=str(device), min_parameter_ratio=min_parameter_ratio,
                   source_hashes=source_hashes(), script_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest())
     state_path = output / 'orchestrator.json'
     if output.exists():
@@ -111,7 +111,7 @@ def confirm(a_paths, b_paths, output, device, *, wait=False, resume=False):
             print(f'Waiting for {len(pending)} verified live calibration workers', flush=True)
             time.sleep(10)
         a, b = [load_run(p) for p in a_paths], [load_run(p) for p in b_paths]
-        assessment = assess(a, b, p=149)
+        assessment = assess(a, b, p=149, min_parameter_ratio=min_parameter_ratio)
         atomic_json(output/'capacity_assessment.json', assessment)
         if not assessment['accepted']:
             raise ValueError(f'Capacity match rejected: {assessment["issues"]}')
@@ -177,8 +177,9 @@ if __name__ == '__main__':
     parser.add_argument('--b-runs',type=Path,nargs='+',required=True)
     parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--device',default='cuda:1')
+    parser.add_argument('--min-parameter-ratio',type=float,default=4.)
     parser.add_argument('--wait',action='store_true')
     parser.add_argument('--resume',action='store_true')
     args=parser.parse_args()
     torch.set_num_threads(2)
-    confirm(args.a_runs,args.b_runs,args.output,torch.device(args.device),wait=args.wait,resume=args.resume)
+    confirm(args.a_runs,args.b_runs,args.output,torch.device(args.device),wait=args.wait,resume=args.resume,min_parameter_ratio=args.min_parameter_ratio)
