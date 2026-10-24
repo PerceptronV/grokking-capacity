@@ -1619,3 +1619,10 @@ directories are also required for independent revalidation; cloning the Git
 repository alone supplies the exported evidence, not the ignored checkpoints.
 The scalar source is the current v6 code. Per-run source hashes and snapshots,
 rather than the launch commit alone, bind the actual training implementation.
+
+A cross-family verification confirms identical A configurations, dataset hashes,
+initial weights and every non-timing trace value for each of73/74/75. All six
+arms across the two families share the same modular dataset for each seed.
+These are the same three A seeds used in two comparisons, not six independent
+A seeds; wall times remain separate measurements. Evidence:
+reports/fullwidth_development/shared_a_confirmation.json.
