@@ -21,7 +21,7 @@ Current full-width evidence: scalar q16 and q4 with the clipping-aware surrogate
 have passed independent arithmetic audits. q16's random-label screen already
 exceeds the dataset target (114,086.64 bits at a saved observation), so it is
 rejected as a capacity-matched B; this is a demonstrated lower bound, not a
-plateau estimate. q4 screening and fresh-source A44 calibration are in progress.
+plateau estimate. q4 also exceeds the target in its saved capacity screen and is rejected. Fresh-source A44 calibration continues.
 Binary scalar and categorical models remain in arithmetic development. No new
 A/B/C capacity-matched comparison has been selected yet.
 
@@ -858,3 +858,5 @@ screens. A44 calibration continues. q4 passed arithmetic and is being audited;
 q2 with the clipped surrogate is still arithmetic-only.
 
 q4 passed its independent arithmetic audit: final held-out 99.083984%; sustained99% at update 11700. Register the same two-size, seed61 capacity screen as q16, with early rejection only when a saved checkpoint demonstrates memory above87,791.72 bits.
+
+q4 screen rejected by the same pre-recorded rule: its saved checkpoint establishes memory above the fixed target upper bound. Check `fullwidth-q4-capacity-v2/B_q4_d96_n16384_s61/screen_rejection.json` for the exact witness. Both q16 and q4 have learned arithmetic and random labels, but neither is a capacity-matched B. Binary quantization and categorical learning remain open.
