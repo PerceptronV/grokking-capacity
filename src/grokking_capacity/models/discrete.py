@@ -81,7 +81,8 @@ def make_model(config: dict):
             raise ValueError("Full-width models do not accept a compressed latent_dim")
         if config["model"] == "quantized":
             return FullWidthQuantizedTransformer(
-                **spec, levels=config["levels"], quantizer_clip=config.get("quantizer_clip", 1.0))
+                **spec, levels=config["levels"], quantizer_clip=config.get("quantizer_clip", 1.0),
+                quantizer_surrogate=config.get("quantizer_surrogate", "identity"))
         return FullWidthCategoricalTransformer(**spec, alphabet=config["alphabet"])
     if config["model"] not in {"discrete", "continuous"}:
         raise ValueError("Unknown model")

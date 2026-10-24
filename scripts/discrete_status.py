@@ -26,6 +26,7 @@ def statuses(root):
         last = records[-1] if records else {}
         summary = directory / 'summary.json'
         state = ('complete' if summary.exists() else 'running' if live else
+                 'rejected/capacity-above-target' if (directory / 'screen_rejection.json').exists() else
                  'stopped/scope-change' if (directory / 'scope_stop.json').exists() else
                  'stopped/incomplete')
         rows.append(dict(path=str(directory.relative_to(root)), status=state,

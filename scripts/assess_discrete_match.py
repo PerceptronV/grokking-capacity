@@ -12,7 +12,7 @@ from pathlib import Path
 
 SHARED = ('p', 'operation', 'depth', 'heads', 'dropout', 'lr', 'weight_decay',
           'beta1', 'beta2', 'batch_size', 'max_steps')
-ARCH = ('model', 'dim', 'latent_dim', 'levels', 'alphabet', 'quantizer_clip')
+ARCH = ('model', 'dim', 'latent_dim', 'levels', 'alphabet', 'quantizer_clip', 'quantizer_surrogate')
 
 
 def load_run(path):

@@ -17,6 +17,14 @@ runs as historical attempts. Their gate and capacity match do not validate the
 new architectures. The unfinished old B seed was scope-stopped, not declared a
 learning failure. The ordinary continuous controls remain ordinary-model data.
 
+Current full-width evidence: scalar q16 and q4 with the clipping-aware surrogate
+have passed independent arithmetic audits. q16's random-label screen already
+exceeds the dataset target (114,086.64 bits at a saved observation), so it is
+rejected as a capacity-matched B; this is a demonstrated lower bound, not a
+plateau estimate. q4 screening and fresh-source A44 calibration are in progress.
+Binary scalar and categorical models remain in arithmetic development. No new
+A/B/C capacity-matched comparison has been selected yet.
+
 The fixed task remains **p149 modular division, 50% training split** and a
 79,810.65-bit label-information target. New A/B/C comparisons are required for
 BOTH full-width categorical and full-width scalar-quantized models. A is an
@@ -804,3 +812,49 @@ measurement as a lower bound; no saturated C capacity or universal constant is
 inferred. Config: configs/discrete_capacity_p149_plain_c.yaml. The existing B14q64
 arithmetic gate precedes this check. Original compressed-C capacity remains an
 auxiliary measurement and must not be attributed to unrestricted C.
+
+## Full-width arithmetic development follow-up
+
+The first width96/K2 pilots have not passed by 24k updates. Quantized identity
+STE shows severe clipping and large pre-quantizer activations (checkpoint14k:
+85%/99.98% clipped in blocks1/2). Categorical K2 is learning but remains far below
+the gate; its checkpoint16k mean maximum categorical probabilities are 0.85/0.87,
+and mode evaluation is worse than sampled evaluation. These are optimization
+diagnostics, not low-capacity evidence. The full registered pilot budgets remain.
+Before launch, register an additional categorical K16 arithmetic pilot with
+weight decay0.1 (other settings unchanged, seed42, 60k updates). Lower decay may
+permit more confident categorical choices; this is a hypothesis to test, not a
+claimed fix. If this optimizer is selected, A/B/C capacity and arithmetic runs
+must all use the same decay0.1. No random labels are admitted by this amendment.
+
+Register scalar-quantizer surrogate follow-up before launch: keep the same hard
+forward grid and full residual width, but use the derivative of clipping (zero
+outside [-1,1]) and identity through rounding. The v1 identity-through-clipping
+variant remains available and its original runs are preserved. This addresses
+the observed unbounded pre-quantizer activations without changing the state
+architecture. Evaluate levels16,4,2 in that order, seed42 and unchanged optimizer.
+The scientific source revision changes provenance for all newly launched runs;
+old source-bound pilots continue as recorded, but any selected categorical
+recipe must pass again under the revised source before new-source calibration.
+
+Full-width scalar q16 with clipping-aware STE passed its p149 arithmetic gate:
+first sustained held-out99% crossing at2,200 updates (=100 data passes), confirmed
+at2,400; final train99.9637%, held-out99.4196%. An independent CPU reload reproduced
+accuracy and verified every coordinate on the grid before any new random labels.
+Register a q16 capacity screen at n=16,384/32,768, seed61, 60k updates each, plus
+new-source A44 calibration at both sizes and seeds61/62. Both use identical
+optimizer/data protocol and the existing 79,810.65-bit target. q16 is only a
+learning-validated candidate, not a capacity-matched B yet. Stop original-source
+pilot queues after their binary runs finish; unstarted follow-ups move to the
+current source. No categorical recipe has passed the gate at this registration.
+
+The q16 capacity screen already exceeds the target upper bound in a saved
+checkpoint. Stop that candidate's screen and cancel its remaining cells: the
+max-achieved memory statistic cannot decrease, so more training cannot make
+this candidate match the fixed dataset. Preserve checkpoint, full trace, and
+`screen_rejection.json`; do not call it a completed 60k run or a saturated capacity
+estimate. This deterministic above-target rejection rule also applies to later
+screens. A44 calibration continues. q4 passed arithmetic and is being audited;
+q2 with the clipped surrogate is still arithmetic-only.
+
+q4 passed its independent arithmetic audit: final held-out 99.083984%; sustained99% at update 11700. Register the same two-size, seed61 capacity screen as q16, with early rejection only when a saved checkpoint demonstrates memory above87,791.72 bits.

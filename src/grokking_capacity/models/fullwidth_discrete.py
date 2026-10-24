@@ -34,12 +34,15 @@ def categorical_straight_through(logits, *, sample=True):
 
 
 class FullWidthQuantizer(nn.Module):
-    def __init__(self, dim, levels, clip):
+    def __init__(self, dim, levels, clip, surrogate='identity'):
         super().__init__()
         if not isinstance(levels, int) or levels < 2:
             raise ValueError('Quantization requires at least two integer levels')
         if not math.isfinite(clip) or clip <= 0:
             raise ValueError('Quantization requires a positive finite fixed clip')
+        if surrogate not in {'identity', 'clipped'}:
+            raise ValueError('Unknown quantizer surrogate')
+        self.surrogate = surrogate
         self.dim, self.levels, self.clip = dim, levels, float(clip)
 
     @property
@@ -52,16 +55,19 @@ class FullWidthQuantizer(nn.Module):
         indices = ((x.detach().clamp(-self.clip, self.clip) + self.clip)
                    * ((self.levels - 1) / (2 * self.clip))).round()
         hard = indices * (2 * self.clip / (self.levels - 1)) - self.clip
-        # Identity STE through rounding and clipping. Range is fixed, with no
-        # input-dependent scale carried into the next block.
-        return hard + (x - x.detach())
+        # Both estimators ignore rounding. The clipped variant keeps the
+        # clamp's derivative (zero outside the range), preventing unbounded
+        # activation growth driven by a surrogate insensitive to saturation.
+        # Range is fixed: no input-dependent scale crosses the boundary.
+        soft = x.clamp(-self.clip, self.clip) if self.surrogate == 'clipped' else x
+        return hard + (soft - soft.detach())
 
 
 class FullWidthQuantizedTransformer(TransformerTorch):
-    def __init__(self, *, levels, quantizer_clip=1.0, **kwargs):
+    def __init__(self, *, levels, quantizer_clip=1.0, quantizer_surrogate='identity', **kwargs):
         super().__init__(**kwargs)
         self.quantizers = nn.ModuleList([
-            FullWidthQuantizer(kwargs['dim'], levels, quantizer_clip)
+            FullWidthQuantizer(kwargs['dim'], levels, quantizer_clip, quantizer_surrogate)
             for _ in self.layers
         ])
 

@@ -156,3 +156,12 @@ def test_categorical_checkpoint_resume_preserves_sampled_training(tmp_path, monk
     assert all({k: v for k, v in x.items() if k != 'wall_seconds'} ==
                {k: v for k, v in y.items() if k != 'wall_seconds'}
                for x, y in zip(a['trace'], b['trace']))
+
+
+def test_clipped_surrogate_has_no_gradient_outside_fixed_range():
+    x = torch.tensor([[-2., -.5, .1, 2.]], requires_grad=True)
+    identity = FullWidthQuantizer(4, 4, 1., 'identity')(x)
+    clipped = FullWidthQuantizer(4, 4, 1., 'clipped')(x)
+    assert torch.equal(identity, clipped)
+    assert torch.equal(torch.autograd.grad(clipped.sum(), x)[0],
+                       torch.tensor([[0., 1., 1., 0.]]))
