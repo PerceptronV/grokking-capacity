@@ -140,3 +140,55 @@ def test_unused_quantizer_equivalence_does_not_admit_new_model_or_data_code():
         assert not baseline_random_sources_compatible(a, {**b, dependency: 'changed'})
         assert not baseline_random_sources_compatible({**a, dependency: 'changed'}, {**b, dependency: 'changed'})
     assert not baseline_random_sources_compatible(a, {**b, FULLWIDTH: 'unverified'})
+
+
+@pytest.mark.parametrize('p', [97, 149])
+def test_prime_replication_matches_target_and_pairs_binary_control(p):
+    import torch
+    from scripts.confirm_discrete import confirmation_runs
+    from grokking_capacity.models.discrete import make_model
+    from grokking_capacity.models.transformer import count_parameters
+    target = (p * (p - 1) // 2) * math.log2(p + 2)
+    a, b = rows('baseline', target), rows('quantized', target * 1.02)
+    for row in a + b:
+        row['config']['p'] = p
+    assert assess(a, b, p=p)['accepted']
+    if p == 97:
+        assert not assess(a, b, p=149)['accepted']
+    common = dict(p=p, operation='/', depth=2, heads=1, dropout=0., lr=.001,
+                  weight_decay=1., beta1=.9, beta2=.98, batch_size=512, max_steps=120000)
+    a = dict(common, model='baseline', dim=28, mlp_dim=112)
+    b = dict(common, model='quantized', dim=52, mlp_dim=208, levels=2,
+             quantizer_clip=1., quantizer_surrogate='rms_clipped')
+    runs = confirmation_runs(a, b, seeds=(73,74,75))
+    assert [name for name,_ in runs] == ['A_s73','B_s73','C_s73','B_s74','C_s74','A_s74','C_s75','A_s75','B_s75']
+    assert all(cfg['p'] == p and cfg['max_steps'] == 120000 for _,cfg in runs)
+    bc = [cfg for name,cfg in runs if name in ('B_s73','C_s73')]
+    models = []
+    for cfg in bc:
+        torch.manual_seed(cfg['seed'])
+        models.append(make_model(cfg))
+    assert count_parameters(models[0]) == count_parameters(models[1])
+    assert models[0].state_dict().keys() == models[1].state_dict().keys()
+    assert all(torch.equal(v, models[1].state_dict()[k]) for k,v in models[0].state_dict().items())
+    with pytest.raises(ValueError, match='prime'):
+        confirmation_runs({**a,'p':147}, {**b,'p':147})
+    with pytest.raises(ValueError, match='match'):
+        confirmation_runs(a, {**b,'p':101})
+
+
+def test_replication_requires_independent_arithmetic_audit_before_random(tmp_path, monkeypatch):
+    import json
+    from types import SimpleNamespace
+    import scripts.run_discrete_replication as pipeline
+    gate = tmp_path / 'gate'
+    gate.mkdir()
+    evidence = {'path': str(gate), 'summary_sha256': 'saved'}
+    monkeypatch.setattr(pipeline, 'check_gate', lambda path: evidence)
+    (gate / 'audit.json').write_text(json.dumps({'arithmetic_gate_passed': False}))
+    args = SimpleNamespace(output=tmp_path/'output', gate=gate, resume=False)
+    monkeypatch.setattr(pipeline.subprocess, 'Popen', lambda *a, **k: pytest.fail('Training started before the gate passed'))
+    with pytest.raises(ValueError, match='independent passing audit'):
+        pipeline.replicate(args)
+    state = json.loads((args.output/'pipeline.json').read_text())
+    assert state['phase'] == 'failed' and not state['commands']

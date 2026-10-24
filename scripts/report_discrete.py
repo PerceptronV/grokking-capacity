@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate and export the completed, frozen p149 comparison and compact evidence.
+"""Validate and export the completed, frozen prime-modulus comparison and compact evidence.
 
 Run from the repository root with PYTHONPATH=src python -m scripts.report_discrete.
 Checkpoint audits must already exist; original gate audits are never overwritten.
@@ -17,7 +17,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-from grokking_capacity.experiments.discrete import check_gate, primary_accuracy_keys, source_hashes, summarise
+from grokking_capacity.experiments.discrete import ROOT, check_gate, primary_accuracy_keys, source_hashes, summarise
 from scripts.analyse_discrete import memorisation_intervals
 from scripts.assess_discrete_match import assess, load_run
 from scripts.confirm_discrete import confirmation_runs, fullwidth_control
@@ -107,13 +107,18 @@ def validate(root, c_paths):
         raise ValueError('Scientific training sources changed')
     fullwidth = frozen.get('control') == 'fullwidth_unrestricted'
     unrestricted = fullwidth or frozen.get('control') == 'unrestricted'
-    implementation = Path('scripts/confirm_discrete_unrestricted.py' if unrestricted and not fullwidth else 'scripts/confirm_discrete.py')
-    if state['inputs']['script_sha256'] != digest(implementation):
+    script = 'confirm_discrete_unrestricted.py' if unrestricted and not fullwidth else 'confirm_discrete.py'
+    implementations = [ROOT / 'scripts' / script]
+    # The completed p149 runs predate prime-modulus support. Preserve and verify
+    # their exact orchestrator bytes independently of the model-source checkout.
+    if script == 'confirm_discrete.py':
+        implementations.append(Path(__file__).resolve().parent / 'frozen' / 'confirm_discrete_p149.py')
+    if not any(p.exists() and state['inputs']['script_sha256'] == digest(p) for p in implementations):
         raise ValueError('Confirmation implementation changed')
     calibration = {}
     for arm in 'AB':
         calibration[arm] = [load_run(Path(p)) for p in state['inputs'][f'{arm.lower()}_runs']]
-    assessment = assess(calibration['A'], calibration['B'], p=149,
+    assessment = assess(calibration['A'], calibration['B'], p=calibration['A'][0]['config']['p'],
                         min_parameter_ratio=frozen['assessment'].get('min_parameter_ratio', 4.))
     if not assessment['accepted'] or assessment != frozen['assessment'] or assessment != read(root/'capacity_assessment.json'):
         raise ValueError('Frozen capacity match changed or failed')
@@ -271,7 +276,8 @@ def plots(output, rows, records, calibration, target):
     policy_note = ('B categorical: hard-mode primary, sampled dotted; × marks final evaluation'
                    if any(row.get('primary_evaluation') == 'hard_mode' for row in rows)
                    else 'Deterministic evaluation; × marks final evaluation')
-    fig.suptitle('Frozen p149 comparison: all three registered seeds\n' + policy_note, fontsize=12)
+    modulus = calibration['A'][0]['config']['p']
+    fig.suptitle(f'Frozen p{modulus} comparison: all three registered seeds\n' + policy_note, fontsize=12)
     fig.tight_layout(rect=(0,0,1,.94))
     for suffix in ('png','pdf'): fig.savefig(output/f'learning_curves.{suffix}',dpi=170)
     plt.close(fig)

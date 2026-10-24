@@ -1,0 +1,34 @@
+defaults:
+  task: random
+  p: 97
+  operation: /
+  train_fraction: 0.5
+  depth: 2
+  heads: 1
+  dropout: 0.0
+  lr: 0.001
+  weight_decay: 1.0
+  beta1: 0.9
+  beta2: 0.98
+  batch_size: 512
+  max_steps: 120000
+  eval_every: 200
+  checkpoint_every: 2000
+  sustained_evals: 3
+  stop_on_success: false
+  model: baseline
+  dim: 28
+  mlp_dim: 112
+runs:
+- name: A_baseline_d28_ff112_n8192_s61
+  n_samples: 8192
+  seed: 61
+- name: A_baseline_d28_ff112_n16384_s61
+  n_samples: 16384
+  seed: 61
+- name: A_baseline_d28_ff112_n8192_s62
+  n_samples: 8192
+  seed: 62
+- name: A_baseline_d28_ff112_n16384_s62
+  n_samples: 16384
+  seed: 62

@@ -1875,3 +1875,76 @@ Evidence: [comparison](reports/categorical_slot_normalization_v7/comparison.csv)
 All 17 exported artifacts were checksum-verified. The completed binary report
 also passed source-bound revalidation using its new frozen v6 worktree; its
 training results are unchanged.
+
+
+## Registered p=97 binary scalar replication (2026-10-24)
+
+The user requested the same experiment at p=97 with architecture sizes matched
+to the dataset. Retain modular division and the fixed 50% split: 4,656 training
+examples and 30,866.284423 bits under the existing N*log2(p+2) convention.
+Repeat the selected full-width binary RMS/clipped-STE family. A is ordinary and
+small; B is fully binary at every block boundary; C is ordinary continuous with
+exactly B's parameter tensors and paired initialization. The old p149 capacity
+match does not transfer to p97.
+
+Before any new training, register initial candidates A width28/FF112 (30,772
+parameters), B/C width52/FF208 (97,084 each), depth2/head1, dropout0. All other
+training settings match the p149 experiment: AdamW lr0.001, betas(0.9,0.98),
+weight decay1, batch512; arithmetic max120k updates, evaluation every100,
+three consecutive observations for threshold success. Development seed42 is
+kept separate from registered confirmation seeds73/74/75. The B seed42
+arithmetic run must pass its own independent checkpoint audit before any
+random-label task. First validate random-label learning on 2,048 examples for
+10k updates; do not interpret inability to learn as a capacity reduction.
+
+Capacity calibration keeps the same seeds61/62, random dataset sizes16384/32768,
+120k updates per cell, evaluations every200, peak-over-trace estimate, late
+drift <=5%, and rejection of dataset-limited estimates. Each A/B estimate must
+be within10% of the p97 target and each other, with B/A parameters >=3. The
+initial widths are scaling-based candidates, not claimed capacity matches.
+Tune only sizes using development evidence; freeze the accepted architectures
+before nine paired confirmation runs in ABC/BCA/CAB order. Record failed
+candidates and missing thresholds. Report sustained95/99 speeds in updates,
+epochs and descriptive shared-GPU seconds, plus the same first-train99 / first-
+heldout98 grokking delay. No universal no-grokking guarantee is assumed.
+
+Configuration: `configs/discrete_p97_v1_learning.yaml`.
+
+Before any p97 random-label training, amend the calibration dataset sizes to
+8,192 and 16,384 (seeds61/62 unchanged), scaling the old powers-of-two grid down
+for the smaller information target. The smaller calibration set still contains
+1.76 times the modular training examples, versus 1.49 times for p149; keeping
+16,384/32,768 would instead change the overload to3.52/7.04 times. The target,
+10% acceptance, 120k horizon, peak estimate and drift rules remain unchanged.
+This amendment is made before observing random-label outcomes. C's descriptive
+capacity control uses the paired n8192/seed61 cell. Configurations are
+`configs/discrete_p97_v1_capacity_{a,b,c}.yaml` and
+`configs/discrete_p97_v1_random_learning.yaml`.
+
+The confirmation generator now accepts prime division moduli and rejects
+mismatched A/B tasks/optimizers. Reporting derives the target and plot label
+from the frozen modulus, and checks the orchestrator hash against the selected
+source checkout so the old p149 frozen sources remain reproducible. The46
+focused architecture, capacity-match and reporting tests pass.
+
+
+During arithmetic development, A28 passed sustained99 and stopped at10,000
+updates; C52 stopped at3,000 with100% held-out accuracy. Both checkpoints were
+independently reloaded. B52 remained underlearning on both splits at18,100
+updates; it continues to its registered120k budget. Before launching a second
+candidate, register B64/FF128 (94,912 parameters) at the same seed42/settings.
+This trades feed-forward width for residual width while keeping approximately
+the same raw parameter count and B/A>=3. It tests whether retaining more binary
+coordinates improves arithmetic learning. Neither candidate may train on random
+labels before its own successful arithmetic gate and audit. Config:
+`configs/discrete_p97_v2_learning.yaml`. Both outcomes will remain in the record.
+Both original p149 reports revalidate (nine runs each); an exact archived copy
+of their orchestrator is retained at `scripts/frozen/confirm_discrete_p149.py`.
+
+
+The staged driver `scripts/run_discrete_replication.py` enforces independent
+arithmetic audit -> small random learning and audit -> paired A/B capacity
+calibration and audits -> capacity match -> frozen confirmations and C capacity
+control -> final audits/report. A failed stage stops advancement. Separate
+processes isolate RNG state across GPU workers. Its pre-random audit guard is
+covered in the47 passing focused tests.

@@ -61,8 +61,12 @@ def confirmation_runs(a, b, *, seeds=(43, 44, 45)):
     shared = ('p', 'operation', 'depth', 'heads', 'dropout', 'lr', 'weight_decay',
               'beta1', 'beta2', 'batch_size')
     common = {key: a[key] for key in shared}
-    if common['p'] != 149 or common['operation'] != '/':
-        raise ValueError('The user fixed p149 modular division')
+    p = common['p']
+    if (type(p) is not int or p < 2 or any(p % d == 0 for d in range(2, math.isqrt(p) + 1))
+            or common['operation'] != '/'):
+        raise ValueError('Confirmation requires prime-modulus division')
+    if any(a.get(key) != b.get(key) for key in shared):
+        raise ValueError('A/B task and optimizer must match before confirmation')
     common.update(task='modular', train_fraction=.5,
                   max_steps=max(60000, a.get('max_steps', 60000), b.get('max_steps', 60000)), eval_every=100,
                   checkpoint_every=2000, sustained_evals=3, stop_on_success=True)
@@ -115,7 +119,7 @@ def confirm(a_paths, b_paths, output, device, *, wait=False, resume=False, min_p
             print(f'Waiting for {len(pending)} verified live calibration workers', flush=True)
             time.sleep(10)
         a, b = [load_run(p) for p in a_paths], [load_run(p) for p in b_paths]
-        assessment = assess(a, b, p=149, min_parameter_ratio=min_parameter_ratio)
+        assessment = assess(a, b, p=a[0]['config']['p'], min_parameter_ratio=min_parameter_ratio)
         atomic_json(output/'capacity_assessment.json', assessment)
         if not assessment['accepted']:
             raise ValueError(f'Capacity match rejected: {assessment["issues"]}')
