@@ -1576,3 +1576,16 @@ saved trace exactly matches the exported trace. This establishes a descriptive
 lower bound above matched A/B; the control is dataset limited and does not
 estimate a saturated C capacity. The peak weights were not retained separately.
 The nine registered arithmetic confirmations continue without configuration changes.
+
+
+## First audited categorical confirmation seed
+
+Seed73 is complete and all three checkpoints passed independent audit. These are actual optimizer updates to three consecutive qualifying evaluations; the other two registered seeds remain pending.
+
+| Arm | Sustained95% | Sustained99% | Final primary held-out |
+|---|---:|---:|---:|
+| A | 2,900 | 3,000 | 99.6191% |
+| B | 30,600 | Not reached by120,000 | 95.1206% |
+| C | 1,400 | 1,900 | 100.0000% |
+
+B ended at96.0729% hard-mode training accuracy and95.1206% hard-mode held-out accuracy; sampled held-out accuracy is90.9759%. It never reaches either first train99 or first held-out98 in this trace, so the supplementary paper-style delay remains unobserved. This is not evidence of successful grokking avoidance. A has zero measured paper-style delay and C has100 updates. The frozen B and remaining seeds are unchanged.
