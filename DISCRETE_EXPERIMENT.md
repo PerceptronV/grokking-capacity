@@ -2,12 +2,16 @@
 
 Branch: `idea/discrete`. Registered 2026-10-24 before new training.
 
-Latest follow-up: the p=97 binary capacity match is accepted. A26/FF104 has
-26,910 parameters; binary B72/FF62 and ordinary continuous C each have82,872.
-All eight A/B calibration checkpoints passed independent audits. The frozen
-nine paired confirmation runs on seeds73/74/75 and C's capacity control are
-training; final speed/grokking results are not yet complete. See the
-[p97 capacity match](reports/p97_development/accepted_capacity_match.json).
+Latest follow-up: the p=97 binary A/B/C replication is complete and audited.
+A26/FF104 has 26,910 parameters; binary B72/FF62 and ordinary continuous C
+have exactly 82,872 each. A/B capacities match the fixed dataset within 10%
+on both calibration seeds. Median updates to sustained 95% are A 7,500,
+B 15,200, C 2,100. A/C reach sustained 99% on all three seeds; B on two.
+Paper-style delays are A 3,200/400/400, B 0/0/0, C 200/100/100 updates.
+Thus empirical capacity matching did not force A's measured delay to zero.
+See the [p97 results](reports/p97_quantized_v9/confirmation.csv),
+[learning curves](reports/p97_quantized_v9/learning_curves.png), and
+[capacity match](reports/p97_development/accepted_capacity_match.json).
 
 Previous follow-up: pre-softmax logit LayerNorm is implemented and tested. Both
 normalized seed-42 pilots completed 120k updates without passing arithmetic
@@ -21,7 +25,7 @@ and avoid the generalisation delay of an equally large continuous control?
 A positive result is not assumed. Lack of learning is not evidence of reduced
 capacity, and failure to grok is not success unless generalisation succeeds.
 
-## Completed results: both full-width discrete families
+## Completed p149 results: both full-width discrete families
 
 Both registered A/B/C comparisons are complete on branch `idea/discrete`.
 All 18 arithmetic checkpoints passed independent audits. Both selected B
@@ -2214,3 +2218,91 @@ The p97 report identifies the first-passage grokking metric as specified before
 this replication, and limits development history to its p97 runs, including
 nested calibration folders. This metadata change does not alter thresholds,
 selection, training, or delay calculations.
+
+
+## Completed p97 binary replication
+
+All nine frozen confirmation runs and the continuous capacity control completed.
+All nine arithmetic checkpoints passed independent reload/evaluation audits;
+the eight selected A/B capacity checkpoints and C control also passed their
+independent audits. The report revalidates against the scientific sources in
+`results/discrete/source-worktrees/p97-v9` (commit `aa70459`). The current reporter
+uses the actual capacity sizes for its plot axes and explicitly labels sustained
+99% crossings. These presentation changes do not alter any training or outcome.
+
+The task remains modular division at p=97, 50% training, 4,656 training examples,
+and a registered label-information target of 30,866.284423 bits. The accepted
+architectures and two-seed capacity table above were frozen before confirmation.
+B passed arithmetic development on seeds 42 and 41 before its random tasks and then
+passed its own 2,048-example random-label validation: final 99.4140625%,
+best 99.90234375%. Confirmation outcomes were not used to change the model.
+
+All entries below are optimizer updates, in seed order **73 / 74 / 75**.
+A crossing requires three consecutive evaluations, spaced 100 updates apart.
+At these evaluation points, 100 updates equals 10 epochs (ten minibatches per
+epoch, including a final 48-example minibatch). A missing crossing remains
+missing; it is not replaced with 120,000.
+
+| Model | Sustained held-out 95% | Sustained held-out 99% | Paper-style delay |
+|---|---|---|---|
+| A, continuous 26/FF104 | 7,000 / 34,000 / 7,500 | 38,600 / 46,900 / 9,600 | 3,200 / 400 / 400 |
+| B, binary 72/FF62 | 15,200 / 17,400 / 12,700 | missing by 120k / 20,500 / 17,200 | 0 / 0 / 0 |
+| C, continuous 72/FF62 | 2,100 / 1,800 / 2,400 | 2,800 / 2,200 / 2,600 | 200 / 100 / 100 |
+
+At 95%, all runs cross, so the three-seed medians are A 7,500, B 15,200,
+C 2,100 updates. The ratio of medians is B/A 2.026667 and B/C 7.238095.
+B beats A on seed 74 but loses on 73/75; C is fastest on every seed.
+At 99%, A/C three-seed medians are 38,600/2,600. B has only two observed
+crossings; their 18,850-update median is conditional on success and must not
+be presented as the full three-seed median or evidence that B is faster overall.
+B seed 73 finishes 120k at 95.317870% training and 94.029212% held-out accuracy.
+
+The paper-style delay is `max(0, first held-out 98% - first train 99%)`, using
+first observations rather than sustained crossings. Every A seed has a positive
+delay despite the capacity match. B has zero observed delay on all three seeds,
+but its failed seed is still a learning failure. None of the nine runs meets the
+separate train>=99%/held-out<90% memorization-gap condition. These observations
+do not establish that B can never grok or that empirical capacity matching is
+an intrinsic capacity bound. Delays shorter than 100 updates remain unresolved.
+
+Measured median wall time to 95% was A 37.930296s, B 84.466698s, C 10.578991s.
+These are descriptive shared-H100 measurements; optimizer updates are the
+primary speed comparison. Exact per-run seconds, examples, epochs, paired
+ratios, thresholds, and final accuracies are retained in the CSV/JSON report.
+
+C's paired n=8,192/seed 61 control records 51,329.060604 bits at 120k; the final
+checkpoint independently reproduces the same value. It does not trigger the
+registered 95%-of-label-entropy data-limit flag. This one tested cell gives a
+finite-budget lower bound, not a precisely measured intrinsic maximum. It is
+well above the A/B estimates and the dataset target, while B/C have identical
+parameter shapes and initialization and only B quantizes block-boundary states.
+
+For context, the completed p149 scalar medians to 95% were A 2,800, B 19,300,
+C 1,800 updates, with B also reaching sustained 99% on two of three seeds.
+At p97 the median ranking remains C, A, B, although B now beats A on one seed.
+A's paper-style delays change from 0/0/0 to 3,200/400/400; B remains 0/0/0.
+This is a resized, capacity-matched replication, not an isolated causal test of
+modulus: the residual and feed-forward dimensions were recalibrated.
+
+The [completion audit](reports/p97_development/completion_audit.json) binds 23
+selected/supporting checkpoints to their exact traces, configs, source snapshots,
+and existing evaluation audits. It verifies selection and all A/B calibration
+audits preceded confirmation, and arithmetic/random-learning gates preceded
+capacity training. All task controllers have finished. The full development
+export retains 14 arithmetic and 21 random/capacity runs, including unsuccessful
+sizes and censored cells. Its [capacity rejection record](reports/p97_development/capacity_rejections.json)
+distinguishes four saved/reloaded above-bound witnesses from the v7 completed
+recorded-peak near miss whose peak weights were not retained. No tolerance was
+relaxed to accept that near miss.
+
+Revalidate without changing gate audits:
+
+```bash
+PYTHONPATH=results/discrete/source-worktrees/p97-v9/src:. python results/discrete/p97_completion_audit.py
+```
+
+The audit script is also preserved under `reports/p97_development/`.
+The earlier 48 focused checks passed; the six reporting tests also passed after
+the capacity-axis generalization. Both exported figures were visually checked.
+Report and development artifacts have SHA256 manifests; raw checkpoints remain
+in the ignored results tree. No p97 categorical comparison is claimed here.

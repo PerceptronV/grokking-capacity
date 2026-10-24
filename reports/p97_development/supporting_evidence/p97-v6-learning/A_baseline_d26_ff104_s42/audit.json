@@ -1,0 +1,11 @@
+{
+  "run": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-v6-learning/A_baseline_d26_ff104_s42",
+  "checkpoint_step": 41600,
+  "train_acc": 0.9982817769050598,
+  "val_acc": 0.9952749013900757,
+  "param_count": 26910,
+  "dataset_sha256": "9518f875b47c7fbace692a64d84bcc791589392036a8405061970b2c2dea5d67",
+  "initial_weights_sha256": "fb18a17d34c44825cbe23c77c875bb39ad2ee7bc5521d5e3f0f2b2e162212212",
+  "arithmetic_gate_passed": false,
+  "primary_evaluation": "deterministic"
+}

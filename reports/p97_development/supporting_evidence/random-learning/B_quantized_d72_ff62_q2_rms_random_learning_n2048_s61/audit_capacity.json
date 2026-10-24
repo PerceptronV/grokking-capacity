@@ -1,0 +1,31 @@
+{
+  "run": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-v9/random-learning/B_quantized_d72_ff62_q2_rms_random_learning_n2048_s61",
+  "checkpoint_step": 10000,
+  "checkpoint_sha256": "2fc1ecb09e2dce5810a42c0df37563469646c3702b623c2dd881a0075d0f52a9",
+  "param_count": 82872,
+  "dataset_sha256": "b25b87f7391b2bc626a3ec49c4d3d4d88addb72eb4eae89567330c8aa7e597ad",
+  "scientific_source_hashes": {
+    "src/grokking_capacity/experiments/discrete.py": "6e3016ef2a6d104415966b0ce6ef8350eb1a4d7247c25647382d58264d0a7669",
+    "src/grokking_capacity/models/discrete.py": "5ec7a68fbd27fa923b933bcbecb4652ef9b76a47146db1c399938a31dfc024d3",
+    "src/grokking_capacity/models/fullwidth_discrete.py": "da11dd2d747f9731eed96b6cc2ef9ec072ac8689e1768626a405080639822f9c",
+    "src/grokking_capacity/models/transformer.py": "691dd08dc7febb2449ae200051d5a323068d8bfe40e554928923450dd84a926c",
+    "src/grokking_capacity/data/modular.py": "8d5dfe63984b75cb931cbc91c98d0925e422e9cae2ace3e32752d3ee05361f65"
+  },
+  "cpu_loss": 0.061983127146959305,
+  "cpu_accuracy": 0.994140625,
+  "cpu_mode_evaluation": false,
+  "cpu_loss_difference": -2.2351741790771484e-08,
+  "cpu_accuracy_difference": 0.0,
+  "cpu_accuracy_tolerance": 0.00048928125,
+  "cpu_loss_tolerance": 0.0001,
+  "original_device_mode_loss": 0.061983149498701096,
+  "sampled_loss": 0.061983149498701096,
+  "sampled_accuracy": 0.994140625,
+  "checkpoint_capacity_bits": 13393.784565608246,
+  "cpu_original_mode_capacity_difference_bits": 6.604133886867203e-05,
+  "fixed_dataset_target_bits": 30866.284423090663,
+  "gate": {
+    "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-v9-learning/B_quantized_d72_ff62_q2_rms_s42",
+    "summary_sha256": "36d225684bb91394475ef418a95e23ad7ea08cb6002631fbf8992934d79726fe"
+  }
+}

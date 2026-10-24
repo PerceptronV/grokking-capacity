@@ -1,0 +1,11 @@
+{
+  "run": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-confirmation-v9-quantized-rms/C_s74",
+  "checkpoint_step": 2400,
+  "train_acc": 1.0,
+  "val_acc": 0.9957044720649719,
+  "param_count": 82872,
+  "dataset_sha256": "933fbfacee9b820c86b1329227dbc8187c5574f6c070aafe7290a5f95453f520",
+  "initial_weights_sha256": "d51b84c0a5cd4e16ee2f8bd456f6fa618ea0feec505b6e39530f1c15f3bc8c03",
+  "arithmetic_gate_passed": false,
+  "primary_evaluation": "deterministic"
+}

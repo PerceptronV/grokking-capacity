@@ -1,0 +1,50 @@
+{
+  "config": {
+    "task": "random",
+    "p": 97,
+    "operation": "/",
+    "train_fraction": 0.5,
+    "depth": 2,
+    "heads": 1,
+    "dropout": 0.0,
+    "seed": 62,
+    "lr": 0.001,
+    "weight_decay": 1.0,
+    "beta1": 0.9,
+    "beta2": 0.98,
+    "batch_size": 512,
+    "max_steps": 120000,
+    "eval_every": 200,
+    "checkpoint_every": 2000,
+    "sustained_evals": 3,
+    "stop_on_success": false,
+    "model": "baseline",
+    "dim": 26,
+    "mlp_dim": 104,
+    "n_samples": 8192
+  },
+  "source_hashes": {
+    "src/grokking_capacity/experiments/discrete.py": "6e3016ef2a6d104415966b0ce6ef8350eb1a4d7247c25647382d58264d0a7669",
+    "src/grokking_capacity/models/discrete.py": "5ec7a68fbd27fa923b933bcbecb4652ef9b76a47146db1c399938a31dfc024d3",
+    "src/grokking_capacity/models/fullwidth_discrete.py": "da11dd2d747f9731eed96b6cc2ef9ec072ac8689e1768626a405080639822f9c",
+    "src/grokking_capacity/models/transformer.py": "691dd08dc7febb2449ae200051d5a323068d8bfe40e554928923450dd84a926c",
+    "src/grokking_capacity/data/modular.py": "8d5dfe63984b75cb931cbc91c98d0925e422e9cae2ace3e32752d3ee05361f65"
+  },
+  "dataset_sha256": "c3a2d6bf94e44112ce8d882f1fc0c0c365bcc4238923fb5f770af2a4d32836c4",
+  "gate": {
+    "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-v7-learning/B_quantized_d72_ff64_q2_rms_s42",
+    "summary_sha256": "6556df0e087bdec1356361f6f8a94cb5127660817a7d4eda9be98b3fe668d53b"
+  },
+  "param_count": 26910,
+  "initial_weights_sha256": "f4282452016c84140d3cbfb45ac7b1e5aa05fc19ed1348b641dd30adfaaba059",
+  "pid": 2005096,
+  "process_start_ticks": "766939834",
+  "host": "68-209-74-145",
+  "python": "3.12.3",
+  "torch": "2.7.0",
+  "device": "cuda:1",
+  "gpu": "NVIDIA H100 80GB HBM3",
+  "gpu_snapshot": "Sat Oct 24 18:33:37 2026       \n+-----------------------------------------------------------------------------------------+\n| NVIDIA-SMI 580.105.08             Driver Version: 580.105.08     CUDA Version: 13.0     |\n+-----------------------------------------+------------------------+----------------------+\n| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |\n| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |\n|                                         |                        |               MIG M. |\n|=========================================+========================+======================|\n|   0  NVIDIA H100 80GB HBM3          On  |   00000000:06:00.0 Off |                    0 |\n| N/A   35C    P0            158W /  700W |   18344MiB /  81559MiB |    100%      Default |\n|                                         |                        |             Disabled |\n+-----------------------------------------+------------------------+----------------------+\n|   1  NVIDIA H100 80GB HBM3          On  |   00000000:07:00.0 Off |                    0 |\n| N/A   36C    P0            234W /  700W |   16761MiB /  81559MiB |     99%      Default |\n|                                         |                        |             Disabled |\n+-----------------------------------------+------------------------+----------------------+\n\n+-----------------------------------------------------------------------------------------+\n| Processes:                                                                              |\n|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |\n|        ID   ID                                                               Usage      |\n|=========================================================================================|\n|    0   N/A  N/A          584643      C   python                                15756MiB |\n|    0   N/A  N/A         2004029      C   /usr/bin/python                         854MiB |\n|    0   N/A  N/A         2004030      C   /usr/bin/python                         854MiB |\n|    0   N/A  N/A         2014114      C   python                                  854MiB |\n|    1   N/A  N/A          587652      C   python                                15052MiB |\n|    1   N/A  N/A         2005096      C   python                                  844MiB |\n|    1   N/A  N/A         2005097      C   python                                  844MiB |\n+-----------------------------------------------------------------------------------------+\n",
+  "start_time": 1792866818.0244184,
+  "git_commit": "d8ac5165be4355ef7ca1e8346f6fbfd0913fd270"
+}

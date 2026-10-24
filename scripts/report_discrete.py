@@ -268,7 +268,7 @@ def plots(output, rows, records, calibration, target):
         ax.set_xticks([0,1000,10000,budget],['0','1k','10k',f'{budget//1000}k'])
         ax.set_ylim(0,1.025)
         ax.axhline(.99,ls=':',c='grey',lw=.7)
-        ax.set_title(f"{name}: {'99% criterion met' if row['generalise_99_step'] is not None else '99% not reached by budget'}",fontsize=10)
+        ax.set_title(f"{name}: {'sustained 99%' if row['generalise_99_step'] is not None else 'no sustained 99% by budget'}",fontsize=10)
         ax.grid(alpha=.15)
     for ax in axes[-1]: ax.set_xlabel('Optimizer updates (linear to 1k, then log)')
     for ax in axes[:,0]: ax.set_ylabel('Accuracy')
@@ -282,18 +282,21 @@ def plots(output, rows, records, calibration, target):
     for suffix in ('png','pdf'): fig.savefig(output/f'learning_curves.{suffix}',dpi=170)
     plt.close(fig)
     capacity_budget = max(row['config']['max_steps'] for runs in calibration.values() for row in runs)
-    fig, axes = plt.subplots(2,2,figsize=(10,6),sharex=True,sharey=True)
+    capacity_seeds = sorted({row['config']['seed'] for runs in calibration.values() for row in runs})
+    capacity_sizes = sorted({row['config']['n_samples'] for runs in calibration.values() for row in runs})
+    fig, axes = plt.subplots(len(capacity_seeds), len(capacity_sizes), figsize=(10,6),
+                             sharex=True, sharey=True, squeeze=False)
     for arm, runs in calibration.items():
         for row in runs:
             config = row['config']
-            ax = axes[config['seed']-61, [16384,32768].index(config['n_samples'])]
+            ax = axes[capacity_seeds.index(config['seed']), capacity_sizes.index(config['n_samples'])]
             data = trace(Path(row['path']))
             data_limited = row['best_bits'] >= .95 * config['n_samples'] * math.log2(config['p'] + 2)
             label = f'{arm} (data limited)' if data_limited else arm
             ax.plot([r['step'] for r in data],[max(r['train_bits'], r.get('train_mode_bits', r['train_bits']))/1000 for r in data],
                     label=label,color=colors[arm],lw=1.2)
-    for i, seed in enumerate((61,62)):
-        for j, n in enumerate((16384,32768)):
+    for i, seed in enumerate(capacity_seeds):
+        for j, n in enumerate(capacity_sizes):
             ax=axes[i,j]
             ax.axhspan(.9*target/1000,1.1*target/1000,color='grey',alpha=.12)
             ax.axhline(target/1000,color='grey',ls=':',lw=.8)

@@ -1,0 +1,52 @@
+{
+  "config": {
+    "task": "random",
+    "p": 97,
+    "operation": "/",
+    "train_fraction": 0.5,
+    "depth": 2,
+    "heads": 1,
+    "dropout": 0.0,
+    "seed": 62,
+    "lr": 0.001,
+    "weight_decay": 1.0,
+    "beta1": 0.9,
+    "beta2": 0.98,
+    "batch_size": 512,
+    "max_steps": 120000,
+    "eval_every": 200,
+    "checkpoint_every": 2000,
+    "sustained_evals": 3,
+    "stop_on_success": false,
+    "model": "quantized",
+    "dim": 72,
+    "mlp_dim": 62,
+    "levels": 2,
+    "quantizer_clip": 1.0,
+    "quantizer_surrogate": "rms_clipped",
+    "n_samples": 16384
+  },
+  "param_count": 82872,
+  "final": {
+    "step": 120000,
+    "examples": 61440000,
+    "epochs": 3750.0,
+    "train_loss": 3.4345386028289795,
+    "train_acc": 0.194091796875,
+    "train_bits": 27432.793047638537,
+    "wall_seconds": 691.1993735292926
+  },
+  "best_train_bits": 28297.356228528763,
+  "arithmetic_gate_passed": false,
+  "metrics": {
+    "train_95": null,
+    "train_99": null,
+    "generalise_95": null,
+    "generalise_99": null,
+    "delay_steps_99": null,
+    "max_train_val_gap": null
+  },
+  "primary_evaluation": "deterministic",
+  "termination": "budget",
+  "peak_cuda_memory_bytes": 93065728
+}
