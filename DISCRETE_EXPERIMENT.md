@@ -19,24 +19,28 @@ learning failure. The ordinary continuous controls remain ordinary-model data.
 
 Current full-width evidence: both categorical and scalar-quantized models have
 passed independent arithmetic audits and small random-label learning checks.
-Categorical width58/K16 and width62/K8 have independently audited above-target
-capacity witnesses of92,238.31 and88,381.03 bits, respectively, so neither is a
-match. Width72/K4 passed arithmetic (99.23% hard-mode held-out accuracy) but is also
-rejected by an audited88,283.57-bit checkpoint. Width70/FF288/K4 is the current
-categorical arithmetic follow-up. Width60/K8 seed42 completed120k below the
-gate; its second initialization remains in arithmetic development. Neither
-width60 recipe has random-label runs.
+The normalized binary scalar width80/FF320 model now has an accepted capacity
+match to A44 and the fixed dataset: per-seed B estimates79,986.88 and79,816.66
+bits versus A's80,552.69 and80,438.20. All four B120k cells are complete and
+independently audited, with late drift1.10--1.26%. The frozen scalar A/B/C
+confirmation is running on newly registered seeds73/74/75. A has75,460
+parameters; B and unrestricted C each have229,360, with identical B/C tensors.
+The scalar C capacity control completed120k; its independent audit and final
+comparison report follow the confirmation queue.
 
-Normalized binary scalar width80/FF320 passed arithmetic (99.20% held-out
-accuracy), and its four-cell capacity calibration is running. The normalized
-four-level counterpart passed arithmetic (99.12%) but is rejected by an
-independently audited20k checkpoint storing98,485.70 bits. Earlier width96,
-larger-FF, and unnormalized four-/sixteen-level scalar candidates also exceed
-the fixed target. Rejection witnesses are lower bounds, not saturated capacity
-estimates. The ordinary width80 scalar C has begun its descriptive capacity
-control. No full-width capacity-matched A/B/C selection exists yet. Corrected full-width
-confirmation uses the newly registered seeds73/74/75; seeds43/44/45 were used
-by the superseded narrow-channel experiments.
+Categorical width58/K16,width62/K8 and width72/K4 have independently audited
+above-target witnesses of92,238.31,88,381.03 and88,283.57 bits, so all three are
+rejected as capacity matches. Width62/FF232/K8 passed its own arithmetic audit
+at18,200 updates (hard-mode held-out99.0024%; recorded sampled96.5083%), and its
+first capacity screen is running. Width70/FF288/K4 remains in arithmetic
+development. Both width60/K8 initializations completed120k below the arithmetic
+gate (48.76% and46.83% hard-mode held-out); neither has random-label runs.
+
+Other audited scalar candidates, including normalized four-level width80/FF320,
+exceed the fixed capacity target. These rejection witnesses are lower bounds,
+not saturated capacity estimates. No categorical match or completed full-width
+A/B/C result is claimed. Seeds43/44/45 belong to the superseded narrow-channel
+experiments; corrected full-width confirmations use73/74/75.
 
 A44's four120k calibration cells are complete and independently audited. The
 per-seed estimates are80,552.69 and80,438.20 bits, each within1% of the79,810.65-bit
@@ -1343,3 +1347,28 @@ hard-mode primary evaluation,original optimizer and frozen v5 source.
 It requires its own arithmetic gate and audit. If qualified, use the registered
 120k capacity grid at n16384/32768,seeds61/62. Capacity matching remains the
 selection criterion; no confirmation result informs this change.
+
+## Accepted scalar match and fresh confirmation
+
+The normalized binary width80/FF320 model completed all four120k capacity
+cells and passed independent final-checkpoint audits. Per-seed empirical
+capacities are79,986.88 and79,816.66 bits versus A44's80,552.69 and80,438.20;
+the fixed target is79,810.65. All four B late drifts are1.10--1.26%, below5%.
+The assessment accepts both dataset matching and A/B matching. A has75,460
+parameters; B and its unrestricted ordinary C each have229,360 (B/A3.0395).
+These are finite-budget empirical estimates, not representational upper bounds.
+
+Freeze this scalar selection before all new arithmetic results. Run seeds
+73/74/75 in the registered ABC/BCA/CAB order, original optimizer and p149/50%
+task,120k budget, and identical B/C initial tensors. Wait for the live scalar
+C capacity control to release cuda:0, then run the nine confirmation cells
+sequentially. Each completed arithmetic checkpoint will be independently
+audited, and failed/unobserved crossings remain censored. The categorical
+family is still developing; no categorical capacity match is claimed.
+
+Width62/FF232/K8 completed arithmetic at18,200 updates and passed independent
+audit before its first random-label screen. The audited hard-mode held-out
+accuracy is99.00236%; recorded sampled accuracy is96.50826%. Start the registered
+n16384/seed61 capacity screen under frozen v5 source. Preserve both inference
+policies, and use max(sampled,hard-mode) for capacity. The other three cells
+remain registered, pending the first screen.
