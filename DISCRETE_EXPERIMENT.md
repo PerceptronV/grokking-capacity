@@ -1758,3 +1758,65 @@ low temperature. Configuration: `configs/discrete_fullwidth_v7_categorical_slotn
 This is development validation, not a fresh confirmation or a new capacity
 match. Any random-label run for this variant requires its own successful
 arithmetic gate and independent audit first. Preserve all previous results.
+
+
+## Exact binary scalar A/B/C speed and grokking comparison
+
+These are the completed p149 division, 50%-split, seeds 73/74/75 results.
+A is the 75,460-parameter ordinary model; B and ordinary C each have 229,360
+parameters and identical initial tensors. B quantizes every residual coordinate
+to two fixed values after RMS normalization at each block boundary.
+
+| Seed | A updates to 95% | B updates to 95% | C updates to 95% | A updates to 99% | B updates to 99% | C updates to 99% |
+|---|---:|---:|---:|---:|---:|---:|
+| 73 | 2,900 | 19,300 | 1,800 | 3,000 | 19,700 | 2,200 |
+| 74 | 2,700 | 5,800 | 1,900 | 2,900 | Not reached by 120,000 | 2,100 |
+| 75 | 2,800 | 98,400 | 1,700 | 4,100 | 101,800 | 1,800 |
+
+A threshold time is the first observation in three consecutive qualifying
+held-out evaluations, sampled every 100 optimizer updates. These are actual
+updates, not epochs. C is faster than A, and A faster than B, on every seed at
+95%. Median 95% times are A 2,800, B 19,300 and C 1,800 updates: ratios of these
+medians make B 6.892857 times A and 10.722222 times C. The paired B/A ratios
+are 6.655172, 2.148148 and 35.142857; paired B/C ratios are 10.722222,
+3.052632 and 57.882353. B's missing 99% crossing is censored and is not replaced
+with the budget or included in an unconditional three-seed median.
+
+For grokking, use the paper's delay: max(0, first held-out 98% update minus
+first training 99% update). These are first observations, not sustained
+thresholds. The complete underlying times are:
+
+| Model | Seed 73: train99 / held-out98 / delay | Seed 74: train99 / held-out98 / delay | Seed 75: train99 / held-out98 / delay | Interpretation |
+|---|---:|---:|---:|---|
+| A | 2,900 / 2,900 / 0 | 2,800 / 2,800 / 0 | 3,200 / 3,200 / 0 | No measured grokking delay |
+| B | 19,300 / 19,300 / 0 | 6,900 / 6,400 / 0 | 99,000 / 99,000 / 0 | No measured grokking delay |
+| C | 1,700 / 1,800 / 100 | 1,900 / 2,000 / 100 | 1,600 / 1,700 / 100 | Short positive delay on every seed |
+
+C has a positive delay under this operational definition, but it is only one
+100-update evaluation interval (about 4.5 epochs), not a long memorization
+plateau. All nine runs have zero observed points with training >=99% and
+held-out <90%. B's late transitions occur after long periods of underlearning
+on both splits. Slower generalization alone is not grokking. The separate,
+more threshold-sensitive sustained99-to-sustained99 delays are A 100/100/600,
+B 400/missing/1,500 and C 500/200/200 updates; they are not the paper's definition.
+The comparison uses dropout 0 versus the paper's central setting of 0.2.
+
+Sources: [complete measurements](reports/fullwidth_quantized_v6/confirmation.csv),
+[paper section 4.3](https://arxiv.org/html/2605.09724v2#S4.SS3).
+
+
+At the normalized temperature-0.1 pilot's 20,000-update checkpoint, a hard-mode
+probe of the first 512 held-out examples found mean maximum categorical
+probabilities 0.999074/0.935338 in layers 1/2. Fractions above 99% confidence
+were 0.988077/0.618574; entropy was 0.005665/0.232319 bits. Normalized score
+magnitudes stayed below 2.623, so normalization controls scale but the retained
+low temperature still permits sharp softmax saturation. This diagnostic does
+not prove that saturation is the sole cause of poor learning.
+
+Before launching another run, register a temperature-1 counterpart in
+`configs/discrete_fullwidth_v7_categorical_slotnorm_t1.yaml`. It shares seed 42,
+initial tensors, data, optimizer, architecture and budget with the normalization-
+only run, and retains Dreamer-style categorical sampling. Temperature 1 matches
+the reference's softmax scale; it does not copy its deterministic/no-noise
+forward estimator. Both pilot outcomes will be retained. Neither the old
+capacity match nor the old arithmetic gate applies to either new recipe.
