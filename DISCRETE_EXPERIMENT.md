@@ -606,3 +606,42 @@ B14q64's CPU audit passed with all checked latent values on the finite grid;
 final accuracies agree within 1e-6. Only after that audit were the seed61 random
 capacity runs started. The analysis/integrity tests now pass 17/17. The analysis
 adds no training-source changes, so source-bound arithmetic gates remain valid.
+
+Complete A44 n16384 seed62 at60k:78,755.65 bits (late relative drift1.33%), closely
+matching seed61's78,516.19. A44 n32768 seed61 completed at68,912.07 bits (drift1.86%).
+The lower larger-data result is retained as optimisation/budget dependence; the
+registered primary estimate remains the maximum across tested sizes per seed.
+All remaining A44/B14q64 seed/size cells are now launched with60k budgets.
+
+Prepare descriptive C14 capacity controls at n16384/32768,seed61,60k updates using
+the matching B14 arithmetic gate. Config: discrete_capacity_p149_c14.yaml. These
+measure whether the continuous control actually has more effective memory;
+that is not assumed from its continuous representations. C measurements do not
+determine which A/B pair is selected. Final modular confirmation will rotate
+A/B/C order across seeds43/44/45 (ABC,BCA,CAB), serially on one GPU after matching.
+
+## Full calibration grid in progress
+
+A44's completed peak estimates are78,516.19 bits at n16384/seed61,
+78,755.65 at n16384/seed62, and68,912.07 at n32768/seed61. Its remaining n32768/seed62
+cell is running. All four B14q64 calibration cells are running with60k budgets.
+Intermediate n16384 peaks were80,991/80,811 bits on seeds61/62; these remain
+provisional. The fixed target and acceptance rules have not changed.
+C14's descriptive n16384/32768 seed61 capacity controls have also started, after
+the B14 arithmetic gate and audit. They do not determine A/B selection.
+
+Both wide coarse discrete models exhausted60k arithmetic updates and failed:
+64-coordinate binary held-out19.21%, four-level21.19%. They are excluded from
+random-label tests. Their exact continuous control reached99.74% held-out at
+24k updates, with95% train/test crossings800/2000 and99% crossings4100/23800.
+Interpret its99% delay alongside the full curve, not as proof of a long
+memorisation plateau. The14-coordinate continuous and128-level precision
+arithmetic diagnostics remain live; preserve all outcomes, including failures.
+
+After the calibration grid completes, run scripts/assess_discrete_match.py with
+the four exact A44 directories and four B14q64 directories. If it passes, freeze
+those configurations and run modular seeds43/44/45 in the registered rotating
+order on one GPU, without overlapping our other workers on that GPU. Report
+successful and censored runs, all95/99 metrics, sampled memorisation spans,
+parameter/capacity ratios, paired curves, and shared-hardware timing limitations.
+No A44 modular outcome or fresh confirmation seed has been inspected yet.

@@ -1,0 +1,32 @@
+# Descriptive control capacity at both sizes; does not determine A/B selection.
+defaults:
+  task: random
+  p: 149
+  operation: /
+  depth: 2
+  heads: 1
+  dropout: 0.0
+  seed: 61
+  lr: 0.001
+  weight_decay: 1.0
+  batch_size: 512
+  n_samples: 16384
+  max_steps: 60000
+  eval_every: 200
+  checkpoint_every: 2000
+  stop_on_success: false
+runs:
+- name: C_l14_n16384_s61
+  model: continuous
+  dim: 96
+  latent_dim: 14
+  levels: 64
+  n_samples: 16384
+  seed: 61
+- name: C_l14_n32768_s61
+  model: continuous
+  dim: 96
+  latent_dim: 14
+  levels: 64
+  n_samples: 32768
+  seed: 61
