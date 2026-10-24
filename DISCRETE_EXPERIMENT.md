@@ -1999,3 +1999,26 @@ B60's potential follow-up grids are registered before results in
 `configs/discrete_p97_v3_{random_learning,capacity_b,capacity_c}.yaml`, using the
 same dataset sizes, seeds and horizons. They remain conditional on its own
 successful arithmetic audit and small random-label learning validation.
+
+
+B60/FF144 passed its arithmetic gate at18,700 updates with
+99.742270% held-out and99.871135% training accuracy.
+Its independent audit passed before starting its own random-learning check.
+The conditional random-learning -> capacity queue is recorded under
+`results/discrete/p97-v3`; A28's existing independent grid remains under
+`results/discrete/p97-v2/capacity-A`.
+
+
+A28/FF112 is also oversized: its independently reloaded58,000-update
+n8192/seed61 checkpoint stores34397.401757 bits, above
+the same10% ceiling. The saved witness SHA256 is`9b6dfa57b5a39d957638832ea71e7a87220cad54615101e7c949096263770bcb`;
+its audit passed before stopping the worker. Retain this as an early rejection,
+not a completed capacity grid. Before new training, register A28/FF100
+(28,756 parameters) in `configs/discrete_p97_v4_learning_a.yaml` and
+`configs/discrete_p97_v4_capacity_a.yaml`. Check arithmetic learning first,
+then repeat the same four capacity cells. B60's independent grid continues.
+
+A28/FF100 passed its modular learning check at9,600 updates with
+99.570447% held-out accuracy, independently audited. Its four-cell
+capacity grid starts at `results/discrete/p97-v4/capacity-A`, using the already
+successful B60 arithmetic gate for the random-task authorization check.
