@@ -333,7 +333,7 @@ def report(root, output, c_paths):
         'registered_sustained_99': 'delay_steps_99 is held-out 99% minus training 99%, each sustained for three evaluations; signed difference; missing crossings stay null.',
         'registered_large_gap': 'Observed intervals with training >=99% and held-out <90%; not a universal binary definition of grokking.',
         'supplementary_first_passage_99_98': 'max(0, first held-out >=98% time - first training >=99% time); missing crossings stay null; uses each run primary evaluation policy.',
-        'supplementary_registration': 'Added after scalar confirmation and before categorical confirmation, for comparison with the paper; does not change selection, stopping, or primary outcomes.',
+        'supplementary_registration': ('Added after the original p149 scalar confirmation and before its categorical confirmation; does not change selection, stopping, or primary outcomes.' if assessment['p'] == 149 else 'Inherited from the p149 comparison and specified before this prime-modulus replication and its confirmation runs; does not change selection or stopping.'),
         'observation_resolution_updates': 100,
         'resolution_note': 'Crossings are measured on recorded evaluations. Sub-100-update delays are unresolved.',
         'paper': 'https://arxiv.org/html/2605.09724v2#S4.SS3',
@@ -355,7 +355,8 @@ def report(root, output, c_paths):
     for name in ('selection.json','configuration.yaml','capacity_assessment.json','orchestrator.json'):
         shutil.copyfile(root/name,output/name)
     history=[]
-    for manifest_path in sorted(root.parent.glob('*/*/manifest.json')):
+    history_pattern = '*/*/manifest.json' if assessment['p'] == 149 else f"p{assessment['p']}-*/**/manifest.json"
+    for manifest_path in sorted(root.parent.glob(history_pattern)):
         path=manifest_path.parent
         if path.parent==root: continue
         manifest=read(manifest_path)
@@ -364,6 +365,8 @@ def report(root, output, c_paths):
         if (path/'summary.json').exists(): item['summary']=read(path/'summary.json')
         if (path/'scope_stop.json').exists(): item['scope_stop']=read(path/'scope_stop.json')
         if (path/'screen_rejection.json').exists(): item['screen_rejection']=read(path/'screen_rejection.json')
+        candidate_rejection = path.parent.parent/'candidate_rejection.json'
+        if candidate_rejection.exists(): item['candidate_rejection']=read(candidate_rejection)
         history.append(item)
     write_json(output/'development_history.json',history)
     plots(output,rows,records,calibration,assessment['target_bits'])

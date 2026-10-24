@@ -2,12 +2,12 @@
 
 Branch: `idea/discrete`. Registered 2026-10-24 before new training.
 
-Latest follow-up: the p=97 binary A/B/C replication is in capacity calibration.
-A26/FF104 passed arithmetic and is being calibrated. B72/FF64 learned arithmetic
-and random labels but narrowly missed the strict capacity ceiling; B72/FF62 passed arithmetic on two development seeds and its own random-learning
-check, and is now being calibrated. Architecture matching and the nine confirmation runs are
-not yet complete. See [p97 development evidence](reports/p97_development/status.json)
-and the registered p97 record near the end of this file.
+Latest follow-up: the p=97 binary capacity match is accepted. A26/FF104 has
+26,910 parameters; binary B72/FF62 and ordinary continuous C each have82,872.
+All eight A/B calibration checkpoints passed independent audits. The frozen
+nine paired confirmation runs on seeds73/74/75 and C's capacity control are
+training; final speed/grokking results are not yet complete. See the
+[p97 capacity match](reports/p97_development/accepted_capacity_match.json).
 
 Previous follow-up: pre-softmax logit LayerNorm is implemented and tested. Both
 normalized seed-42 pilots completed 120k updates without passing arithmetic
@@ -2172,3 +2172,45 @@ passing independent audit. Checkpoint SHA256:`2fc1ecb09e2dce5810a42c0df375634696
 Its two n8192 capacity seeds are now running; both n16384 seeds are queued for
 the GPU released when A26's full grid completes. Finalizer status and command
 history are in `results/discrete/p97-v9/finalizer.json`.
+
+
+A26's four120k capacity cells completed. Per-seed max-over-size estimates are
+31,608.686332 bits (seed61) and31,579.711267 bits (seed62). They remain within10% of the30,866.284423-bit target. Final
+independent grid audits and the A/B cross-match are still required. B72/FF62's
+four cells are now all running, with both n16384 seeds launched after A released
+cuda:1. B72/FF60 seed42 exhausted120k below its arithmetic gate and has no
+random runs; seed41 remains in development.
+
+Before confirmation, preserve the scientific code/config checkout at commit
+`aa70459` in `results/discrete/source-worktrees/p97-v9`. This detached snapshot
+leaves the working branch `idea/discrete` unchanged and supports later report
+revalidation without relying on future model-code edits.
+
+
+## Accepted p97 architecture match and frozen confirmation
+
+The full paired grid passed with target 30866.284423 bits and raw B/A parameter ratio 3.079599. All eight final checkpoints were independently audited before confirmation.
+
+| Calibration seed | A capacity (bits) | B capacity (bits) | A / target | B / target |
+|---|---:|---:|---:|---:|
+| 61 | 31608.686332 | 33446.009186 | 1.024052 | 1.083577 |
+| 62 | 31579.711267 | 33425.687474 | 1.023113 | 1.082919 |
+
+A is width26/FF104, 26,910 parameters. B is width72/FF62 with full-width binary
+RMS/clipped-STE states at each block boundary, 82,872 parameters. C is an ordinary
+continuous width72/FF62 transformer with exactly the same parameter tensors
+and paired initialization as B. The FF width is internal to each residual
+block; the state crossing a block boundary has72 coordinates.
+
+The parameter count and capacity match were frozen before any confirmation.
+Run seeds73/74/75 in ABC/BCA/CAB order with the unchanged optimizer, split and
+120k-update maximum. These configurations are in
+`results/discrete/p97-confirmation-v9-quantized-rms/selection.json` and
+`configuration.yaml`. C's paired n8192/seed61 random-label capacity control is
+under `results/discrete/p97-v9/capacity-C`. Final reporting must wait for all
+nine outcomes and the independent audits, with missing crossings preserved.
+
+The p97 report identifies the first-passage grokking metric as specified before
+this replication, and limits development history to its p97 runs, including
+nested calibration folders. This metadata change does not alter thresholds,
+selection, training, or delay calculations.
