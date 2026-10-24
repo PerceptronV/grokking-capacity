@@ -682,14 +682,27 @@ on GPU0. The worker automatically executes the remaining frozen runs and refuses
 to substitute a different model after seeing fresh outcomes.
 
 A_s43 completed at 3100 updates, final held-out 99.7279%, with sustained 95% at 2700
-and 99% at 2900. B_s43 was still below sustained 99% after 24,900 updates, with train
-and held-out fluctuating together. This early result favours A but is not an
-aggregate conclusion. Retain the registered 60k budget and all remaining seeds;
-failed generalisation is not counted as successful avoidance of grokking.
+and 99% at 2900. B_s43 exhausted its 60k budget: final train 97.1250%, held-out
+96.8076%, sustained 95% train/held-out at 4900, and no sustained held-out 99%
+crossing. Independent CPU reloads reproduce both final results, and B's internal
+codes are exactly on the finite grid. C_s43 is training; the remaining fresh seeds
+are still pending. This early result favours A but is not an aggregate conclusion.
+Retain the registered budget and remaining seeds; failed generalisation is not
+counted as successful avoidance of grokking.
 
 Remaining work: let all nine confirmation runs complete; independently audit
 final checkpoints and paired data/initial tensors; recompute capacity acceptance;
 analyse all 95/99 crossing metrics, sampled memorisation spans, timing/censoring,
 and paired seed differences; produce reviewable plots/tables and a final report.
 Do not mark the objective complete while any of this is missing. Implementation
-and focused analysis checks: 18 passed. Training scientific sources remain unchanged.
+and focused analysis checks: 20 passed. Training scientific sources remain unchanged.
+
+`scripts/report_discrete.py` prepares the final numerical evidence and plots only
+after all nine runs finish and their independent checkpoint audits exist. It
+revalidates the frozen configurations, calibration hashes, capacity acceptance,
+paired datasets/initial tensors, and arithmetic-before-random ordering. It exports
+all crossings (including examples/epochs/shared-hardware seconds), missing values
+for censored crossings, explicitly labelled observed-only medians, paired ratios,
+full curves and compact run evidence. A retrospective ordering check found all
+17 discrete random-label runs followed a successful gate for their exact model;
+none of the failed arithmetic recipes entered calibration.
