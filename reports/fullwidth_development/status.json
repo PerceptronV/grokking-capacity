@@ -1,0 +1,10 @@
+{
+  "scope": "Full-width development only; obsolete learned narrow channels excluded.",
+  "comparison_status": "No accepted full-width capacity-matched A/B/C selection yet.",
+  "counts": {
+    "arithmetic": 22,
+    "capacity": 13
+  },
+  "accuracy_note": "Categorical primary traces are sampled; hard-mode traces are separate. Null crossings are unobserved, not budget times.",
+  "capacity_note": "Above-target screens establish lower bounds, not saturated capacity estimates. Arithmetic label fit is not a capacity measurement."
+}

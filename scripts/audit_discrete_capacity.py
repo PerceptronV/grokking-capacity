@@ -21,7 +21,10 @@ def audit_capacity(path):
     assert cfg['task'] == 'random'
     if not ((path / 'summary.json').exists() or (path / 'screen_rejection.json').exists()):
         raise ValueError('Audit a completed or explicitly rejected screen, not a live worker')
-    checkpoint = path / 'checkpoint.pt'
+    rejection = json.loads((path / 'screen_rejection.json').read_text()) if (path / 'screen_rejection.json').exists() else {}
+    checkpoint = path / rejection.get('checkpoint_file', 'checkpoint.pt')
+    if rejection.get('checkpoint_sha256'):
+        assert hashlib.sha256(checkpoint.read_bytes()).hexdigest() == rejection['checkpoint_sha256']
     saved = torch.load(checkpoint, map_location='cpu', weights_only=False)
     assert saved['scientific']['config'] == cfg
     assert saved['scientific']['source_hashes'] == manifest['source_hashes'] == source_hashes()
@@ -39,10 +42,12 @@ def audit_capacity(path):
     categorical = cfg['model'] == 'categorical'
     cpu_loss, cpu_acc = evaluate(model, x, y, categorical_mode=categorical)
     prefix = 'train_mode' if categorical else 'train'
-    assert abs(cpu_acc - row[prefix + '_acc']) < 1e-6
-    # Hard quantization can amplify tiny CPU/GPU arithmetic differences.
-    # Keep a tight cross-device bound, then reproduce the original-device
-    # measurement separately below (q4 observed delta: 1.72e-5 nats).
+    # Binary quantization produced one CPU/GPU prediction difference at a
+    # zero boundary (CPU 0, GPU 3.58e-7) in the d80/FF480 checkpoint. Permit
+    # at most one example for quantized cross-device accuracy, still require
+    # tight loss agreement and reproduce original-device metrics below.
+    cpu_accuracy_tolerance = 1e-6 + (1 / len(x) if cfg['model'] == 'quantized' else 0)
+    assert abs(cpu_acc - row[prefix + '_acc']) < cpu_accuracy_tolerance
     assert abs(cpu_loss - row[prefix + '_loss']) < 1e-4
     device = torch.device(manifest['device'])
     model.to(device)
@@ -61,8 +66,12 @@ def audit_capacity(path):
                   param_count=count_parameters(model), dataset_sha256=manifest['dataset_sha256'],
                   scientific_source_hashes=source_hashes(), cpu_loss=cpu_loss, cpu_accuracy=cpu_acc,
                   cpu_mode_evaluation=categorical, cpu_loss_difference=cpu_loss-row[prefix + '_loss'],
+                  cpu_accuracy_difference=cpu_acc-row[prefix + '_acc'],
+                  cpu_accuracy_tolerance=cpu_accuracy_tolerance, cpu_loss_tolerance=1e-4,
                   original_device_mode_loss=original_mode[0], sampled_loss=sampled_loss,
-                  sampled_accuracy=sampled_acc, checkpoint_capacity_bits=max(information(cpu_loss), information(sampled_loss)),
+                  sampled_accuracy=sampled_acc,
+                  checkpoint_capacity_bits=max(information(cpu_loss), information(sampled_loss), information(original_mode[0])),
+                  cpu_original_mode_capacity_difference_bits=information(cpu_loss)-information(original_mode[0]),
                   fixed_dataset_target_bits=target, gate=manifest['gate'])
     if (path / 'screen_rejection.json').exists():
         # A trace peak is insufficient for this assertion: reloaded weights

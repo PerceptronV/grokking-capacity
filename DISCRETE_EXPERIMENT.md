@@ -17,13 +17,15 @@ runs as historical attempts. Their gate and capacity match do not validate the
 new architectures. The unfinished old B seed was scope-stopped, not declared a
 learning failure. The ordinary continuous controls remain ordinary-model data.
 
-Current full-width evidence: scalar q16 and q4 with the clipping-aware surrogate
-have passed independent arithmetic audits. q16's random-label screen already
-exceeds the dataset target (114,086.64 bits at a saved observation), so it is
-rejected as a capacity-matched B; this is a demonstrated lower bound, not a
-plateau estimate. q4 also exceeds the target in its saved capacity screen and is rejected. Fresh-source A44 calibration continues.
-Binary scalar q2 has passed arithmetic, but its saved capacity screen also exceeds the target; categorical models remain in arithmetic development. No new
-A/B/C capacity-matched comparison has been selected yet.
+Current full-width evidence: scalar alphabets 2, 4, and 16 have passed
+independent arithmetic audits. All tested width96/two-block scalar recipes
+exceed the fixed capacity target in saved random-label checkpoints. The two
+successful native-width/FF variants (72/576/q4 and80/480/q2) also exceed it.
+These are demonstrated lower bounds, not plateau estimates. Categorical models
+remain in arithmetic development; some sustain99% held-out under hard argmax,
+but none has yet passed the registered sampled99% gate. Fresh-source A44
+calibration continues. No full-width capacity-matched A/B/C comparison has been
+selected. See `reports/fullwidth_development` for all development runs.
 
 The fixed task remains **p149 modular division, 50% training split** and a
 79,810.65-bit label-information target. New A/B/C comparisons are required for
@@ -988,3 +990,38 @@ The fixed p149 split, target bits, ±10% matches, >=4 parameter ratio, multiple
 calibration sizes/seeds, and fresh paired A/B/C comparison remain unchanged.
 Gate matching now explicitly includes optimizer settings and the FF/normalization
 settings as well as all discrete architecture settings.
+
+The v4 scalar candidates (72,FF576,q4) and(80,FF480,q2) passed arithmetic at
+10,600/11,500 terminal updates, with held-out99.2019%/99.6009%, respectively.
+After independent audits, screen each at n16,384/32,768 seed61 with120k updates
+and the existing above-target stopping rule. Recalibrate A44 under v4 at both
+sizes and seeds61/62, also120k, so final comparisons cannot mix code or horizons.
+Calibration cells may run concurrently; final paired modular comparisons remain
+serial and primarily measured in optimizer updates, with shared-machine timing
+limitations recorded. No capacity match is claimed before completed evidence.
+
+Normalized categorical pilots learn much better: both exceeded96% held-out by
+9k updates, but remain below the gate around21k. Register sharper normalized
+pilots at(width96,temperature0.1) and(width58,temperature0.03), alphabet16,
+original optimizer, seed42/120k. All states remain sampled hard one-hots; no
+random-label tests are admitted by this arithmetic-only amendment.
+
+The first v4 scalar screens also exceeded87,791.72 bits. Both were stopped by
+the registered rejection rule; each exact witness is preserved separately as
+`rejection_checkpoint.pt` with its SHA256, so a concurrent newer checkpoint
+cannot erase the observed lower bound. Independent audits use that witness.
+The user's preference is pending on two explicit protocol clarifications:
+primary hard-mode versus sampled categorical evaluation, and whether the
+agent-added >=4x parameter cutoff should remain or permit >=3x. Until answered,
+existing acceptance criteria remain in force; no categorical random labels run.
+
+The width80/FF480 binary capacity witness reproduces its original GPU loss and
+accuracy exactly. CPU differs on one of16,384 examples: block2's pre-quantizer
+coordinate is0 on CPU and3.576e-7 on GPU, straddling the binary rounding boundary.
+The saved `cpu_gpu_diagnostic.json` identifies the checkpoint, example, and
+coordinate. CPU loss differs by3.23e-5 nats (under1 bit of measured capacity).
+For quantized checkpoints, the CPU audit now permits at most one prediction
+of accuracy difference while retaining loss tolerance1e-4 and the strict
+original-device checks. Both CPU and GPU must independently exceed the target
+for rejection. This numerical tolerance amendment follows the observed
+cross-device discrepancy; it changes no training, source model, or match bound.
