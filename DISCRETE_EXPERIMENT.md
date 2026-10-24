@@ -2065,3 +2065,24 @@ at approximately the same raw parameter budget. Configs:
 `configs/discrete_p97_v7_{learning,random_learning,capacity_b,capacity_c}.yaml`.
 Its random stages remain conditional on its own audited arithmetic success.
 Earlier pilots continue to their registered stopping rule or120k budget.
+
+
+B72/FF64 passed its arithmetic gate at11,300 updates with
+99.656355% held-out and99.763745% training accuracy.
+Its independent checkpoint audit passed before random-label training. Its
+small random validation and conditional two-lane capacity queue start under
+`results/discrete/p97-v7`. The two calibration dataset sizes run in separate
+processes on cuda:0, each processing seeds61 then62. No stopping, optimizer,
+data, or acceptance criterion changes. A26 is still completing its arithmetic
+check; B64/FF108 and B60/FF128 retain their original arithmetic budgets.
+
+
+A26/FF104 completed its arithmetic check at41,600 updates with
+99.527490% held-out accuracy and passed independent checkpoint audit.
+Its capacity grid starts at `results/discrete/p97-v6/capacity-A` in two separate
+processes on cuda:1, one per dataset size, using B72's successful arithmetic gate.
+B72's small random validation completed10k updates at99.804688% accuracy and
+passed audit before its two-lane capacity grid began. B64/FF108 exhausted120k
+updates at95.6615% held-out accuracy, failed its gate, and has no random runs;
+its checkpoint was independently audited. B60/FF128 is still running its
+registered arithmetic budget. Capacity matching remains unconfirmed.
