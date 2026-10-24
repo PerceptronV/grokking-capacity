@@ -111,6 +111,18 @@ Sources checked against official implementation:
 Dreamer's published latent has 32 variables with 32 categories each; the
 mechanism is adapted here, rather than copying its dimensions or recurrent model.
 
+The internal reference is
+`language-regularisation/src/language_regularisation/common/interfaces.py`:
+its `straight_through` uses hard argmax forward with a softmax surrogate.
+`models/symbolic/shared/channel.py` sends hard values to consumer-owned
+embeddings; its probability diagnostics are separate from that interface.
+Our categorical adaptation uses DreamerV2 sampling during training, preserves
+the softmax surrogate, and places the hard state at every complete Transformer
+block boundary. The internal NEO quantizer uses a learned normalized codebook
+and an identity surrogate; our scalar family instead uses a fixed finite grid
+on every residual coordinate. Neither internal architecture is copied wholesale.
+
+
 ## Mandatory order
 
 1. Verify finite forward values, STE gradients, matched B/C parameters, and no
