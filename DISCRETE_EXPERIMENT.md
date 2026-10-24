@@ -10,23 +10,21 @@ capacity, and failure to grok is not success unless generalisation succeeds.
 
 ## Current experiment status
 
-The user selected **p149 modular division with a fixed 50% split**. The target is
-79,810.65 bits, measured as training examples times log2(p+2). Both A and B must
-match this target and each other within 10%, with B/A parameter ratio at least 4.
-Matching A to B alone is explicitly insufficient. Earlier p97/p163 explorations
-remain in the history and do not redefine the final task.
+The fixed task is **p149 modular division, 50% training split**, with a
+79,810.65-bit label-information target. The completed calibration accepts A44 and
+B14q64 under the registered empirical criterion. A's per-seed peak estimates are
+78,516.19/78,755.65 bits; B's are 81,896.76/82,972.08. Both match the dataset and
+each other within 10%, with two sizes and two seeds, 60k updates, and late drift
+below 5%. A has 75,460 parameters; B/C have 329,952 (ratio 4.3725).
 
-The current small-model candidate is A44: 75,460 parameters and 78,516 demonstrated
-bits after 60k updates on n16384,seed61. Repeated sizes and seeds are running.
-B16q64 is rejected: its longer calibration reached 89,670 bits, above 87,792.
-The narrower B14q64 (329,952 parameters) passed its own arithmetic gate and
-independent CPU audit at 99.85% held-out. Its seed61 capacity checks are running
-at both n16384/32768. **No capacity match or fresh-seed comparison is accepted.**
-
-The B16/C16 development comparison favoured C. B14's continuous control and the
-wider coarse-channel arithmetic diagnostics remain separate development runs.
-Failed arithmetic recipes are excluded from random labels. Use
-`python scripts/discrete_status.py --active-only` for verified live progress.
+This is a finite-budget empirical match, not a proved representational limit.
+The larger random datasets yield lower learned memory, a retained optimisation
+limitation. B14q64 passed its own arithmetic gate and CPU audit before calibration.
+The pair is now frozen for fresh modular seeds43/44/45, with the exact continuous
+C14 control and rotated execution order on one GPU. **No fresh-seed conclusion
+is claimed before those runs finish.** All unsuccessful exploratory recipes stay
+in the record. Use the run manifests and confirmation orchestrator state for
+current progress.
 
 ## Mandatory order
 
@@ -611,7 +609,7 @@ Complete A44 n16384 seed62 at60k:78,755.65 bits (late relative drift1.33%), clos
 matching seed61's78,516.19. A44 n32768 seed61 completed at68,912.07 bits (drift1.86%).
 The lower larger-data result is retained as optimisation/budget dependence; the
 registered primary estimate remains the maximum across tested sizes per seed.
-All remaining A44/B14q64 seed/size cells are now launched with60k budgets.
+All remaining A44/B14q64 seed/size cells are now launched with 60k budgets.
 
 Prepare descriptive C14 capacity controls at n16384/32768,seed61,60k updates using
 the matching B14 arithmetic gate. Config: discrete_capacity_p149_c14.yaml. These
@@ -624,13 +622,13 @@ A/B/C order across seeds43/44/45 (ABC,BCA,CAB), serially on one GPU after matchi
 
 A44's completed peak estimates are78,516.19 bits at n16384/seed61,
 78,755.65 at n16384/seed62, and68,912.07 at n32768/seed61. Its remaining n32768/seed62
-cell is running. All four B14q64 calibration cells are running with60k budgets.
+cell is running. All four B14q64 calibration cells are running with 60k budgets.
 Intermediate n16384 peaks were80,991/80,811 bits on seeds61/62; these remain
 provisional. The fixed target and acceptance rules have not changed.
 C14's descriptive n16384/32768 seed61 capacity controls have also started, after
 the B14 arithmetic gate and audit. They do not determine A/B selection.
 
-Both wide coarse discrete models exhausted60k arithmetic updates and failed:
+Both wide coarse discrete models exhausted 60k arithmetic updates and failed:
 64-coordinate binary held-out19.21%, four-level21.19%. They are excluded from
 random-label tests. Their exact continuous control reached99.74% held-out at
 24k updates, with95% train/test crossings800/2000 and99% crossings4100/23800.
@@ -645,3 +643,30 @@ order on one GPU, without overlapping our other workers on that GPU. Report
 successful and censored runs, all95/99 metrics, sampled memorisation spans,
 parameter/capacity ratios, paired curves, and shared-hardware timing limitations.
 No A44 modular outcome or fresh confirmation seed has been inspected yet.
+
+## Accepted empirical match and frozen confirmation
+
+All eight A44/B14q64 calibration cells completed their 60k budgets and passed
+scripts/assess_discrete_match.py without exceptions. Result:
+results/discrete/p149_match_assessment.json. Seed61 A/B=78,516.19/81,896.76 bits;
+seed62=78,755.65/82,972.08. B exceeds A by 4.31% and 5.35%; each is within 4% of the
+79,810.65-bit target. Parameter ratio 329,952/75,460=4.37254. All late drifts are
+below the pre-registered 5% threshold; both dataset sizes are non-interpolated.
+The empirical estimate is the registered maximum across tested sizes per seed.
+
+The current candidate is frozen using capacity evidence only. Before launch,
+none of A44's modular outcomes or confirmation seeds43/44/45 were inspected.
+`scripts/confirm_discrete.py` recomputes acceptance, validates the original discrete
+arithmetic gate/audit and training-source identity, records hashes of all input
+artifacts, and freezes exact model configurations. It waits for our other workers
+on the chosen GPU, then runs ABC/BCA/CAB order for seeds43/44/45 with 60k limits.
+Failed or censored runs are retained. It supports explicit provenance-checked
+resume and refuses concurrent duplicate workers. Entry point:
+`PYTHONPATH=src python -m scripts.confirm_discrete`.
+Eighteen focused checks pass, including fresh-data pairing and rotation order.
+
+Development outcomes retained: B14q128 exhausted 60k at 82.58% held-out; C14 at 90.11%.
+Both final checkpoints were independently reloaded, and their data/initial-tensor
+hashes match successful B14q64. More quantisation levels did not monotonically
+improve learning. These development outcomes do not alter the frozen models,
+optimizer, dataset, seed set or capacity criterion.
