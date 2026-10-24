@@ -38,18 +38,27 @@ def analyse(root):
         mean = float(tail.mean()) if len(tail) else None
         drift = mean - float(np.mean([r['train_bits'] for r in previous])) if mean is not None and previous else None
         completed = (path.parent / 'summary.json').exists()
+        best = max(trace, key=lambda r: r['train_bits'])
         row = dict(name=path.parent.name, model=config['model'], dim=config['dim'],
+                   p=config['p'], depth=config['depth'], heads=config['heads'],
+                   lr=config['lr'], weight_decay=config['weight_decay'], dropout=config['dropout'],
+                   max_steps=config['max_steps'], batch_size=config['batch_size'],
                    latent_dim=config.get('latent_dim'), levels=config.get('levels'),
                    seed=config['seed'], n_samples=n, params=manifest['param_count'],
                    completed=completed, steps=trace[-1]['step'],
                    train_acc=trace[-1]['train_acc'], label_bits=ceiling,
-                   final_bits=trace[-1]['train_bits'], tail_mean_bits=mean,
+                   final_bits=trace[-1]['train_bits'], best_bits=best['train_bits'],
+                   best_bits_step=best['step'],
+                   best_train_acc=max(r['train_acc'] for r in trace),
+                   best_fraction_of_dataset=best['train_bits'] / ceiling,
+                   tail_mean_bits=mean,
                    tail_std_bits=float(tail.std()) if len(tail) else None,
                    late_window_drift_bits=drift,
                    tail_bits_per_parameter=mean / manifest['param_count'] if mean is not None else None,
                    tail_fraction_of_dataset=mean / ceiling if mean is not None else None,
-                   interpretation='running' if not completed else (
-                       'dataset-limited: increase n' if mean is not None and mean / ceiling >= .95
+                   interpretation=('stopped: scope changed' if (path.parent / 'scope_stop.json').exists()
+                                   else 'incomplete: inspect process status') if not completed else (
+                       'dataset-limited: increase n' if best['train_bits'] / ceiling >= .95
                        else 'finite-budget: need more n, seeds and horizon checks'))
         rows.append(row)
     output = root / 'analysis'

@@ -20,8 +20,10 @@ capacity, and failure to grok is not success unless generalisation succeeds.
    Use multiple dataset sizes, independent seeds, and horizon extensions where
    capacity is not saturated. Distinguish failed optimisation, dataset-limited
    measurements, finite-budget estimates and demonstrated plateaus.
-3. Select A/B by calibration only: aim for capacity within 10%, target capacity
-   near dataset label complexity, B/A parameter ratio >=4. Freeze selection
+3. Select A/B by calibration only: require each model's empirical capacity within
+   10% of the fixed modular training-set label complexity AND within 10% of each
+   other, with B/A parameter ratio >=4. Matching A to B alone is insufficient.
+   Keep the training split fixed at 50%; tune models to the dataset. Freeze selection
    before fresh modular seed comparisons. C has B's architecture/parameter
    tensors/initial weights, with quantisation disabled. If no defensible match
    is found, report that and continue calibration rather than claiming a match.
@@ -179,7 +181,7 @@ fit is claimed. The remaining work is to finish calibration, extend unresolved
 curves, choose the empirical match, then run and analyse fresh paired modular
 seeds. Preserve unsuccessful recipes and censoring.
 
-Active queues (verify process start identities from each manifest before acting):
+Historical queues at registration (use scripts/discrete_status.py for current activity):
 
 | Queue | Worker PID | Execution session | Configuration |
 | --- | ---: | ---: | --- |
@@ -216,3 +218,143 @@ results/discrete/narrow_development_comparison.pdf (and PNG). Refresh full
 learning summaries with scripts/analyse_discrete.py and calibration summaries
 with scripts/analyse_discrete_capacity.py. The test result remains 11/11 focused
 checks and 48/49 full tests, with the unchanged legacy mup_base grouping failure.
+
+## Calibration continuation — 24 October 2026
+
+The previous goal turn made progress: implemented/audited discrete learning,
+recorded both failures and successes, and launched gated capacity screens. On
+continuation all four workers were verified live; none was restarted.
+
+Initial arithmetic A_d24 reached sustained held-out 99% at update 8900; A_d16
+exhausted 30,000 updates at 79.51% held-out. These cannot yet be contrasted as
+capacity-equivalent with B. The initial B_l16_q8 screen ended at 50,412 bits on
+8192 random examples, above the roughly 24,000-bit developing A_d24 screen.
+Register wider continuous capacity probes at dimensions 28/32/40/46, n=16384,
+seed 61, 20,000 updates, keeping the optimiser fixed. The largest of these still
+has fewer than one quarter of B_l16_q8's parameters. Selection uses capacity
+results, not their as-yet-unseen modular performance.
+
+`scripts/extend_discrete.py` permits longer calibration from an exact terminal
+checkpoint in a new output directory. Only max_steps changes; model, optimiser,
+batch order/cursor, RNG, and trace are preserved. It stores the original scientific
+declaration and checkpoint/manifest/summary hashes. The original run is immutable;
+the extension is explicitly adaptive and does not retroactively change its budget.
+This retains the unchanged training implementation and arithmetic-gate source
+binding. Capacity curves still increasing at 20k updates will be extended to 60k
+before being used to claim a match.
+
+Capacity-estimator clarification before matching: retain the **best achieved**
+M_T as a lower bound in addition to late-window averages/drift. C_l16_q8 reached
+100% random-label training accuracy and about53,756 of54,308 available bits, then
+sometimes forgot labels under continued AdamW training. A lower tail mean must
+not be called a smaller capacity if the model already demonstrated a larger fit.
+The capacity summary now flags dataset limitation using best achieved bits,
+rather than terminal or tail bits alone. This follows the original upper-envelope
+interpretation; it is not evidence that the best noisy observation is a saturated
+capacity. Selection will require repeated seeds, larger datasets and horizon checks.
+
+The fixed-rate checkpoint extension test passed with exact final weights, batch
+state, RNG, and non-timing traces versus uninterrupted training, with nonzero
+dropout; the parent checkpoint bytes remained unchanged. Focused tests:12 passed.
+Register 20k ->60k extensions for initial B_l16_q8 at n8192 and small A_d24 at
+n8192 as convergence checks, retaining their original runs. These are diagnostics,
+not a claim that this particular pair is capacity-matched.
+
+The independently audited B_l8_q16 recipe is now admitted to its own screen:
+8192/16384/32768 examples, seed61,20,000 updates; include its continuous control at
+16384 examples. This tests a stronger candidate bottleneck without conflating
+failure to learn arithmetic with reduced capacity. It runs on GPU0, whose available
+memory was rechecked; capacity-step comparisons do not use cross-GPU wall time.
+The final fresh-seed A/B/C timing comparison remains serial on one device.
+
+## Task-size adaptation from capacity evidence
+
+Before seeing any p163 arithmetic outcome, register a p163 modular-division
+learning gate for the fast B_l16_q8 recipe and its paired C. At p97/50% split,
+the training labels contain30,866 bits, whereas this B already demonstrated
+66,611 bits on n16384 random examples and is still improving. A capacity match
+at that level would not test the intended near-dataset-capacity regime.
+At p163/50%,13203 training examples carry about97k bits, closer to the developing
+capacity estimates. Every A/B/C comparison will use one identical prime/split;
+p97 results remain exploratory and are not pooled with p163. This is task-size
+selection based on capacity, not selection on unseen p163 generalisation results.
+The p163 model has333,408 parameters; a width46 continuous A has83,122 (ratio4.01).
+Widths and capacity matches remain provisional. No random p163 experiment may
+start until that specific discrete architecture passes its new arithmetic gate.
+YAML configuration: configs/discrete_learning_p163.yaml, fresh task development
+seed42, at most60,000 updates with the same constant-rate optimiser.
+
+The stronger B_l8_q16 screen at n8192 ended near37,988 bits, while A_d32 at
+n16384 is developing toward a similar scale. This is a possible near-dataset-size
+match at p97 (dataset30,866 bits) and would retain an8x parameter ratio. However,
+B_l8_q16 learns fewer bits at n16384 under the short budget, indicating unresolved
+optimisation/data-size dependence. Do not accept this match yet. Extend its
+n8192 and n16384 screens to60k updates before choosing A. The p163 exploration
+remains separate; it does not replace this potentially informative p97 comparison.
+A negative result (large discrete B learns slower than matched A) remains a valid
+answer to the hypothesis; no selection rule requires a positive result.
+
+## Candidate-match confirmation registration
+
+The n8192 B_l16_q8 continuation completed 60k updates, reaching at most 51,131
+bits, versus 50,412 at 20k. Its n16384 screen demonstrated 69,419 bits, so the
+smaller-data plateau is not its overall capacity. The p163 arithmetic probe is
+still unsuccessful and remains excluded from random-label tests.
+
+For the stronger B_l8_q16 bottleneck, the n8192 extension has reached about
+39,544 bits, while A_d32 achieved 37,035 on n16384 at 20k. Its parameter ratio is
+317,664 / 39,264 = 8.09. Register a focused calibration comparison at 60k updates,
+seeds 61 and 62, and n8192/16384 for both models. Extend the existing seed61
+checkpoints, and use configs/discrete_capacity_match.yaml for missing cells.
+The primary empirical estimate is the maximum achieved memorisation across the
+registered dataset sizes, reported separately per seed and with tail drift.
+Both sizes are beyond interpolation for the candidate pair. This remains an
+optimiser- and budget-dependent estimate, not a proved representational bound.
+
+Accept the proposed width32 match only if the relative A/B difference is at most
+10% on each calibration seed, using A as the denominator. Increasing late curves
+or strong seed dependence will be reported as unresolved; no universal bits per
+parameter constant will be inferred. Do not pick a width using new modular
+results. After calibration freezes the choice, test paired modular seeds43/44/45
+with a 60k-update budget, using the same data, order, and optimiser across A/B/C.
+Run these comparisons serially on one GPU; report sustained 95/99 thresholds,
+train/test delay, maximum accuracy gap, loop wall time, and censored runs.
+
+The earlier proposed A_d24 60k diagnostic is dropped before launch: that width
+is far below either candidate's observed memory, and its extension cannot resolve
+the selected pair. Original results are retained. This is a documented scope
+reduction, not a changed result. The higher-capacity B_l16_q8 and p163 screens
+remain exploratory and do not replace this potentially negative comparison.
+
+## User correction: mandatory three-way match
+
+The user clarified that capacity(A), capacity(B), and modular training-set label
+complexity must all match; A is intended to be in the regime without memorisation
+followed by grokking. The user explicitly chose to keep the dataset fixed and tune
+the models, rather than change the split to accommodate the measured capacities.
+The 50% split is fixed. No final width32/B_l8_q16 comparison is accepted at p97:
+40k bits is materially above the 30,866-bit dataset target. The preceding
+candidate-match registration is superseded; its partial results remain diagnostics.
+
+Under the existing log2(p+2) convention, p97 requires 27,780–33,953 measured bits
+per model (10% tolerance around 30,866). Additionally require the A/B difference
+within 10%. All stopped workers retain checkpoints/traces and scope_stop.json;
+they are scope interruptions, not budget failures or evidence of saturation.
+The exploratory p163 task adaptation was stopped, and no p163 random tests ran.
+
+The user then suggested considering p147. Since 147=3*7^2, the current division
+implementation's Fermat inverse is invalid for that modulus. Prime149 with the
+same division task was recommended; p147 addition is the alternative presented.
+At p149/50%, 11,026 examples contain 79,811 bits, so the admissible per-model range
+would be 71,830–87,792 bits. Any new modulus needs its own discrete arithmetic
+gate before random-label training and recalibration with its actual vocabulary.
+The modulus/task choice is pending the user's response; the split remains 50%.
+Capacity matching does not mathematically guarantee absent grokking; A's curves
+must verify that intended experimental condition on the fresh seeds.
+
+Status tooling now distinguishes scope-stopped experiments and --active-only
+shows actual live workers. Extension manifests now record the continuation device
+and start time rather than copying those fields from the parent. For earlier
+extensions, the manifest's device could be inherited; command-line provenance in
+scope_stop.json identifies the actual continuation device. No timing comparison
+uses those exploratory runs.

@@ -1,0 +1,24 @@
+# The eight-coordinate recipe passed its own arithmetic gate before this probe.
+defaults:
+  task: random
+  p: 97
+  operation: '/'
+  depth: 2
+  heads: 1
+  dropout: 0.0
+  dim: 96
+  latent_dim: 8
+  levels: 16
+  seed: 61
+  lr: 0.001
+  weight_decay: 1.0
+  batch_size: 512
+  max_steps: 20000
+  eval_every: 200
+  checkpoint_every: 2000
+  stop_on_success: false
+runs:
+  - {name: B_l8_q16_n8192_s61, model: discrete, n_samples: 8192}
+  - {name: B_l8_q16_n16384_s61, model: discrete, n_samples: 16384}
+  - {name: B_l8_q16_n32768_s61, model: discrete, n_samples: 32768}
+  - {name: C_l8_q16_n16384_s61, model: continuous, n_samples: 16384}

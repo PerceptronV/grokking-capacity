@@ -1,0 +1,24 @@
+# Capacity-only A selection; no arithmetic outcomes from these widths used here.
+# Initial small A models store substantially fewer bits than successful B_l16_q8.
+defaults:
+  task: random
+  model: baseline
+  p: 97
+  operation: '/'
+  depth: 2
+  heads: 1
+  dropout: 0.0
+  seed: 61
+  lr: 0.001
+  weight_decay: 1.0
+  batch_size: 512
+  n_samples: 16384
+  max_steps: 20000
+  eval_every: 200
+  checkpoint_every: 2000
+  stop_on_success: false
+runs:
+  - {name: A_d28_n16384_s61, dim: 28}
+  - {name: A_d32_n16384_s61, dim: 32}
+  - {name: A_d40_n16384_s61, dim: 40}
+  - {name: A_d46_n16384_s61, dim: 46}

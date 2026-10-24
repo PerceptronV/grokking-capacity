@@ -1,0 +1,25 @@
+# Task-size development chosen from capacity evidence, before matched seed tests.
+# p163 at 50% split carries about97k label bits, closer to the candidate capacity.
+defaults:
+  task: modular
+  p: 163
+  operation: '/'
+  train_fraction: 0.5
+  depth: 2
+  heads: 1
+  dropout: 0.0
+  dim: 96
+  latent_dim: 16
+  levels: 8
+  seed: 42
+  lr: 0.001
+  weight_decay: 1.0
+  batch_size: 512
+  max_steps: 60000
+  eval_every: 100
+  checkpoint_every: 2000
+  sustained_evals: 3
+  stop_on_success: true
+runs:
+  - {name: B_l16_q8_p163_s42, model: discrete}
+  - {name: C_l16_q8_p163_s42, model: continuous}
