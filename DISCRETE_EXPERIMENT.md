@@ -1589,3 +1589,33 @@ Seed73 is complete and all three checkpoints passed independent audit. These are
 | C | 1,400 | 1,900 | 100.0000% |
 
 B ended at96.0729% hard-mode training accuracy and95.1206% hard-mode held-out accuracy; sampled held-out accuracy is90.9759%. It never reaches either first train99 or first held-out98 in this trace, so the supplementary paper-style delay remains unobserved. This is not evidence of successful grokking avoidance. A has zero measured paper-style delay and C has100 updates. The frozen B and remaining seeds are unchanged.
+
+
+## Rechecking the final evidence
+
+The original checkpoints remain under `results/discrete/`. Exported reports
+contain the frozen configurations, traces, independent audits, and artifact
+hashes. Report generation first validates all nine completed runs and refuses
+an unfinished queue. Once the categorical queue finishes, regenerate and
+validate the two reports from this repository root with:
+
+```bash
+PYTHONPATH=src:. python scripts/report_discrete.py \
+  results/discrete/fullwidth-confirmation-v6-quantized-rms \
+  --output reports/fullwidth_quantized_v6 \
+  --c-runs results/discrete/fullwidth-control-capacity-v6/C_baseline_d80_ff320_n16384_s61
+
+PYTHONPATH=results/discrete/source-worktrees/fullwidth-v5/src:. python scripts/report_discrete.py \
+  results/discrete/fullwidth-confirmation-v5-categorical-ff216 \
+  --output reports/fullwidth_categorical_v5_ff216 \
+  --c-runs results/discrete/fullwidth-control-capacity-v5/C_baseline_d104_ff216_n16384_s61
+```
+
+The categorical worktree is pinned to
+`d428975b217ecc566e82b45a4eaeeec36d1f1706`; it already exists on this host.
+On a new checkout, recreate that detached source worktree at the same relative
+path before using the categorical command. The original run/checkpoint
+directories are also required for independent revalidation; cloning the Git
+repository alone supplies the exported evidence, not the ignored checkpoints.
+The scalar source is the current v6 code. Per-run source hashes and snapshots,
+rather than the launch commit alone, bind the actual training implementation.
