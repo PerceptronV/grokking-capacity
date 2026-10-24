@@ -9,8 +9,8 @@
     }
   ],
   "counts": {
-    "arithmetic": 39,
-    "capacity": 38
+    "arithmetic": 40,
+    "capacity": 43
   },
   "accuracy_note": "Categorical raw traces retain sampled and hard-mode metrics separately; primary_evaluation records the registered policy. Null crossings are unobserved, not budget times.",
   "capacity_note": "Above-target screens establish lower bounds, not saturated capacity estimates. Arithmetic label fit is not a capacity measurement."

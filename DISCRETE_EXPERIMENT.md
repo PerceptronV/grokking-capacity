@@ -37,15 +37,19 @@ by10.52% and10.41%, respectively. All final checkpoints passed independent
 audit, but the historical peak weights were not retained; distinguish these
 recorded estimates from the independently reloaded lower-bound witnesses.
 Its queued C control was cancelled before any training. This recipe did pass
-arithmetic and its own small random-label learning checks. Width62/FF160/K8 is
-the new arithmetic-only follow-up, with3.0786x A's parameters and an ordinary
-C differing by-0.932% in count. No random labels are permitted before its own
-arithmetic gate and audit. Width70/FF288/K4 and both width60/K8 initializations
-completed120k below their arithmetic gates and have no random-label runs.
+arithmetic and its own small random-label learning checks. Width62/FF160/K8
+completed120k below the arithmetic gate (audited75.06% hard-mode held-out),
+so it has no random-label runs. Width62/FF216/K8 passed its own arithmetic
+checkpoint audit at14,900 updates (99.2472% hard-mode held-out,98.0863% sampled)
+and its own10k-update small random-label check (100% hard-mode,99.4141% sampled).
+Its four120k capacity cells are running on the paired datasets. This B has
+253,146 parameters (3.3547x A); ordinary C width104/FF216 has253,240 (+0.0371%).
+Width70/FF288/K4 and both width60/K8 initializations also completed120k below
+their arithmetic gates and have no random-label runs.
 
 Other audited scalar candidates, including normalized four-level width80/FF320,
 exceed the fixed capacity target. These rejection witnesses are lower bounds,
-not saturated capacity estimates. No categorical match or completed full-width
+not saturated capacity estimates. No categorical match or completed categorical
 A/B/C result is claimed. Seeds43/44/45 belong to the superseded narrow-channel
 experiments; corrected full-width confirmations use73/74/75.
 
@@ -1478,3 +1482,14 @@ learning_validation, so it cannot enter the capacity estimate or selection.
 Also prepare ordinary C width104/FF216 at n16384,seed61,120k updates as a
 descriptive control. Launch that C only if B's full capacity grid is accepted.
 The small validation and C control use the unchanged original optimizer.
+
+The FF160 arithmetic run completed120k and passed an independent audit of its
+failed result: hard-mode held-out75.05895%, sampled65.48159%. Its prepared
+capacity runs remain unstarted. FF216 passed the arithmetic gate at14,900
+updates and independent CPU/original-GPU checkpoint audit before any random
+training: hard-mode held-out99.24724%, sampled98.08635%. Its small random-label
+validation completed10k updates and independently reproduces100% hard-mode
+accuracy and99.4140625% sampled accuracy. This is learning evidence, not a
+capacity estimate. After its first n16384/seed61 screen reached the target
+band, start the remaining three registered capacity cells. All four use
+paired A datasets and the unchanged120k budgets and matching criteria.
