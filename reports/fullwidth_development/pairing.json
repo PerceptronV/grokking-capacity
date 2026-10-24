@@ -1,0 +1,124 @@
+{
+  "scope": "All launched v5/v6 capacity candidates and scalar continuous control, including rejected candidates.",
+  "cells": [
+    {
+      "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-capacity-v5/B_categorical_d58_k16_rms_t01_mode_n16384_s61",
+      "seed": 61,
+      "n_samples": 16384,
+      "dataset_sha256": "ea438e8c3ef9005ad39c6521546473c68804db5239bd053a80a23daa36728c31",
+      "matches_A": true
+    },
+    {
+      "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-capacity-v5/B_categorical_d62_k8_rms_t01_mode_n16384_s61",
+      "seed": 61,
+      "n_samples": 16384,
+      "dataset_sha256": "ea438e8c3ef9005ad39c6521546473c68804db5239bd053a80a23daa36728c31",
+      "matches_A": true
+    },
+    {
+      "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-capacity-v5/B_categorical_d62_k8_rms_t01_mode_n16384_s62",
+      "seed": 62,
+      "n_samples": 16384,
+      "dataset_sha256": "36f8333d761517f5df035fa99ed461d1281bd2effcf80b19f07d7b5d31bc9c49",
+      "matches_A": true
+    },
+    {
+      "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-capacity-v5/B_categorical_d62_k8_rms_t01_mode_n32768_s61",
+      "seed": 61,
+      "n_samples": 32768,
+      "dataset_sha256": "c188c91b6fc125ea1421a61aa93b6381eaf2499f55da57f84815d1c16d224638",
+      "matches_A": true
+    },
+    {
+      "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-capacity-v5/B_categorical_d62_k8_rms_t01_mode_n32768_s62",
+      "seed": 62,
+      "n_samples": 32768,
+      "dataset_sha256": "bc4e71f23655e0de91f6359ab498636d418546af3af2d341ed5c4f642446f226",
+      "matches_A": true
+    },
+    {
+      "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-capacity-v5/B_categorical_d72_k4_rms_t01_mode_n16384_s61",
+      "seed": 61,
+      "n_samples": 16384,
+      "dataset_sha256": "ea438e8c3ef9005ad39c6521546473c68804db5239bd053a80a23daa36728c31",
+      "matches_A": true
+    },
+    {
+      "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-capacity-v5/B_categorical_d72_k4_rms_t01_mode_n16384_s62",
+      "seed": 62,
+      "n_samples": 16384,
+      "dataset_sha256": "36f8333d761517f5df035fa99ed461d1281bd2effcf80b19f07d7b5d31bc9c49",
+      "matches_A": true
+    },
+    {
+      "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-capacity-v5/B_categorical_d72_k4_rms_t01_mode_n32768_s61",
+      "seed": 61,
+      "n_samples": 32768,
+      "dataset_sha256": "c188c91b6fc125ea1421a61aa93b6381eaf2499f55da57f84815d1c16d224638",
+      "matches_A": true
+    },
+    {
+      "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-capacity-v5/B_categorical_d72_k4_rms_t01_mode_n32768_s62",
+      "seed": 62,
+      "n_samples": 32768,
+      "dataset_sha256": "bc4e71f23655e0de91f6359ab498636d418546af3af2d341ed5c4f642446f226",
+      "matches_A": true
+    },
+    {
+      "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-capacity-v5/B_quantized_d80_ff320_q16_n16384_s61",
+      "seed": 61,
+      "n_samples": 16384,
+      "dataset_sha256": "ea438e8c3ef9005ad39c6521546473c68804db5239bd053a80a23daa36728c31",
+      "matches_A": true
+    },
+    {
+      "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-capacity-v5/B_quantized_d80_ff320_q4_n16384_s61",
+      "seed": 61,
+      "n_samples": 16384,
+      "dataset_sha256": "ea438e8c3ef9005ad39c6521546473c68804db5239bd053a80a23daa36728c31",
+      "matches_A": true
+    },
+    {
+      "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-capacity-v6/B_quantized_d80_ff320_q2_rms_n16384_s61",
+      "seed": 61,
+      "n_samples": 16384,
+      "dataset_sha256": "ea438e8c3ef9005ad39c6521546473c68804db5239bd053a80a23daa36728c31",
+      "matches_A": true
+    },
+    {
+      "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-capacity-v6/B_quantized_d80_ff320_q2_rms_n16384_s62",
+      "seed": 62,
+      "n_samples": 16384,
+      "dataset_sha256": "36f8333d761517f5df035fa99ed461d1281bd2effcf80b19f07d7b5d31bc9c49",
+      "matches_A": true
+    },
+    {
+      "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-capacity-v6/B_quantized_d80_ff320_q2_rms_n32768_s61",
+      "seed": 61,
+      "n_samples": 32768,
+      "dataset_sha256": "c188c91b6fc125ea1421a61aa93b6381eaf2499f55da57f84815d1c16d224638",
+      "matches_A": true
+    },
+    {
+      "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-capacity-v6/B_quantized_d80_ff320_q2_rms_n32768_s62",
+      "seed": 62,
+      "n_samples": 32768,
+      "dataset_sha256": "bc4e71f23655e0de91f6359ab498636d418546af3af2d341ed5c4f642446f226",
+      "matches_A": true
+    },
+    {
+      "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-capacity-v6/B_quantized_d80_ff320_q4_rms_n16384_s61",
+      "seed": 61,
+      "n_samples": 16384,
+      "dataset_sha256": "ea438e8c3ef9005ad39c6521546473c68804db5239bd053a80a23daa36728c31",
+      "matches_A": true
+    },
+    {
+      "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-control-capacity-v6/C_baseline_d80_ff320_n16384_s61",
+      "seed": 61,
+      "n_samples": 16384,
+      "dataset_sha256": "ea438e8c3ef9005ad39c6521546473c68804db5239bd053a80a23daa36728c31",
+      "matches_A": true
+    }
+  ]
+}

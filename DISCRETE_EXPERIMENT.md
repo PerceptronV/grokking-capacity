@@ -17,16 +17,22 @@ runs as historical attempts. Their gate and capacity match do not validate the
 new architectures. The unfinished old B seed was scope-stopped, not declared a
 learning failure. The ordinary continuous controls remain ordinary-model data.
 
-Current full-width evidence: scalar alphabets2,4,16 have passed independent
-arithmetic audits, but the tested width96 and larger-FF scalar candidates exceed
-the fixed capacity target. Categorical width58/K16 passed the source-v5 hard-mode
-arithmetic gate (99.03% held-out; sampled96.86%) and learned random labels. Its
-independently audited hard-mode capacity witness exceeds92,238 bits, so it is
-also rejected as a match. These rejections are demonstrated lower bounds, not
-plateau estimates. Categorical width62/K8 has also passed its independent hard-mode arithmetic
-audit (99.25% held-out) and entered capacity calibration. Scalar width80/FF320
-with16 levels has passed arithmetic (99.69% held-out); its screen follows its
-independent audit. Other candidates remain in arithmetic development. No full-width capacity-matched A/B/C selection exists yet.
+Current full-width evidence: both categorical and scalar-quantized models have
+passed independent arithmetic audits and small random-label learning checks.
+Categorical width58/K16 and width62/K8 have independently audited above-target
+capacity witnesses of92,238.31 and88,381.03 bits, respectively, so neither is a
+match. Width72/K4 passed arithmetic (99.23% hard-mode held-out accuracy) and its
+four-cell capacity calibration is running. Width60/K8 remains in arithmetic
+development and has no random-label runs.
+
+Normalized binary scalar width80/FF320 passed arithmetic (99.20% held-out
+accuracy), and its four-cell capacity calibration is running. The normalized
+four-level counterpart passed arithmetic (99.12%) but is rejected by an
+independently audited20k checkpoint storing98,485.70 bits. Earlier width96,
+larger-FF, and unnormalized four-/sixteen-level scalar candidates also exceed
+the fixed target. Rejection witnesses are lower bounds, not saturated capacity
+estimates. The ordinary width80 scalar C has begun its descriptive capacity
+control. No full-width capacity-matched A/B/C selection exists yet.
 
 A44's four120k calibration cells are complete and independently audited. The
 per-seed estimates are80,552.69 and80,438.20 bits, each within1% of the79,810.65-bit
@@ -1207,3 +1213,63 @@ gate is transferred to rms_clipped; the new surrogate still requires its own
 successful arithmetic checkpoint. Discrete calibration and confirmation retain
 exact within-arm source matching. Evidence is saved in
 reports/fullwidth_development/scalar_normalization_source_equivalence.json.
+
+The width62/K8 categorical screen reaches87,283 bits by65.2k, still below the
+87,791.72-bit ceiling but near its upper edge. Register a local native-width
+refinement to60/K8, keeping RMS,temperature0.1,mode-primary,seed42,optimizer,
+and120k arithmetic budget unchanged. It has248,820 parameters (3.30x A44), and
+ordinary C width84 has251,580 (+1.11%). This moves capacity toward the center of
+the fixed tolerance if the wider candidate ultimately exceeds it. It uses the
+frozen v5 categorical source and needs its own arithmetic audit. No confirmation
+speed is observed or used in this calibration choice.
+
+The scalar width80/FF400/q2 pilot completed120k below the99% arithmetic gate
+(final held-out98.64%); no random labels are permitted for that recipe. Stop the
+binary categorical width84/K2 development pilot after remaining near chance
+beyond60k to prioritize qualified capacity grids. Preserve its exact checkpoint
+and trace; label its original120k budget censored by scope change, not completed.
+
+Normalized binary width80/FF320 passed the v6 arithmetic gate at18,900 updates,
+with99.20% held-out accuracy. Its unnormalized counterpart completed120k at57.06%
+on the same development seed. This is development evidence, not the fresh-seed
+A/B/C comparison. After its independent audit, run the registered120k capacity
+grid at n16,384/32,768 and seeds61/62, beginning with seed61. The exact ordinary
+C has229,360 parameters. A's reuse is covered by the pinned baseline-equivalence
+audits; no calibration is inferred from the hard-state bit count.
+
+Width62/K8 eventually exceeded the fixed target ceiling in a saved96k checkpoint:
+88,381.03 bits versus87,791.72. Preserve that witness for audit and cancel its
+other three calibration cells with explicit scope-stop records. Do not relax the
+fixed tolerance or infer a plateau from partial cells.
+
+Register one additional development initialization for width60/K8 before launch:
+seed41 with data_seed42, preserving exactly the existing arithmetic train/test
+split, optimizer and architecture. Seed42 remains in the record. A successful
+seed41 run can establish arithmetic learnability, but is not confirmation speed
+evidence; fresh paired seeds43/44/45 remain untouched and will reveal reliability.
+This is a bounded initialization check after the width60 seed42 optimization
+stall, not a change to the capacity criterion or permission for unqualified
+random-label training.
+
+The normalized four-level width80/FF320 model also passed arithmetic at37,200
+updates (held-out99.12%). After independent audit, screen its registered120k
+capacity grid, starting n16,384 seed61. Both normalized scalar candidates share
+an exact ordinary continuous C (width80/FF320,229,360 parameters). Register that
+C's descriptive random-label control now: n16,384,seed61,120k updates,identical
+optimizer/data protocol. This control can serve either scalar candidate if a
+capacity match passes; its results cannot alter B selection. A dataset-limited
+C result is a lower bound, not a saturated capacity estimate.
+
+Verified that every launched v5/v6 capacity cell and the scalar continuous
+control uses exactly A's paired random dataset for its(seed,size), via saved
+dataset hashes. For any calibration following the width60 seed41/data42 arithmetic
+gate, do not inherit data_seed42 into random calibration: use data seeds61/62
+paired with A. The arithmetic-only data override keeps the development split
+fixed and is not part of the architecture. Pairing is required before acceptance.
+
+The normalized four-level scalar screen is now rejected: its saved20k checkpoint
+independently reproduces98,485.70 bits, above the87,791.72-bit ceiling. Preserve
+rejection_checkpoint.pt and its SHA; the remaining three registered cells are
+cancelled. This is a demonstrated above-target lower bound, not a completed
+120k calibration. Normalized binary calibration and the common continuous C
+control continue. The width62/K8 categorical96k rejection audit also passed.

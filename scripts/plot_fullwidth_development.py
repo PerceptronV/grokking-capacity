@@ -21,8 +21,10 @@ for row in rows:
         label = f"B categorical: width {row['dim']}, alphabet {row['alphabet']}"
     else:
         label = f"B scalar: width {row['dim']}, FF {row['mlp_dim']}, {row['levels']} levels"
+        if row.get('quantizer_surrogate') == 'rms_clipped':
+            label += ', RMS normalized'
     points.append((label, float(row['audited_checkpoint_bits'])/1000, True))
-fig, ax = plt.subplots(figsize=(10,5.7))
+fig, ax = plt.subplots(figsize=(11, max(5.7, .4 * len(points) + 1.8)))
 target = a['target_bits']/1000
 ax.axvspan(.9*target,1.1*target,color='#daf0df',label='Fixed dataset target ±10%')
 ax.axvline(target,color='#3c6548',ls='--',lw=1)
