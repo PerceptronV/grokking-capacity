@@ -1567,3 +1567,12 @@ results/discrete/fullwidth-confirmation-v5-categorical-ff216/selection.json.
 The nine-run confirmation and independent audit/report worker are live, with
 the descriptive ordinary-C capacity control on the other GPU. A_s73 is the
 first completed and audited confirmation; no categorical outcome is yet claimed.
+
+The categorical comparison's ordinary-C capacity control completed120k updates
+and passed independent CPU/original-GPU checkpoint audit. Its observed peak is
+117,657.87 bits; the independently reloaded final checkpoint reproduces
+117,581.61 bits and99.993896% accuracy (16,383/16,384 random labels). The final
+saved trace exactly matches the exported trace. This establishes a descriptive
+lower bound above matched A/B; the control is dataset limited and does not
+estimate a saturated C capacity. The peak weights were not retained separately.
+The nine registered arithmetic confirmations continue without configuration changes.
