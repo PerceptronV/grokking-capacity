@@ -8,6 +8,24 @@ and avoid the generalisation delay of an equally large continuous control?
 A positive result is not assumed. Lack of learning is not evidence of reduced
 capacity, and failure to grok is not success unless generalisation succeeds.
 
+## Current experiment status
+
+The user selected **p149 modular division with a fixed 50% split**. The target is
+79,810.65 bits, measured as training examples times log2(p+2). Both A and B must
+match this target and each other within 10%, with B/A parameter ratio at least 4.
+Matching A to B alone is explicitly insufficient. Earlier p97/p163 explorations
+are retained as history and do not redefine the final task.
+
+The p149 B_l16_q64 model passed its arithmetic gate and independent CPU audit:
+99.55% held-out accuracy at update 5600, with first sustained 99% train/test crossings
+at 2700/5400. Its initial random-label screen and smaller A44/A46/C16 screens have
+started. There is **no accepted capacity match or fresh-seed comparison yet**.
+The 8- and 16-level p149 recipes exhausted 60k updates below 88% held-out and
+failed their gates. C_l16 reached 100% train/test accuracy at 2000 updates, with
+sustained 99% crossings both at 1800. This development comparison does not support
+a benefit from discretisation; the matched smaller-A comparison remains open.
+Use `python scripts/discrete_status.py --active-only` for live progress.
+
 ## Mandatory order
 
 1. Verify finite forward values, STE gradients, matched B/C parameters, and no
@@ -370,7 +388,7 @@ at p149 has been observed when making this selection.
 Register configs/discrete_learning_p149.yaml: width96, two layers, seed42,
 16-coordinate channels with 8 or 16 levels; identical bounded-continuous control
 (the levels setting is inactive for C). All use lr0.001, weight decay1, dropout0,
-60k maximum updates, and the same sustained99 gate. The eight-level candidate
+60k maximum updates, and the same sustained 99% gate. The eight-level candidate
 was the fast development recipe at p97; the sixteen-level candidate tests whether
 more resolution restores learning on the larger task. There is no random-label
 training at p149 before a corresponding discrete arithmetic gate and audit pass.
@@ -405,17 +423,83 @@ not a proof of finite representational capacity or absence of grokking. Tests
 explicitly reject an equal A/B pair that exceeds dataset complexity.
 
 Arithmetic-only precision follow-up: after both p149 eight- and sixteen-level
-runs slowed near90% held-out beyond13k updates, register a 64-level variant at
-the same16-coordinate width, seed42 and all other settings unchanged. This is a
-precision diagnostic, not a capacity match. It needs its own sustained99 gate and
+runs slowed near 90% held-out beyond 13k updates, register a 64-level variant at
+the same 16-coordinate width, seed42 and all other settings unchanged. This is a
+precision diagnostic, not a capacity match. It needs its own sustained 99% gate and
 independent audit before random labels. The 79,811-bit target remains unchanged;
 a more accurate model that exceeds the target will be rejected for the final
-comparison. Initial recipes retain their60k budgets and are not declared failed
+comparison. Initial recipes retain their 60k budgets and are not declared failed
 based on an intermediate plateau. Config: discrete_learning_p149_precision.yaml.
 
 Prepare the same n16384/seed61 capacity screen for B_l16_q64, contingent on its
-own gate. It has the same330,720 parameters and initial tensors as the other
-16-coordinate candidates. At around4k updates its held-out accuracy is near99%,
+own gate. It has the same 330,720 parameters and initial tensors as the other
+16-coordinate candidates. At around 4k updates its held-out accuracy is near 99%,
 but the sustained gate has not yet passed. No calibration is launched on this
 intermediate result. The capacity-assessment tests and existing experiment tests
-all pass:15 focused checks.
+all pass: 15 focused checks.
+
+## p149 arithmetic gate passed before calibration
+
+B_l16_q64_p149_s42 completed at 5600 updates with train 99.7551% and held-out 99.5465%.
+Its three-evaluation 99% crossings were train 2700 and held-out 5400 (delay 2700),
+and maximum train/held-out accuracy gap was 20.01 percentage points. The independent
+CPU checkpoint audit reproduced both accuracies, source/data/initial-weight
+hashes, and exact finite grid values at both layers. All 11,026 held-out final
+codes were distinct; the 96-bit message alphabet does not imply compact weight
+memory. This is an arithmetic-success gate, not evidence that grokking vanished.
+
+Only after that audit, launch the p149 n16384/seed61 random-label screens for
+B_l16_q64, the paired continuous C, and smaller A widths44/46. Gate evidence is
+results/discrete/learning-p149-v1/B_l16_q64_p149_s42. Eight- and sixteen-level
+recipes remain in arithmetic training and are not admitted to random labels.
+The target stays 79,810.6507 bits; no match or fresh-seed outcome is claimed yet.
+
+The p149 B_l16_q64 learning curve does not show a clear long memorisation plateau:
+95% train/test crossings are1800/2100, and both rise together. The2700-update
+99%-threshold delay reflects fluctuations near the threshold: between2700 and
+5400, training dips below99% at10 of28 observations (minimum97.22%), and held-out
+accuracy never falls below96.50%. Do not equate that threshold statistic alone
+with strong evidence of classical grokking. Figure:
+results/discrete/p149_discrete_arithmetic_gate.pdf (also PNG).
+
+A44's first n16384/seed61 screen completed 20k updates: best72,817.61 bits, final
+training accuracy64.03%, late relative drift2.59%. It is inside the dataset target
+band but is not accepted yet. Launch the registered20k->60k continuation in
+results/discrete/capacity-p149-extensions-v1/A_d44_n16384_s61_60k. Selection still
+requires larger data, independent seeds and the discrete candidate's results.
+
+The p149 control C_l16 completed at 2000 updates with 100% train/held-out accuracy;
+sustained 99% crossings were both 1800 (zero threshold delay), and 95% train/test
+crossings 1300/1800. Its dataset and initial-tensor hashes are identical to B_l16_q64
+(levels is inactive in C). This development seed does not support discretisation
+as the source of faster learning or reduced grokking: C is faster, with no 99%
+threshold delay. The large-versus-small capacity-matched comparison is still open.
+Keep this negative result; do not select or discard models based on achieving the
+hoped-for C-groks/B-does-not pattern. Paired plot:
+results/discrete/p149_development_comparison.pdf (also PNG).
+
+The eight- and sixteen-level p149 recipes exhausted 60k updates at 87.82% and 87.54%
+held-out, respectively. Both failed the arithmetic gate and remain excluded from
+random-label testing. Their failure to grok is not evidence of useful regularisation.
+
+## Continuation checkpoint after p149 arithmetic validation
+
+Objective remains active and incomplete. No random-label jobs for failed p149
+B_l16_q8/B_l16_q16 were launched. B_l16_q64 and C_l16 both have successful independent
+CPU audits, matching data and initial tensors. Fifteen focused tests passed.
+
+Live work (verify using manifests/status tool; never restart a live worker):
+- capacity-p149-v1: A44 n16384 seed61 completed 20k; A46 follows in that queue.
+- capacity-p149-v1: C16 n16384 seed61 completed 20k; B16q64 follows in that queue.
+- capacity-p149-extensions-v1: A44 n16384 seed61 continuing 20k->60k.
+
+At an intermediate checkpoint A44's extension had demonstrated 75,589 bits,
+A46's initial screen 77,920, and B16q64's initial screen 83,039. These are not
+saturated capacities. The target is fixed at 79,810.65 bits. Complete/extend the
+candidate screens, reject any B that demonstrates >87,791.72 bits, and choose A
+using capacity evidence only. A44 and A46 modular confirmation outcomes remain
+unseen. The final candidate requires n32768, seed62, 60k horizons at both sizes,
+and assessment by scripts/assess_discrete_match.py before fresh modular seeds.
+If B16q64 exceeds the target, a narrower latent width may be probed, but it must
+first pass its own p149 arithmetic gate; do not interpret optimisation failure
+as reduced capacity. Preserve the negative C-vs-B development result regardless.

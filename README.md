@@ -50,19 +50,27 @@ Unless otherwise stated, the files and code in this repository are licensed unde
 
 ## Discrete latent experiment
 
-The `idea/discrete` experiment compares small continuous transformers with larger
-models containing finite scalar channels and parameter-matched continuous controls.
-The [protocol and evidence](DISCRETE_EXPERIMENT.md) specify an arithmetic-learning
-gate before random-label capacity calibration; development pilots are not yet a
-capacity-matched hypothesis test.
+The `idea/discrete` experiment compares a small continuous model A, a larger
+transformer B with finite internal representations, and its continuous control C.
+The fixed task is modular division at p=149 with a 50% training split. Both A and
+B must match the training set's 79,811-bit label complexity and each other within
+10%; matching A to B alone is insufficient. The [protocol and evidence](DISCRETE_EXPERIMENT.md)
+require successful discrete arithmetic learning before any random-label tests.
+No final capacity-matched result has been established yet.
 
 ```bash
 PYTHONPATH=src python -m grokking_capacity.experiments.discrete \
-  --config configs/discrete_learning.yaml --output results/discrete/learning-v1 --device cuda:1
-PYTHONPATH=src python scripts/analyse_discrete.py results/discrete/learning-v1
-PYTHONPATH=src python scripts/audit_discrete.py results/discrete/learning-v1/B_l32_q16
-PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=src python -m pytest -q tests/test_discrete.py
+  --config configs/discrete_learning_p149_precision.yaml \
+  --output results/discrete/learning-p149-v1 --device cuda:1
+PYTHONPATH=src python scripts/audit_discrete.py \
+  results/discrete/learning-p149-v1/B_l16_q64_p149_s42
+python scripts/discrete_status.py --active-only
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=src python -m pytest -q \
+  tests/test_discrete.py tests/test_discrete_extension.py tests/test_discrete_match.py
 ```
 
+Capacity runs require `--gate` pointing to a successful matching discrete arithmetic
+run. `scripts/assess_discrete_match.py` checks the three-way match using completed,
+paired calibration across seeds and dataset sizes, with horizon and drift checks.
 Inspect an existing run's process and checkpoint before using `--resume`. Completed
 runs are skipped; changed source/configuration/data cannot silently overwrite a run.
