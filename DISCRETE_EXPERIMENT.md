@@ -1549,3 +1549,9 @@ paired. Run the registered descriptive C capacity control on cuda:0. Preserve
 failed/censored confirmation outcomes and report both registered sustained
 95/99 results and the supplementary paper-style99/98 first-passage delay.
 No confirmation outcome can change this frozen candidate.
+
+The categorical selection is now frozen in
+results/discrete/fullwidth-confirmation-v5-categorical-ff216/selection.json.
+The nine-run confirmation and independent audit/report worker are live, with
+the descriptive ordinary-C capacity control on the other GPU. A_s73 is the
+first completed and audited confirmation; no categorical outcome is yet claimed.

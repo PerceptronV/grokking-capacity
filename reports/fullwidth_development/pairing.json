@@ -1,6 +1,6 @@
 {
   "scope": "All launched v5/v6 capacity candidates and continuous controls at the recorded time, including rejected candidates.",
-  "recorded_at": "2026-10-24T08:51:00.080092+00:00",
+  "recorded_at": "2026-10-24T09:05:39.693663+00:00",
   "cells": [
     {
       "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-capacity-v5/B_categorical_d58_k16_rms_t01_mode_n16384_s61",
@@ -172,6 +172,13 @@
     },
     {
       "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-control-capacity-v6/C_baseline_d80_ff320_n16384_s61",
+      "seed": 61,
+      "n_samples": 16384,
+      "dataset_sha256": "ea438e8c3ef9005ad39c6521546473c68804db5239bd053a80a23daa36728c31",
+      "matches_A": true
+    },
+    {
+      "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-control-capacity-v5/C_baseline_d104_ff216_n16384_s61",
       "seed": 61,
       "n_samples": 16384,
       "dataset_sha256": "ea438e8c3ef9005ad39c6521546473c68804db5239bd053a80a23daa36728c31",
