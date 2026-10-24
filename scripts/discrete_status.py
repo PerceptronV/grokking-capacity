@@ -7,7 +7,7 @@ from pathlib import Path
 
 def statuses(root):
     rows = []
-    for path in sorted(root.glob('*/*/manifest.json')):
+    for path in sorted(root.rglob('manifest.json')):
         manifest = json.loads(path.read_text())
         directory = path.parent
         process = Path(f'/proc/{manifest["pid"]}/stat')

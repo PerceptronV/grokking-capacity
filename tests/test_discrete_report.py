@@ -65,3 +65,28 @@ def test_paper_delay_clamps_validation_first_to_zero_but_preserves_missing_event
         result = first_passage_delay(incomplete)
         assert result['first_passage_delay_99_98_steps'] is None
         assert result['first_passage_delay_99_98_epochs'] is None
+
+
+
+def test_nested_replication_status_and_development_scope(tmp_path):
+    import json
+    from grokking_capacity.experiments.discrete import DEFAULTS
+    from scripts.discrete_status import statuses
+    from scripts.report_fullwidth_development import export
+    for relative, p in [('p97-v6/capacity-A/A_n8192_s61',97), ('fullwidth-old/A_n8192_s61',149)]:
+        folder=tmp_path/relative
+        folder.mkdir(parents=True)
+        cfg=dict(DEFAULTS, task='random', model='baseline', p=p, dim=26, mlp_dim=104, n_samples=8192)
+        manifest=dict(config=cfg, pid=999999999, process_start_ticks='absent', device='cuda:1',
+                      param_count=26910, source_hashes={}, gate=None)
+        (folder/'manifest.json').write_text(json.dumps(manifest))
+        (folder/'summary.json').write_text(json.dumps(dict(termination='budget')))
+        (folder/'trace.jsonl').write_text(json.dumps(dict(step=120000, train_acc=.6, train_bits=31000., wall_seconds=100.))+'\n')
+    rows=statuses(tmp_path)
+    assert len(rows)==2 and all(r['status']=='complete' for r in rows)
+    output=tmp_path/'report'
+    export(tmp_path,output,prefix='p97-')
+    assert json.loads((output/'status.json').read_text())['counts']=={'arithmetic':0,'capacity':1}
+    import csv
+    with (output/'capacity.csv').open() as file: rows=list(csv.DictReader(file))
+    assert len(rows)==1 and rows[0]['p']=='97'

@@ -13,11 +13,11 @@ def read(path):
     return json.loads(path.read_text())
 
 
-def export(root, output):
+def export(root, output, *, prefix='fullwidth-'):
     output.mkdir(parents=True, exist_ok=True)
     state = {row['path']: row['status'] for row in statuses(root)}
     groups = {'arithmetic': [], 'capacity': []}
-    for path in sorted(root.glob('fullwidth-*/*/manifest.json')):
+    for path in sorted(root.glob(f'{prefix}*/**/manifest.json')):
         folder = path.parent
         if (folder.parent/'selection.json').exists():
             continue  # Frozen confirmation has its own report, not development data.
@@ -77,7 +77,7 @@ def export(root, output):
                 writer.writeheader()
                 writer.writerows(rows)
     comparisons = []
-    for selection in sorted(root.glob('fullwidth-*/selection.json')):
+    for selection in sorted(root.glob(f'{prefix}*/**/selection.json')):
         frozen = read(selection)
         if frozen.get('control') != 'fullwidth_unrestricted':
             continue
@@ -100,5 +100,6 @@ if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root',type=Path,default=Path('results/discrete'))
     parser.add_argument('--output',type=Path,default=Path('reports/fullwidth_development'))
+    parser.add_argument('--prefix',default='fullwidth-')
     args=parser.parse_args()
-    export(args.root,args.output)
+    export(args.root,args.output,prefix=args.prefix)

@@ -2086,3 +2086,11 @@ passed audit before its two-lane capacity grid began. B64/FF108 exhausted120k
 updates at95.6615% held-out accuracy, failed its gate, and has no random runs;
 its checkpoint was independently audited. B60/FF128 is still running its
 registered arithmetic budget. Capacity matching remains unconfirmed.
+
+
+Status discovery now includes nested replication directories. The development
+exporter accepts `--prefix p97-`, preserving its existing full-width default.
+`reports/p97_development` records arithmetic outcomes and all random runs,
+including rejected checkpoints, without implying a capacity match. The48
+focused tests pass, including nested-run status/export coverage. Refresh with:
+`PYTHONPATH=src:. python scripts/report_fullwidth_development.py --prefix p97- --output reports/p97_development`.
