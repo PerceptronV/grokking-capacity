@@ -706,3 +706,34 @@ for censored crossings, explicitly labelled observed-only medians, paired ratios
 full curves and compact run evidence. A retrospective ordering check found all
 17 discrete random-label runs followed a successful gate for their exact model;
 none of the failed arithmetic recipes entered calibration.
+
+
+## Paper comparison requested during confirmation
+
+The reported discrete-run “steps” are actual optimiser updates. At p149 and a
+50% split, 11,026 training rows with batch512 give22 updates per complete epoch.
+A_s43's sustained99% crossing at2900 updates is131.836 data passes (approximately
+132 epochs), not2900 epochs. The paper uses first-passage epochs rather than the
+new experiment's three consecutive observations at100-update intervals.
+
+The published paper's Appendix C.2 includes p149 in the weight-decay sweep.
+For its lambda1 baseline, `scripts/check_p149_paper.py` reads the original registry
+without mutation and verifies all80 generalisation crossings against saved NPZ
+traces. Settings: dropout0.2, depth2,heads1, lr0.001, batch512, fraction0.5,
+seeds42–46, host147-224-250-73. Complete exports and figures are in
+[reports/paper_p149](reports/paper_p149); every row includes its trace hash.
+
+Mean first99% validation times (all5 seeds successful at these widths):
+d40=309.4 epochs, d48=267.6, d64=107.4, d96=71.4, d128=57.0, d256=42.4.
+Thus the original ordinary-transformer result does support faster generalisation
+with increasing size. Width96 takes about1571 updates on average, compared with
+our narrow-channel B/C models' much slower seed43 outcomes. The paper-defined
+minimum delay (train99 to validation98, clipped at zero) is0 through width80,
+1 epoch atwidth96,3 atwidth128 and7 atwidth256. Smaller failed runs stay in the
+export: widths20/24 reached99% in0/5 seeds,28 in1/5 and32 in2/5.
+
+This corrects any suggestion that the current result overturns the usual width
+trend. B/C use a new14-coordinate bottleneck after every block, and the current
+comparison uses dropout0. The new result concerns that channel architecture and
+matched finite-budget capacity; it is not a pure width-scaling replication.
+Reference: https://arxiv.org/pdf/2605.09724v2 (Appendices A.2,A.6,C.2).
