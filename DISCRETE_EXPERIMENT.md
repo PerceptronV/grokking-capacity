@@ -1472,7 +1472,7 @@ The median per-run maximum train-minus-held-out gap is A:24.02, B:17.39, C:50.81
 
 B seed74 ended at 98.957% held-out accuracy. Its 99% crossing remains unobserved; the budget is not substituted as a crossing time. No aggregate 99% median across all three B seeds is claimed.
 
-C stores at least 117,696.50 bits in the descriptive random-label control. That run is limited by its dataset, so this is a lower bound, not a saturated C capacity estimate. A/B matching uses the registered random-label protocol and 120k budget; it does not prove an intrinsic information bound or guarantee absent grokking. Wall times were recorded sequentially on a shared GPU and are descriptive.
+C reaches an observed peak of 117,696.50 bits in the descriptive random-label control; its independently reloaded final checkpoint stores 116,994.05 bits. That run is limited by its dataset, so these are lower bounds, not saturated C capacity estimates. The peak weights were not retained separately; the final-checkpoint number is the independently reproduced value. A/B matching uses the registered random-label protocol and 120k budget; it does not prove an intrinsic information bound or guarantee absent grokking. Wall times were recorded sequentially on a shared GPU and are descriptive.
 
 Full evidence: [confirmation table](reports/fullwidth_quantized_v6/confirmation.csv), [learning curves](reports/fullwidth_quantized_v6/learning_curves.png), [capacity curves](reports/fullwidth_quantized_v6/capacity_curves.png), [validation](reports/fullwidth_quantized_v6/validation.json). The categorical family remains unfinished and is not covered by this scalar conclusion.
 
