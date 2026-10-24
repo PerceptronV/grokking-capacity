@@ -1,0 +1,35 @@
+{
+  "inputs": {
+    "a_runs": [
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-a44-capacity-v4/A_d44_n16384_s61",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-a44-capacity-v4/A_d44_n16384_s62",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-a44-capacity-v4/A_d44_n32768_s61",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-a44-capacity-v4/A_d44_n32768_s62"
+    ],
+    "b_runs": [
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-capacity-v5/B_categorical_d62_ff216_k8_rms_t01_mode_n16384_s61",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-capacity-v5/B_categorical_d62_ff216_k8_rms_t01_mode_n16384_s62",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-capacity-v5/B_categorical_d62_ff216_k8_rms_t01_mode_n32768_s61",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-capacity-v5/B_categorical_d62_ff216_k8_rms_t01_mode_n32768_s62"
+    ],
+    "device": "cuda:1",
+    "min_parameter_ratio": 3.0,
+    "confirmation_seeds": [
+      73,
+      74,
+      75
+    ],
+    "source_hashes": {
+      "src/grokking_capacity/experiments/discrete.py": "6e3016ef2a6d104415966b0ce6ef8350eb1a4d7247c25647382d58264d0a7669",
+      "src/grokking_capacity/models/discrete.py": "5ec7a68fbd27fa923b933bcbecb4652ef9b76a47146db1c399938a31dfc024d3",
+      "src/grokking_capacity/models/fullwidth_discrete.py": "b147a59bc2c4edf6657ec576f0035ec925dc5a254b97516d86c7cbf46dd35f33",
+      "src/grokking_capacity/models/transformer.py": "691dd08dc7febb2449ae200051d5a323068d8bfe40e554928923450dd84a926c",
+      "src/grokking_capacity/data/modular.py": "8d5dfe63984b75cb931cbc91c98d0925e422e9cae2ace3e32752d3ee05361f65"
+    },
+    "script_sha256": "9998b396ec00559edede3dc903bf347f15efd7fed06d9c7acc6a712d32647b11"
+  },
+  "pid": 1450708,
+  "process_start_ticks": "763585825",
+  "phase": "complete",
+  "current_run": "B_s75"
+}

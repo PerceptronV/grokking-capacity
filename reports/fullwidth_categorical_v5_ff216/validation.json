@@ -1,0 +1,65 @@
+{
+  "all_nine_complete": true,
+  "capacity_match": {
+    "accepted": true,
+    "target_bits": 79810.65065579832,
+    "p": 149,
+    "train_fraction": 0.5,
+    "tolerance": 0.1,
+    "min_steps": 60000,
+    "max_tail_relative_drift": 0.05,
+    "parameter_ratio": 3.3547044791942753,
+    "min_parameter_ratio": 3.0,
+    "estimates": [
+      {
+        "seed": 61,
+        "a_bits": 80552.68819047292,
+        "b_bits": 87313.54882124011,
+        "a_to_dataset": 1.0092974750685195,
+        "b_to_dataset": 1.0940087332178225
+      },
+      {
+        "seed": 62,
+        "a_bits": 80438.19681371239,
+        "b_bits": 87428.36705859585,
+        "a_to_dataset": 1.0078629374996642,
+        "b_to_dataset": 1.0954473662375046
+      }
+    ],
+    "issues": [],
+    "interpretation": "Finite-budget empirical estimate; does not guarantee absent grokking",
+    "baseline_source_equivalence_used": true,
+    "a_runs": [
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-a44-capacity-v4/A_d44_n16384_s61",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-a44-capacity-v4/A_d44_n16384_s62",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-a44-capacity-v4/A_d44_n32768_s61",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-a44-capacity-v4/A_d44_n32768_s62"
+    ],
+    "b_runs": [
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-capacity-v5/B_categorical_d62_ff216_k8_rms_t01_mode_n16384_s61",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-capacity-v5/B_categorical_d62_ff216_k8_rms_t01_mode_n16384_s62",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-capacity-v5/B_categorical_d62_ff216_k8_rms_t01_mode_n32768_s61",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-capacity-v5/B_categorical_d62_ff216_k8_rms_t01_mode_n32768_s62"
+    ]
+  },
+  "checkpoint_audits": 9,
+  "paired_datasets": true,
+  "control": "fullwidth_unrestricted",
+  "paired_B_C_initial_tensors": false,
+  "paired_B_C_shared_base_initial_tensors": false,
+  "scientific_source_hashes": {
+    "src/grokking_capacity/experiments/discrete.py": "6e3016ef2a6d104415966b0ce6ef8350eb1a4d7247c25647382d58264d0a7669",
+    "src/grokking_capacity/models/discrete.py": "5ec7a68fbd27fa923b933bcbecb4652ef9b76a47146db1c399938a31dfc024d3",
+    "src/grokking_capacity/models/fullwidth_discrete.py": "b147a59bc2c4edf6657ec576f0035ec925dc5a254b97516d86c7cbf46dd35f33",
+    "src/grokking_capacity/models/transformer.py": "691dd08dc7febb2449ae200051d5a323068d8bfe40e554928923450dd84a926c",
+    "src/grokking_capacity/data/modular.py": "8d5dfe63984b75cb931cbc91c98d0925e422e9cae2ace3e32752d3ee05361f65"
+  },
+  "arithmetic_before_random": {
+    "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-learning-v5/B_categorical_d62_ff216_k8_rms_t01_mode_s42": {
+      "summary_sha256": "cd8cc382f039a5db929fcec339f7383827ab8e8c590a0793e8a45c1268264da0",
+      "audit_sha256": "3b9d2129a76198add043c2ac66bceac74b2240e76ef3056acb5d70991866903a",
+      "audited_at": 1792831711.3226788,
+      "first_random_start": 1792831717.7190454
+    }
+  }
+}

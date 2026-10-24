@@ -271,7 +271,7 @@ def plots(output, rows, records, calibration, target):
     policy_note = ('B categorical: hard-mode primary, sampled dotted; × marks final evaluation'
                    if any(row.get('primary_evaluation') == 'hard_mode' for row in rows)
                    else 'Deterministic evaluation; × marks final evaluation')
-    fig.suptitle('Frozen p149 comparison: all three fresh seeds\n' + policy_note, fontsize=12)
+    fig.suptitle('Frozen p149 comparison: all three registered seeds\n' + policy_note, fontsize=12)
     fig.tight_layout(rect=(0,0,1,.94))
     for suffix in ('png','pdf'): fig.savefig(output/f'learning_curves.{suffix}',dpi=170)
     plt.close(fig)

@@ -1,0 +1,11 @@
+{
+  "run": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-confirmation-v5-categorical-ff216/C_s75",
+  "checkpoint_step": 1800,
+  "train_acc": 1.0,
+  "val_acc": 0.9990930557250977,
+  "param_count": 253240,
+  "dataset_sha256": "4c60f7bfa687bf3d391eb86ef5412945ca87102c2e072fb631b18294bc5a088b",
+  "initial_weights_sha256": "6b932da8e60c398b0597748096feafb0d1ba988950d99e5fd47a6c0667c0aa40",
+  "arithmetic_gate_passed": false,
+  "primary_evaluation": "deterministic"
+}

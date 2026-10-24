@@ -1,0 +1,77 @@
+{
+  "config": {
+    "task": "modular",
+    "p": 149,
+    "operation": "/",
+    "train_fraction": 0.5,
+    "depth": 2,
+    "heads": 1,
+    "dropout": 0.0,
+    "seed": 74,
+    "lr": 0.001,
+    "weight_decay": 1.0,
+    "beta1": 0.9,
+    "beta2": 0.98,
+    "batch_size": 512,
+    "max_steps": 120000,
+    "eval_every": 100,
+    "checkpoint_every": 2000,
+    "sustained_evals": 3,
+    "stop_on_success": true,
+    "model": "categorical",
+    "dim": 62,
+    "mlp_dim": 216,
+    "alphabet": 8,
+    "categorical_temperature": 0.1,
+    "categorical_normalization": "rms",
+    "categorical_evaluation": "hard_mode"
+  },
+  "param_count": 253146,
+  "final": {
+    "step": 120000,
+    "examples": 60141948,
+    "epochs": 5454.557228369309,
+    "train_loss": 0.7398203611373901,
+    "train_acc": 0.5224922895431519,
+    "train_bits": 68042.21311370058,
+    "val_loss": 0.7583423256874084,
+    "val_acc": 0.4819517731666565,
+    "train_mode_loss": 0.7274760603904724,
+    "train_mode_acc": 0.5222201943397522,
+    "train_mode_bits": 68238.57582547783,
+    "val_mode_loss": 0.746627926826477,
+    "val_mode_acc": 0.4851260781288147,
+    "wall_seconds": 769.0485110804439
+  },
+  "best_train_bits": 68071.28878580268,
+  "arithmetic_gate_passed": false,
+  "metrics": {
+    "train_95": null,
+    "train_99": null,
+    "generalise_95": null,
+    "generalise_99": null,
+    "delay_steps_99": null,
+    "max_train_val_gap": 0.11536368727684021
+  },
+  "primary_evaluation": "hard_mode",
+  "evaluation_metrics": {
+    "sampled": {
+      "train_95": null,
+      "train_99": null,
+      "generalise_95": null,
+      "generalise_99": null,
+      "delay_steps_99": null,
+      "max_train_val_gap": 0.10221296548843384
+    },
+    "hard_mode": {
+      "train_95": null,
+      "train_99": null,
+      "generalise_95": null,
+      "generalise_99": null,
+      "delay_steps_99": null,
+      "max_train_val_gap": 0.11536368727684021
+    }
+  },
+  "termination": "budget",
+  "peak_cuda_memory_bytes": 144839680
+}

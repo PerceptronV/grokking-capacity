@@ -8,7 +8,62 @@ and avoid the generalisation delay of an equally large continuous control?
 A positive result is not assumed. Lack of learning is not evidence of reduced
 capacity, and failure to grok is not success unless generalisation succeeds.
 
-## Current experiment status — architecture correction
+## Completed results: both full-width discrete families
+
+Both registered A/B/C comparisons are complete on branch `idea/discrete`.
+All 18 arithmetic checkpoints passed independent audits. Both selected B
+recipes passed their own arithmetic gate before any random-label training,
+then learned a separate 2,048-example random-label validation set. The
+categorical gate reached 99.2472% hard-mode held-out accuracy and its random
+validation reached 100% hard-mode (99.4141% sampled). The binary scalar gate
+reached 99.2019% held-out accuracy and its random validation ended at 99.7559%
+(best 100%). These development successes did not guarantee confirmation success.
+
+The fixed p=149 division training set contains 11,026 examples; its registered
+label-information target is 79,810.65 bits. A's empirical capacity estimates are
+80,552.69/80,438.20 bits. Scalar B gives 79,986.88/79,816.66 bits; categorical B
+gives 87,313.55/87,428.37 bits. Each B matches A and the target within 10% on both
+calibration seeds, under the frozen two-size, 120k-update protocol. These are
+finite-budget measurements, not intrinsic capacity bounds or a theorem that A
+cannot grok.
+
+| Comparison | A parameters | B parameters | Ordinary C parameters | B seeds reaching 95% | B seeds reaching 99% |
+|---|---:|---:|---:|---:|---:|
+| Binary scalar quantization | 75,460 | 229,360 | 229,360 | 3/3 | 2/3 |
+| Dreamer-style categorical | 75,460 | 253,146 | 253,240 | 2/3 | 0/3 |
+
+A and C reach sustained 99% on all three seeds in both comparisons. At 95%,
+scalar median update counts are A 2,800/B 19,300/C 1,800. Categorical A/C medians
+are 2,800/1,300; categorical B takes 30,600 and 5,500 updates on seeds 73/75 and
+does not reach 95% on seed 74. No observed-only B median is presented as a
+three-seed median. B does not beat A or C on any paired 95% comparison.
+The same three A seeds are shared across families, not six independent trials.
+Scalar B/C have identical parameter shapes and initialization. Categorical C
+is an ordinary transformer with 0.0371% more parameters and different shapes.
+
+Neither tested discrete recipe supports the proposed faster-generalization
+benefit. Both reduce the transient train-test gap relative to C, but scalar B
+is slower and categorical B has substantial learning instability. No run meets
+the registered train>=99%/held-out<90% large-gap condition. Under the separate
+paper-style first-train 99/first-held-out 98 measure, C has a 100-update delay on
+every seed, A has 0, scalar B has 0, and categorical B has missing/missing/0.
+Missing thresholds are not evidence of successful grokking avoidance. The
+100-update evaluation spacing cannot resolve shorter delays; dropout 0 here
+also differs from the paper's dropout 0.2. These are results for the frozen
+recipes, not evidence that all discrete transformers must behave this way.
+
+Full evidence: [scalar results](reports/fullwidth_quantized_v6/confirmation.csv),
+[scalar curves](reports/fullwidth_quantized_v6/learning_curves.png),
+[categorical results](reports/fullwidth_categorical_v5_ff216/confirmation.csv),
+[categorical curves](reports/fullwidth_categorical_v5_ff216/learning_curves.png).
+Frozen configurations, capacity traces, independent checkpoint audits and
+artifact hashes accompany each report. Timing in seconds is descriptive on
+shared GPUs; primary comparisons use actual optimizer updates.
+The [completion audit](reports/fullwidth_development/completion_audit.json)
+verifies all 182 exported artifacts and 36 supporting checkpoints, including
+the arithmetic gates and selected small random-label validations.
+
+## Architecture correction and development record
 
 **The user rejected the 14-coordinate architecture. Every earlier learned
 low-dimensional channel experiment, including confirmation-p149-v1/v2, is
@@ -54,7 +109,7 @@ their arithmetic gates and have no random-label runs.
 Other audited scalar candidates, including normalized four-level width80/FF320,
 exceed the fixed capacity target. These rejection witnesses are lower bounds,
 not saturated capacity estimates. The categorical capacity match is accepted;
-the categorical A/B/C confirmation remains unfinished. Seeds43/44/45 belong to the superseded narrow-channel
+the categorical A/B/C confirmation is now complete, as summarized above. Seeds43/44/45 belong to the superseded narrow-channel
 experiments; corrected full-width confirmations use73/74/75.
 
 A44's four120k calibration cells are complete and independently audited. The
@@ -1474,7 +1529,7 @@ B seed74 ended at 98.957% held-out accuracy. Its 99% crossing remains unobserved
 
 C reaches an observed peak of 117,696.50 bits in the descriptive random-label control; its independently reloaded final checkpoint stores 116,994.05 bits. That run is limited by its dataset, so these are lower bounds, not saturated C capacity estimates. The peak weights were not retained separately; the final-checkpoint number is the independently reproduced value. A/B matching uses the registered random-label protocol and 120k budget; it does not prove an intrinsic information bound or guarantee absent grokking. Wall times were recorded sequentially on a shared GPU and are descriptive.
 
-Full evidence: [confirmation table](reports/fullwidth_quantized_v6/confirmation.csv), [learning curves](reports/fullwidth_quantized_v6/learning_curves.png), [capacity curves](reports/fullwidth_quantized_v6/capacity_curves.png), [validation](reports/fullwidth_quantized_v6/validation.json). The categorical family remains unfinished and is not covered by this scalar conclusion.
+Full evidence: [confirmation table](reports/fullwidth_quantized_v6/confirmation.csv), [learning curves](reports/fullwidth_quantized_v6/learning_curves.png), [capacity curves](reports/fullwidth_quantized_v6/capacity_curves.png), [validation](reports/fullwidth_quantized_v6/validation.json). The categorical comparison is reported separately below.
 
 
 Register an intermediate categorical candidate before launch: native width62,
@@ -1564,9 +1619,9 @@ No confirmation outcome can change this frozen candidate.
 
 The categorical selection is now frozen in
 results/discrete/fullwidth-confirmation-v5-categorical-ff216/selection.json.
-The nine-run confirmation and independent audit/report worker are live, with
-the descriptive ordinary-C capacity control on the other GPU. A_s73 is the
-first completed and audited confirmation; no categorical outcome is yet claimed.
+At registration, the nine-run confirmation and independent audit/report worker
+were launched, with the descriptive ordinary-C capacity control on the other
+GPU. The frozen configuration was retained through all nine completed runs.
 
 The categorical comparison's ordinary-C capacity control completed120k updates
 and passed independent CPU/original-GPU checkpoint audit. Its observed peak is
@@ -1575,7 +1630,7 @@ and passed independent CPU/original-GPU checkpoint audit. Its observed peak is
 saved trace exactly matches the exported trace. This establishes a descriptive
 lower bound above matched A/B; the control is dataset limited and does not
 estimate a saturated C capacity. The peak weights were not retained separately.
-The nine registered arithmetic confirmations continue without configuration changes.
+All nine registered arithmetic confirmations are now complete without configuration changes.
 
 
 ## First audited categorical confirmation seed
@@ -1591,13 +1646,65 @@ Seed73 is complete and all three checkpoints passed independent audit. These are
 B ended at96.0729% hard-mode training accuracy and95.1206% hard-mode held-out accuracy; sampled held-out accuracy is90.9759%. It never reaches either first train99 or first held-out98 in this trace, so the supplementary paper-style delay remains unobserved. This is not evidence of successful grokking avoidance. A has zero measured paper-style delay and C has100 updates. The frozen B and remaining seeds are unchanged.
 
 
+## Completed full-width categorical comparison
+
+All nine registered categorical-family runs and their independent audits are
+complete. B uses 62 categorical variables per token at each block boundary,
+K=8, native FF 216, RMS normalization and temperature 0.1. Training samples
+hard one-hot codes with the DreamerV2 softmax STE. Primary evaluation is hard
+argmax; sampled evaluation is recorded separately. RMS, temperature and the
+primary inference rule are adaptations, not claims about DreamerV2 defaults.
+
+All crossings below require three consecutive evaluations at 100-update
+spacing. Values are actual optimizer updates, not epochs. All three B runs
+reached the frozen 120,000-update budget without sustained 99% held-out accuracy.
+
+| Seed | A to 95% | B to 95% | C to 95% | A to 99% | B to 99% | C to 99% |
+|---|---:|---:|---:|---:|---:|---:|
+| 73 | 2,900 | 30,600 | 1,400 | 3,000 | Not reached | 1,900 |
+| 74 | 2,700 | Not reached | 1,200 | 2,900 | Not reached | 1,400 |
+| 75 | 2,800 | 5,500 | 1,300 | 4,100 | Not reached | 1,600 |
+
+| B seed | Final hard-mode train | Final hard-mode held-out | Final sampled held-out |
+|---|---:|---:|---:|
+| 73 | 96.0729% | 95.1206% | 90.9759% |
+| 74 | 52.2220% | 48.5126% | 48.1952% |
+| 75 | 98.6668% | 98.1952% | 96.7441% |
+
+The median per-run maximum train-minus-held-out gap is A 24.02, B 11.54,
+C 49.79 percentage points. Every run has zero recorded observations satisfying
+train>=99% and held-out<90%. C's paper-style delay is 100 updates on all seeds;
+B's is missing/missing/0. Seed 75 first reaches held-out 98 at 8,600 and train 99
+at 9,900, so its positive-part delay is 0, but it still never reaches sustained
+held-out 99. Seed 74's joint learning failure is not a successful capacity limit.
+
+Categorical B is 3.3547 times A's parameter count. Its measured capacity is
+9.40%/9.54% above the dataset target and 8.39%/8.69% above paired A estimates,
+within the registered 10% tolerance. The ordinary C control has 253,240
+parameters versus B's 253,146. C's random-label run is dataset limited: the
+observed peak 117,657.87 bits is a lower bound; the independently reloaded final
+checkpoint reproduces 117,581.61 bits. Peak weights were not retained separately.
+
+Together with the completed scalar comparison, this is a negative result for
+the proposed speed advantage under the selected recipes. Successful arithmetic
+and random-label development validation established that both discrete forms
+can learn; confirmation exposed slower learning and, especially for categorical
+B, poor robustness across seeds. No configuration was changed using these
+confirmation outcomes.
+
+Evidence: [table](reports/fullwidth_categorical_v5_ff216/confirmation.csv),
+[learning curves](reports/fullwidth_categorical_v5_ff216/learning_curves.png),
+[capacity curves](reports/fullwidth_categorical_v5_ff216/capacity_curves.png),
+[validation](reports/fullwidth_categorical_v5_ff216/validation.json).
+
+
 ## Rechecking the final evidence
 
 The original checkpoints remain under `results/discrete/`. Exported reports
 contain the frozen configurations, traces, independent audits, and artifact
 hashes. Report generation first validates all nine completed runs and refuses
-an unfinished queue. Once the categorical queue finishes, regenerate and
-validate the two reports from this repository root with:
+an unfinished queue. Both queues are complete. Regenerate and validate the
+two reports from this repository root with:
 
 ```bash
 PYTHONPATH=src:. python scripts/report_discrete.py \

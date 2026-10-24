@@ -1,0 +1,74 @@
+{
+  "config": {
+    "task": "random",
+    "p": 149,
+    "operation": "/",
+    "train_fraction": 0.5,
+    "depth": 2,
+    "heads": 1,
+    "dropout": 0.0,
+    "seed": 61,
+    "lr": 0.001,
+    "weight_decay": 1.0,
+    "beta1": 0.9,
+    "beta2": 0.98,
+    "batch_size": 512,
+    "max_steps": 120000,
+    "eval_every": 200,
+    "checkpoint_every": 2000,
+    "sustained_evals": 3,
+    "stop_on_success": false,
+    "dim": 62,
+    "model": "categorical",
+    "alphabet": 8,
+    "categorical_temperature": 0.1,
+    "categorical_normalization": "rms",
+    "categorical_evaluation": "hard_mode",
+    "mlp_dim": 216,
+    "n_samples": 32768
+  },
+  "param_count": 253146,
+  "final": {
+    "step": 120000,
+    "examples": 61440000,
+    "epochs": 1875.0,
+    "train_loss": 3.8870232105255127,
+    "train_acc": 0.150665283203125,
+    "train_bits": 53432.01295334191,
+    "train_mode_loss": 3.5924103260040283,
+    "train_mode_acc": 0.21038818359375,
+    "train_mode_bits": 67359.61054120387,
+    "wall_seconds": 783.8107676347718
+  },
+  "best_train_bits": 55659.62426491454,
+  "arithmetic_gate_passed": false,
+  "metrics": {
+    "train_95": null,
+    "train_99": null,
+    "generalise_95": null,
+    "generalise_99": null,
+    "delay_steps_99": null,
+    "max_train_val_gap": null
+  },
+  "primary_evaluation": "hard_mode",
+  "evaluation_metrics": {
+    "sampled": {
+      "train_95": null,
+      "train_99": null,
+      "generalise_95": null,
+      "generalise_99": null,
+      "delay_steps_99": null,
+      "max_train_val_gap": null
+    },
+    "hard_mode": {
+      "train_95": null,
+      "train_99": null,
+      "generalise_95": null,
+      "generalise_99": null,
+      "delay_steps_99": null,
+      "max_train_val_gap": null
+    }
+  },
+  "termination": "budget",
+  "peak_cuda_memory_bytes": 145266688
+}
