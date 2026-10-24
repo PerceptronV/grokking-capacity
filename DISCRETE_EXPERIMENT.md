@@ -45,15 +45,16 @@ completed120k below the arithmetic gate (audited75.06% hard-mode held-out),
 so it has no random-label runs. Width62/FF216/K8 passed its own arithmetic
 checkpoint audit at14,900 updates (99.2472% hard-mode held-out,98.0863% sampled)
 and its own10k-update small random-label check (100% hard-mode,99.4141% sampled).
-Its four120k capacity cells are running on the paired datasets. This B has
+Its four120k capacity cells are complete and independently audited; the fixed
+capacity assessment accepts this recipe. This B has
 253,146 parameters (3.3547x A); ordinary C width104/FF216 has253,240 (+0.0371%).
 Width70/FF288/K4 and both width60/K8 initializations also completed120k below
 their arithmetic gates and have no random-label runs.
 
 Other audited scalar candidates, including normalized four-level width80/FF320,
 exceed the fixed capacity target. These rejection witnesses are lower bounds,
-not saturated capacity estimates. No categorical match or completed categorical
-A/B/C result is claimed. Seeds43/44/45 belong to the superseded narrow-channel
+not saturated capacity estimates. The categorical capacity match is accepted;
+the categorical A/B/C confirmation remains unfinished. Seeds43/44/45 belong to the superseded narrow-channel
 experiments; corrected full-width confirmations use73/74/75.
 
 A44's four120k calibration cells are complete and independently audited. The
@@ -1524,3 +1525,27 @@ in grokking runs; these registered comparisons use dropout0. Five reporting
 tests pass, including censoring and separation of first and sustained crossings.
 The regenerated scalar report validates all nine checkpoints and all exported
 artifact hashes. Both delay definitions will also be reported for categorical B.
+
+
+## Accepted categorical match and registered confirmation
+
+Width62/FF216/K8 completed all four120k capacity cells, and all final checkpoints
+passed independent audits. Per-seed maximum-over-trace estimates are87,313.55
+and87,428.37 bits, versus A44's80,552.69 and80,438.20. B is9.40% and9.54%
+above the fixed79,810.65-bit target and8.39% and8.69% above A, within both
+registered10% tolerances. Late drift is0.77%,0.74%,1.23%,0.91% across the four
+cells. The n32768 maxima are69,821.10 and69,589.67 bits; selection uses the
+maximum over sizes per seed, consistently with A and the scalar comparison.
+All saved final checkpoint traces exactly equal their exported traces, and
+checkpoint hashes, source hashes, configs, datasets and120k budgets verify.
+
+Freeze this accepted selection before categorical confirmation. Run the
+registered73/74/75 seeds in ABC/BCA/CAB order on cuda:1, with the original
+optimizer,p149 division,50% split and120k ceiling. B has253,146 parameters
+(3.3547x A44); ordinary unrestricted C width104/FF216 has253,240 (+0.0371%).
+C and B have different tensor shapes, so no identical-initial-tensor claim
+applies to this categorical comparison. Dataset and minibatch orders remain
+paired. Run the registered descriptive C capacity control on cuda:0. Preserve
+failed/censored confirmation outcomes and report both registered sustained
+95/99 results and the supplementary paper-style99/98 first-passage delay.
+No confirmation outcome can change this frozen candidate.
