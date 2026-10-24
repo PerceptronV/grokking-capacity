@@ -2034,3 +2034,34 @@ width from128 to108. The approximately8% parameter reduction gives more margin
 below the fixed capacity ceiling. A28/FF100's grid continues unchanged.
 Configs:`configs/discrete_p97_v5_{learning,random_learning,capacity_b,capacity_c}.yaml`.
 The new recipe must pass its own arithmetic audit and small random validation.
+
+
+A28/FF100's98,000-update checkpoint independently stores
+34039.721871 bits; its late crossing exceeds the fixed
+ceiling. Retained witness SHA256:`5f52103effa31bb00e0d04f2680a4de88059c1d9c5f9f560c840129f257b1a1f`. Stop its capacity
+worker after the successful witness audit. Register A26/FF104 (26,910
+parameters), a further residual-width reduction, with its own seed42 arithmetic
+check and the same capacity grid in `configs/discrete_p97_v6_{learning_a,capacity_a}.yaml`.
+
+B64/FF108 is still below its arithmetic gate after57k updates (best held-out
+98.60%). Before launching another candidate, register B60/FF128 (87,060
+parameters) to retain more FF width at a similar total count. It reduces the
+already successful B60/FF144 candidate by16 FF units. Configs:
+`configs/discrete_p97_v6_{learning_b,random_learning,capacity_b,capacity_c}.yaml`.
+B64/FF108 continues to its original budget; retain both development outcomes.
+The first viable candidate still needs the complete capacity match before
+confirmation. Independent small calibration jobs may share a GPU to reduce
+elapsed calibration time; RNG stays isolated by process and primary timing
+comparisons remain optimizer updates, with seconds descriptive only.
+
+
+B64/FF108 still lacks sustained99 at87.6k updates (best held-out99.33%);
+B60/FF128 remains underlearning at17.8k. Register an additional arithmetic
+candidate B72/FF64 (83,736 parameters,3.111706xA26). It keeps72 binary
+coordinates at every block boundary while reducing the internal feed-forward
+width. There is no learned compression between blocks and no continuous bypass.
+This explores whether a wider discrete state can improve arithmetic learning
+at approximately the same raw parameter budget. Configs:
+`configs/discrete_p97_v7_{learning,random_learning,capacity_b,capacity_c}.yaml`.
+Its random stages remain conditional on its own audited arithmetic success.
+Earlier pilots continue to their registered stopping rule or120k budget.
