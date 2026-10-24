@@ -17,15 +17,22 @@ runs as historical attempts. Their gate and capacity match do not validate the
 new architectures. The unfinished old B seed was scope-stopped, not declared a
 learning failure. The ordinary continuous controls remain ordinary-model data.
 
-Current full-width evidence: scalar alphabets 2, 4, and 16 have passed
-independent arithmetic audits. All tested width96/two-block scalar recipes
-exceed the fixed capacity target in saved random-label checkpoints. The two
-successful native-width/FF variants (72/576/q4 and80/480/q2) also exceed it.
-These are demonstrated lower bounds, not plateau estimates. Categorical models
-remain in arithmetic development; some sustain99% held-out under hard argmax,
-but none has yet passed the registered sampled99% gate. Fresh-source A44
-calibration continues. No full-width capacity-matched A/B/C comparison has been
-selected. See `reports/fullwidth_development` for all development runs.
+Current full-width evidence: scalar alphabets2,4,16 have passed independent
+arithmetic audits, but the tested width96 and larger-FF scalar candidates exceed
+the fixed capacity target. Categorical width58/K16 passed the source-v5 hard-mode
+arithmetic gate (99.03% held-out; sampled96.86%) and learned random labels. Its
+independently audited hard-mode capacity witness exceeds92,238 bits, so it is
+also rejected as a match. These rejections are demonstrated lower bounds, not
+plateau estimates. Categorical width62/K8 has also passed its independent hard-mode arithmetic
+audit (99.25% held-out) and entered capacity calibration. Scalar width80/FF320
+with16 levels has passed arithmetic (99.69% held-out); its screen follows its
+independent audit. Other candidates remain in arithmetic development. No full-width capacity-matched A/B/C selection exists yet.
+
+A44's four120k calibration cells are complete and independently audited. The
+per-seed estimates are80,552.69 and80,438.20 bits, each within1% of the79,810.65-bit
+target; every cell has late relative drift below1.5%. The v4 A training is reused
+under the explicitly verified v4/v5 baseline source equivalence below. See
+`reports/fullwidth_development` for all observations and audit summaries.
 
 The fixed task remains **p149 modular division, 50% training split** and a
 79,810.65-bit label-information target. New A/B/C comparisons are required for
@@ -40,11 +47,12 @@ and softmax-probability surrogate gradient. At width 96 it has **96 variables**,
 not 96/K or 14. A learned full-width readout produces 96*K logits; concatenated
 one-hots feed a learned linear embedding into the next stage. No other state
 crosses the boundary. Count both logits and embedding matrices in B's parameters.
-Training and primary evaluation sample hard categories; argmax evaluation is
-reported separately. Evaluation RNG is isolated from training RNG. No Dreamer
+Training samples hard categories. Source-v5 primary evaluation uses hard argmax;
+sampled evaluation is retained separately. Earlier pilots used sampled-primary
+evaluation and keep that original interpretation. Evaluation RNG is isolated from training RNG. No Dreamer
 world-model prior, KL objective, or deterministic recurrent state is added.
 
-Quantized B rounds all 96 residual coordinates onto a fixed uniform grid after
+Quantized B rounds all native residual coordinates onto a fixed uniform grid after
 each complete block. Initial pilots use clip range [-1,1] and identity STE
 through rounding/clipping. There is no learned compression, expansion, or
 input-dependent scale. This B and its ordinary C have identical parameter
@@ -88,7 +96,8 @@ mechanism is adapted here, rather than copying its dimensions or recurrent model
    measurements, finite-budget estimates and demonstrated plateaus.
 3. Select A/B by calibration only: require each model's empirical capacity within
    10% of the fixed modular training-set label complexity AND within 10% of each
-   other, with B/A parameter ratio >=4. Matching A to B alone is insufficient.
+   other, with B/A parameter ratio >=3 for the source-v5 follow-up (originally >=4).
+   Matching A to B alone is insufficient.
    Keep the training split fixed at 50%; tune models to the dataset. Freeze selection
    before fresh modular seed comparisons. C is an ordinary unrestricted continuous transformer. Quantized B/C share
    parameters and initialization; categorical B/C match total parameter count
@@ -1060,3 +1069,104 @@ each source-v5 arithmetic gate. A44 is repeated under the same source. Keep
 late drift<=5%, all A/B/dataset comparisons within10%, and a >=3x parameter
 ratio. Exclude candidates early only with an audited saved above-target witness.
 Freeze selected architectures before fresh paired arithmetic seeds43/44/45.
+
+After launching the source-v5 pilots, stop the four still-live v4 categorical
+pilots to concentrate compute on the new qualification policy. Preserve exact
+checkpoint snapshots and all observations with scope_stop.json. Their original
+120k budgets are censored by this scope change; no completed-failure conclusion
+is drawn. The four v4 A capacity cells continue to their registered horizon.
+
+Add a four-level arithmetic pilot at the same native width80/FF320 and all
+other v5 settings before launch. It tests scalar precision without changing
+parameter count. If both pass arithmetic and match capacity, select by capacity
+agreement with the fixed dataset and A, before observing fresh-seed arithmetic
+results. Binary width80 remains below60% held-out at13.5k; no failure is assumed.
+
+Baseline source-equivalence audit: the v4/v5 model and data files are byte-identical.
+After removing the new pure policy validation and the unreachable modular-only
+stopping branch, the random-training program is AST-identical, including data,
+evaluation, initialization, optimizer updates, batching and checkpoint state.
+A real64-update CUDA replay under each version produced exactly equal model,
+optimizer, batch order/cursor, CPU/CUDA RNG states, and all non-timing observations.
+See reports/fullwidth_development/source_equivalence.json. Therefore reuse the
+registered v4 A44 calibration rather than rerunning identical optimization.
+Each A checkpoint remains audited under its original frozen source. Acceptance
+permits only this exact pair of runner hashes with every model/data hash equal;
+B calibration and fresh confirmation must use the same v5 source. The result
+records that baseline source equivalence was used. This explicitly supersedes
+the unnecessary v5 A rerun registration before any such rerun was launched.
+
+The first categorical random-label screen exceeds the target under hard mode,
+although sampled label information is lower. Preserve and independently audit
+its exact above-target checkpoint and cancel remaining cells. This validates
+categorical random-label learning but rejects width58/K16 as a capacity match.
+Before launch, register a width48/K16/RMS/temperature0.1/hard-mode arithmetic
+pilot with the same optimizer and120k budget. It has235,920 parameters,3.13x A44.
+Also register binary width80/FF400 (267,760 parameters,3.55x A44): it interpolates
+between the learning-successful but over-capacity FF480 and the slower-learning
+FF320 candidate. These are architecture calibration attempts; fresh comparison
+seeds43/44/45 remain untouched. Each recipe must pass its own arithmetic audit.
+
+The categorical width58 capacity witness independently reproduces both original
+GPU evaluations exactly. CPU hard mode differs on one of16,384 predictions due
+to a near-tie between categories2 and13 in block2: competing-logit margins are
+8.94e-8 on CPU and-2.98e-8 on GPU. The CPU memory estimate differs by0.223 bits.
+Apply the same one-example cross-device accuracy tolerance to categorical hard
+states as to scalar quantizers, retaining loss tolerance1e-4 and exact original
+GPU agreement. The saved cpu_gpu_diagnostic.json identifies the exact cause;
+both devices independently exceed the fixed target tolerance.
+
+Register one alternative categorical alphabet before launch: native width62,
+K8, RMS normalization, temperature0.1, sampled training/hard-mode primary,
+unchanged optimizer and120k arithmetic budget. It has265,050 parameters (3.51x
+A44), with nearest ordinary C width86 (263,074;0.75% fewer). This tests whether
+more coordinates with fewer categories learn more reliably than width48/K16,
+which remains below50% held-out mode accuracy at15.9k. Its total hard-state
+alphabet budget is186 bits/token versus192 for width48/K16 and232 for width58/K16.
+No capacity conclusion follows from those state sizes; this recipe still needs
+its own arithmetic gate and independent audit before any random labels.
+
+Complete the native width80/FF320 scalar precision pilot grid with8 and16
+levels, original optimizer/seed42/120k budget, registered before launch. The
+four-level run remains around98.4% held-out at65k; higher precision tests whether
+its remaining arithmetic errors are caused by the coarse grid. Every candidate
+has229,360 parameters and its own arithmetic gate before random labels. Larger
+alphabets are not assumed to meet capacity; above-target screens remain rejected.
+
+Complete a bounded categorical alphabet grid with(width72,K4) and(width84,K2),
+RMS normalization,temperature0.1,mode-primary,sampled training,original optimizer,
+seed42/120k arithmetic budget. Counts are270,936 and308,028 (3.59x and4.08x A44);
+nearest ordinary controls are widths88 and94,within1.5% of B counts. Alongside
+(width58,K16) and(width62,K8), this tests fewer categories with more native
+coordinates, while retaining the entire discrete state at every block boundary.
+The eight-category recipe has passed its fresh arithmetic gate at12,200 updates;
+its capacity screen starts only after its independent audit. The two new recipes
+are arithmetic-only until separately qualified. Selection remains based on
+capacity calibration, never on fresh-seed confirmation speed.
+
+Register explicit small random-label fitting checks after the respective
+arithmetic audits: N2048,seed61,10k updates,eval100,original optimizer for
+categorical width58/K16 (v5,mode-primary) and scalar width80/FF480/q2 (frozen v4).
+These check near-complete memorization on a dataset below measured capacity,
+separately from the larger calibration screens. They are learning-validation
+runs, not capacity estimates or model-selection evidence. Export both categorical
+inference policies; no assumption is made that sampled and hard-mode fits agree.
+
+The source-v5 scalar width80/FF320/q16 arithmetic run reached sustained99% and
+stopped at19,100 updates with99.69% held-out accuracy. After its independent
+audit, run the registered120k, two-size/two-seed calibration grid, beginning
+with n16,384 seed61. The same saved-checkpoint above-target rejection rule applies.
+The q4 candidate's capacity config is prepared but remains prohibited until
+its own arithmetic gate and independent audit pass.
+
+Both small random-label validations completed10k updates and passed independent
+checkpoint audits: scalar binary width80/FF480 fits100% of2048 random labels;
+categorical width58/K16 fits100% in hard mode and99.46% under the recorded sampled
+evaluation. These demonstrate learning, not saturated capacity. See
+reports/fullwidth_development/random_learning.json.
+
+The width80/FF320/q16 capacity screen is rejected by an independently audited
+6k checkpoint storing106,059 bits, above the fixed tolerance. The q4 recipe has
+now passed arithmetic at91,300 updates (99.08% held-out); its own audit precedes
+its screen. The categorical width62/K8 two-size screen remains live and has not
+yet established a completed capacity estimate or plateau.

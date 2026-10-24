@@ -114,3 +114,15 @@ def test_confirmation_preserves_categorical_evaluation_and_continuous_control():
     assert all(cfg.get('categorical_evaluation')=='hard_mode' for name,cfg in runs if name[0]=='B')
     assert all('categorical_evaluation' not in cfg for name,cfg in runs if name[0]!='B')
     assert 'categorical_evaluation' not in fullwidth_control(b)
+
+
+def test_source_equivalence_is_limited_to_verified_runner_pair():
+    from scripts.discrete_source_compatibility import (
+        RUNNER, VERIFIED_RANDOM_RUNNERS, baseline_random_sources_compatible)
+    old, new = sorted(VERIFIED_RANDOM_RUNNERS)
+    a = {RUNNER: old, 'model': 'unchanged'}
+    b = {RUNNER: new, 'model': 'unchanged'}
+    assert baseline_random_sources_compatible(a, b)
+    assert not baseline_random_sources_compatible(a, {**b, 'model': 'changed'})
+    assert not baseline_random_sources_compatible(a, {**b, RUNNER: 'unknown'})
+    assert not baseline_random_sources_compatible(a, {RUNNER: new})

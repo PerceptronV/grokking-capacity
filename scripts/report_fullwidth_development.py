@@ -34,7 +34,7 @@ def export(root, output):
             continue
         final = trace[-1]
         summary = read(folder/'summary.json') if (folder/'summary.json').exists() else {}
-        row = dict(path=str(folder.resolve()), family=cfg['model'], status=state[str(folder.relative_to(root))],
+        row = dict(path=str(folder.resolve()), family=cfg['model'], purpose=cfg.get('purpose', 'calibration' if cfg['task']=='random' else 'arithmetic_development'), status=state[str(folder.relative_to(root))],
                    termination=summary.get('termination'), p=cfg['p'], depth=cfg['depth'], dim=cfg['dim'],
                    mlp_dim=cfg.get('mlp_dim') or 4*cfg['dim'], params=manifest['param_count'],
                    levels=cfg.get('levels'), alphabet=cfg.get('alphabet'),
@@ -71,7 +71,7 @@ def export(root, output):
     for name, rows in groups.items():
         if rows:
             with (output/(name+'.csv')).open('w') as file:
-                writer=csv.DictWriter(file,fieldnames=list(rows[0]))
+                writer=csv.DictWriter(file,fieldnames=list(rows[0]),lineterminator="\n")
                 writer.writeheader()
                 writer.writerows(rows)
     note=dict(scope='Full-width development only; obsolete learned narrow channels excluded.',

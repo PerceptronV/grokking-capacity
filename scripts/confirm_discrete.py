@@ -13,6 +13,7 @@ import yaml
 
 from grokking_capacity.experiments.discrete import atomic_json, check_gate, run, source_hashes
 from scripts.assess_discrete_match import assess, load_run
+from scripts.discrete_source_compatibility import baseline_random_sources_compatible
 from grokking_capacity.models.discrete import make_model
 from grokking_capacity.models.transformer import count_parameters
 from scripts.discrete_status import statuses
@@ -115,7 +116,8 @@ def confirm(a_paths, b_paths, output, device, *, wait=False, resume=False, min_p
         atomic_json(output/'capacity_assessment.json', assessment)
         if not assessment['accepted']:
             raise ValueError(f'Capacity match rejected: {assessment["issues"]}')
-        if a[0]['source_hashes'] != source_hashes():
+        if (not baseline_random_sources_compatible(a[0]['source_hashes'], source_hashes())
+                or b[0]['source_hashes'] != source_hashes()):
             raise ValueError('Calibration and confirmation training sources differ')
         b_manifest = json.loads((b_paths[0]/'manifest.json').read_text())
         gate = Path(b_manifest['gate']['path'])

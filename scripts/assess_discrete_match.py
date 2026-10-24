@@ -9,6 +9,8 @@ import json
 import math
 from pathlib import Path
 
+from scripts.discrete_source_compatibility import baseline_random_sources_compatible
+
 
 SHARED = ('p', 'operation', 'depth', 'heads', 'dropout', 'lr', 'weight_decay',
           'beta1', 'beta2', 'batch_size', 'max_steps')
@@ -73,8 +75,10 @@ def assess(a, b, *, p=149, fraction=.5, tolerance=.1, min_steps=60000, max_drift
                 issues.append(f'{arm}: inconsistent architecture')
             if cfg['p'] != p or cfg['operation'] != '/' or any(cfg.get(k) != reference['config'].get(k) for k in SHARED):
                 issues.append(f'{arm}: task/optimiser/horizon mismatch')
-            if row['source_hashes'] != reference['source_hashes']:
+            if not baseline_random_sources_compatible(row['source_hashes'], reference['source_hashes']):
                 issues.append(f'{arm}: scientific source mismatch')
+            if arm == 'B' and row['source_hashes'] != arm_ref['source_hashes']:
+                issues.append('B: scientific sources differ within the discrete arm')
             if cfg['max_steps'] < min_steps:
                 issues.append(f'{arm} {cell}: insufficient horizon')
             if row['best_bits'] >= .95 * cfg['n_samples'] * math.log2(p + 2):
@@ -114,6 +118,7 @@ def assess(a, b, *, p=149, fraction=.5, tolerance=.1, min_steps=60000, max_drift
                 tolerance=tolerance, min_steps=min_steps, max_tail_relative_drift=max_drift,
                 parameter_ratio=ratio, min_parameter_ratio=min_parameter_ratio, estimates=estimates, issues=sorted(set(issues)),
                 interpretation='Finite-budget empirical estimate; does not guarantee absent grokking',
+                baseline_source_equivalence_used=any(row['source_hashes'] != reference['source_hashes'] for row in a+b),
                 a_runs=[r.get('path') for r in a], b_runs=[r.get('path') for r in b])
 
 

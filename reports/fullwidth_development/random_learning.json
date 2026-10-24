@@ -1,0 +1,31 @@
+{
+  "purpose": "Learning validation on 2048 random labels, not a capacity estimate. Each run followed its own independent arithmetic audit.",
+  "runs": [
+    {
+      "family": "categorical",
+      "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-random-learning-v5/B_categorical_d58_k16_random_learning_n2048_s61",
+      "updates": 10000,
+      "sampled_or_deterministic_accuracy": 0.99462890625,
+      "hard_mode_accuracy": 1.0,
+      "checkpoint_sha256": "7399986e3db8d2f43298b6d94f0e39b9bf4442b435c27fff46660ef6240dacf6",
+      "arithmetic_gate": {
+        "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-learning-v5/B_categorical_d58_k16_rms_t01_mode_s42",
+        "summary_sha256": "d924806f311a16c6d32404ffa69e9217ea5a742484cc99a3fc8805ab47814a0a"
+      },
+      "independently_audited": true
+    },
+    {
+      "family": "quantized",
+      "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-random-learning-v4/B_quantized_d80_ff480_q2_random_learning_n2048_s61",
+      "updates": 10000,
+      "sampled_or_deterministic_accuracy": 1.0,
+      "hard_mode_accuracy": null,
+      "checkpoint_sha256": "84d2ea4ecf22566227117c463f52d33bae74a65a80ca050cc488a74dbd46d31a",
+      "arithmetic_gate": {
+        "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-learning-v4/B_quantized_d80_ff480_q2_s42",
+        "summary_sha256": "1da763a0059de9e485bd2a51adc17d1b7ca0b3c39b91b42b070a953fc4b63363"
+      },
+      "independently_audited": true
+    }
+  ]
+}

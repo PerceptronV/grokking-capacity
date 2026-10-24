@@ -44,9 +44,11 @@ def audit_capacity(path):
     prefix = 'train_mode' if categorical else 'train'
     # Binary quantization produced one CPU/GPU prediction difference at a
     # zero boundary (CPU 0, GPU 3.58e-7) in the d80/FF480 checkpoint. Permit
-    # at most one example for quantized cross-device accuracy, still require
+    # Categorical argmax also showed one tie-level difference (8.9e-8 vs
+    # -3.0e-8 competing-logit margin). Permit at most one example for hard
+    # discrete cross-device accuracy, still require
     # tight loss agreement and reproduce original-device metrics below.
-    cpu_accuracy_tolerance = 1e-6 + (1 / len(x) if cfg['model'] == 'quantized' else 0)
+    cpu_accuracy_tolerance = 1e-6 + (1 / len(x) if cfg['model'] in {'quantized', 'categorical'} else 0)
     assert abs(cpu_acc - row[prefix + '_acc']) < cpu_accuracy_tolerance
     assert abs(cpu_loss - row[prefix + '_loss']) < 1e-4
     device = torch.device(manifest['device'])
