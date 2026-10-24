@@ -91,23 +91,32 @@ class FullWidthCategoricalState(nn.Module):
             raise ValueError('Categorical alphabet must contain at least two symbols')
         if not math.isfinite(temperature) or temperature <= 0:
             raise ValueError('Categorical temperature must be positive and finite')
-        if normalization not in {'none', 'rms'}:
+        if normalization not in {'none', 'rms', 'slot_layernorm', 'rms_slot_layernorm'}:
             raise ValueError('Unknown categorical normalization')
         self.normalization = normalization
         self.temperature = float(temperature)
         self.dim, self.alphabet = dim, alphabet
         self.to_logits = nn.Linear(dim, dim * alphabet, bias=False)
+        # language-regularisation's per-slot pre-softmax score normalization.
+        # Normalize over the alphabet, independently for every token/coordinate.
+        # Fixed scale and bias prevent the logits head from undoing scale control.
+        self.logit_normalizer = (
+            nn.LayerNorm(alphabet, eps=1e-4, elementwise_affine=False)
+            if normalization in {'slot_layernorm', 'rms_slot_layernorm'}
+            else nn.Identity()
+        )
 
     @property
     def bits_per_token(self):
         return self.dim * math.log2(self.alphabet)
 
     def forward(self, x, *, sample=True):
-        if self.normalization == 'rms':
+        if self.normalization in {'rms', 'rms_slot_layernorm'}:
             # Parameter-free, full-width normalization before logits. The scale
             # is not passed to the next stage: only the hard one-hot state is.
             x = x * torch.rsqrt(x.square().mean(dim=-1, keepdim=True) + 1e-5)
         logits = self.to_logits(x).unflatten(-1, (self.dim, self.alphabet))
+        logits = self.logit_normalizer(logits)
         return categorical_straight_through(logits / self.temperature, sample=sample)
 
 

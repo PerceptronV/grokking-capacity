@@ -1707,7 +1707,7 @@ an unfinished queue. Both queues are complete. Regenerate and validate the
 two reports from this repository root with:
 
 ```bash
-PYTHONPATH=src:. python scripts/report_discrete.py \
+PYTHONPATH=results/discrete/source-worktrees/fullwidth-v6/src:. python scripts/report_discrete.py \
   results/discrete/fullwidth-confirmation-v6-quantized-rms \
   --output reports/fullwidth_quantized_v6 \
   --c-runs results/discrete/fullwidth-control-capacity-v6/C_baseline_d80_ff320_n16384_s61
@@ -1724,7 +1724,7 @@ On a new checkout, recreate that detached source worktree at the same relative
 path before using the categorical command. The original run/checkpoint
 directories are also required for independent revalidation; cloning the Git
 repository alone supplies the exported evidence, not the ignored checkpoints.
-The scalar source is the current v6 code. Per-run source hashes and snapshots,
+The scalar source is frozen at commit `4b29d26` in `results/discrete/source-worktrees/fullwidth-v6`; recreate that detached worktree on a new checkout. Per-run source hashes and snapshots,
 rather than the launch commit alone, bind the actual training implementation.
 
 A cross-family verification confirms identical A configurations, dataset hashes,
@@ -1733,3 +1733,28 @@ arms across the two families share the same modular dataset for each seed.
 These are the same three A seeds used in two comparisons, not six independent
 A seeds; wall times remain separate measurements. Evidence:
 reports/fullwidth_development/shared_a_confirmation.json.
+
+
+## Pre-softmax categorical normalization follow-up — 24 October 2026
+
+The user requested the score normalization from language-regularisation.
+Its `experiments/object_selection/model.py:ScaledSlotLayerNorm` normalizes
+across a slot's alphabet using LayerNorm with epsilon 1e-4 and no affine
+parameters. This differs from our existing RMS normalization of the residual
+before the logits projection. Source v7 adds `slot_layernorm` and
+`rms_slot_layernorm` to the existing categorical normalization option. The
+latter retains residual RMS and then normalizes each K-logit vector, before
+temperature scaling and both categorical sampling and the softmax STE.
+No continuous state bypasses the discrete boundary and no parameters are added.
+
+Register a development arithmetic run using width 62 / FF216 / K8, seed 42,
+p149 division, 50% training split, the existing optimizer, temperature 0.1,
+hard-mode primary evaluation and a 120k-update ceiling. Only score
+normalization changes from the previous seed-42 recipe. Temperature remains
+0.1 for this controlled test; the reference's temperature-1, deterministic
+training recipe is not copied. Score normalization controls raw logit scale,
+but does not guarantee non-saturated probabilities or useful gradients at this
+low temperature. Configuration: `configs/discrete_fullwidth_v7_categorical_slotnorm.yaml`.
+This is development validation, not a fresh confirmation or a new capacity
+match. Any random-label run for this variant requires its own successful
+arithmetic gate and independent audit first. Preserve all previous results.

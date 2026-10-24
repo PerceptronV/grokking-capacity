@@ -64,10 +64,12 @@ def test_quantized_and_ordinary_control_have_identical_initial_parameters():
     assert all(torch.equal(v, c.state_dict()[k]) for k, v in b.state_dict().items())
 
 
-@pytest.mark.parametrize('family', ['categorical', 'quantized'])
-def test_every_full_width_boundary_is_hard_and_has_no_bypass(family):
+@pytest.mark.parametrize('family,normalization', [
+    ('categorical', 'none'), ('categorical', 'rms_slot_layernorm'), ('quantized', 'none'),
+])
+def test_every_full_width_boundary_is_hard_and_has_no_bypass(family, normalization):
     torch.manual_seed(7)
-    model = make_model(config(model=family, levels=4))
+    model = make_model(config(model=family, levels=4, categorical_normalization=normalization))
     tokens = torch.randint(9, (6, 4))
     boundaries = model.categorical_states if family == 'categorical' else model.quantizers
     outputs = []
@@ -122,7 +124,8 @@ def test_gate_checks_family_and_alphabet(tmp_path):
     (tmp_path / 'manifest.json').write_text(json.dumps({'source_hashes': source_hashes()}))
     (tmp_path / 'trace.jsonl').write_text(''.join(json.dumps(x) + '\n' for x in trace))
     check_gate(tmp_path, cfg)
-    for candidate in [config(alphabet=2), config(model='quantized', levels=4)]:
+    for candidate in [config(alphabet=2), config(model='quantized', levels=4),
+                      config(categorical_normalization='rms_slot_layernorm')]:
         with pytest.raises(ValueError, match='architecture'):
             check_gate(tmp_path, candidate)
 
@@ -248,3 +251,48 @@ def test_rms_scalar_quantization_has_fixed_grid_and_normalized_clipped_gradient(
     assert list(quantize.parameters()) == []
     if levels == 2:
         assert torch.equal(z, FullWidthQuantizer(4, 2, 1., 'clipped')(x))
+
+
+@pytest.mark.parametrize('sample', [False, True])
+@pytest.mark.parametrize('normalization', ['slot_layernorm', 'rms_slot_layernorm'])
+def test_slot_normalization_has_full_softmax_surrogate_through_logits_and_input(sample, normalization):
+    from grokking_capacity.models.fullwidth_discrete import FullWidthCategoricalState
+    torch.manual_seed(217)
+    state = FullWidthCategoricalState(4, 3, temperature=.3, normalization=normalization).double()
+    x = torch.tensor([[.2, -.5, .7, 1.2]], dtype=torch.float64, requires_grad=True)
+    source = x * torch.rsqrt(x.square().mean(-1, keepdim=True) + 1e-5) if normalization.startswith('rms') else x
+    raw = state.to_logits(source).unflatten(-1, (4, 3))
+    centered = raw - raw.mean(-1, keepdim=True)
+    normalized = centered / (centered.square().mean(-1, keepdim=True) + 1e-4).sqrt()
+    weights = torch.tensor([[[1., -2., 4.], [3., 5., -1.], [-2., 1., 6.], [2., 4., -3.]]], dtype=x.dtype)
+    expected = torch.autograd.grad(((normalized / .3).softmax(-1) * weights).sum(), (x, state.to_logits.weight))
+    hard = state(x, sample=sample)
+    actual = torch.autograd.grad((hard * weights).sum(), (x, state.to_logits.weight))
+    for observed, reference in zip(actual, expected):
+        torch.testing.assert_close(observed, reference, atol=1e-12, rtol=1e-12)
+        assert torch.isfinite(observed).all() and observed.norm() > 0
+    assert torch.all((hard == 0) | (hard == 1)) and torch.all(hard.sum(-1) == 1)
+    if not sample:
+        assert torch.equal(hard.argmax(-1), raw.argmax(-1))
+    assert count_parameters(state) == 4 * 4 * 3
+
+
+def test_slot_normalization_controls_score_scale_independently_without_added_parameters():
+    from grokking_capacity.models.fullwidth_discrete import FullWidthCategoricalState
+    state = FullWidthCategoricalState(4, 8, normalization='rms_slot_layernorm').double()
+    scores = torch.tensor([[-3., -2., -1., 0., 1., 2., 3., 4.],
+                           [8., 2., -1., 3., -4., 0., 1., 6.]], dtype=torch.float64)
+    normalize = state.logit_normalizer
+    output = normalize(scores)
+    torch.testing.assert_close(normalize(scores + torch.tensor([[100.], [-200.]])), output)
+    torch.testing.assert_close(normalize(scores * torch.tensor([[1e4], [1e6]])), output, atol=2e-5, rtol=0)
+    assert output.abs().max() <= 7 ** .5
+    assert torch.equal(output.argmax(-1), scores.argmax(-1))
+    assert torch.equal(normalize(torch.full_like(scores, 1e5)), torch.zeros_like(scores))
+    assert list(normalize.parameters()) == []
+    torch.manual_seed(218)
+    old = make_model(config(categorical_normalization='rms'))
+    torch.manual_seed(218)
+    new = make_model(config(categorical_normalization='rms_slot_layernorm'))
+    assert old.state_dict().keys() == new.state_dict().keys()
+    assert all(torch.equal(value, new.state_dict()[key]) for key, value in old.state_dict().items())
