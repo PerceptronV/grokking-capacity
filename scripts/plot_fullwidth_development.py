@@ -22,6 +22,15 @@ for comparison in status.get('comparisons', []):
     family = next(run['model'] for run in selected['runs'] if run['name'].startswith('B_'))
     points.extend((f"B {family} (accepted): seed {row['seed']}", row['b_bits']/1000, False)
                   for row in selected['assessment']['estimates'])
+for assessment_path in sorted(root.glob('*_capacity_assessment.json')):
+    assessment = json.loads(assessment_path.read_text())
+    if assessment['accepted'] or not assessment.get('estimates'):
+        continue
+    manifest = json.loads((Path(assessment['b_runs'][0])/'manifest.json').read_text())
+    cfg = manifest['config']
+    for estimate in assessment['estimates']:
+        label = f"B {cfg['model']}: width {cfg['dim']}/FF{cfg.get('mlp_dim',4*cfg['dim'])}, seed {estimate['seed']}"
+        points.append((label, estimate['b_bits']/1000, 'completed_failure'))
 for row in rows:
     if row['above_target_rejection_verified'] != 'True':
         continue
@@ -37,7 +46,7 @@ target = a['target_bits']/1000
 ax.axvspan(.9*target,1.1*target,color='#daf0df',label='Fixed dataset target ±10%')
 ax.axvline(target,color='#3c6548',ls='--',lw=1)
 for i,(label,value,lower_bound) in enumerate(points):
-    ax.scatter(value,i,marker='>' if lower_bound else 'o',s=65,
+    ax.scatter(value,i,marker=('x' if lower_bound == 'completed_failure' else '>' if lower_bound else 'o'),s=65,
                color='#c66b28' if lower_bound else '#3069a2',zorder=3)
     ax.annotate(f'{value:.2f}',(value,i),xytext=(7,-3),textcoords='offset points',fontsize=9)
 ax.set_yticks(range(len(points)),[p[0] for p in points])
@@ -45,7 +54,7 @@ ax.invert_yaxis();ax.set_xlim(65,125);ax.grid(axis='x',alpha=.15)
 ax.set_xlabel('Measured label information (thousand bits)')
 ax.set_title('Capacity calibration against the fixed dataset target',pad=13)
 ax.legend(loc='upper right',frameon=False)
-fig.text(.03,.02,'A and accepted B: maxima across two dataset sizes at 120k updates. Rejected B: audited checkpoint lower bounds.\nAll discrete recipes shown passed arithmetic. Confirmation status is reported separately.',fontsize=9)
+fig.text(.03,.02,'Circles/crosses: recorded maxima across two sizes at 120k updates; crosses failed the capacity assessment.\nTriangles: independently audited checkpoint lower bounds. All B recipes shown passed arithmetic.',fontsize=9)
 fig.tight_layout(rect=(0,.1,1,1))
 for ext in ['png','pdf']:fig.savefig(root/f'capacity_development.{ext}',dpi=180)
 plt.close(fig)

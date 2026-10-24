@@ -9,7 +9,7 @@
     }
   ],
   "counts": {
-    "arithmetic": 38,
+    "arithmetic": 39,
     "capacity": 38
   },
   "accuracy_note": "Categorical raw traces retain sampled and hard-mode metrics separately; primary_evaluation records the registered policy. Null crossings are unobserved, not budget times.",

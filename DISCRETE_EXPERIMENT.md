@@ -29,14 +29,18 @@ The scalar C capacity control completed120k; its independent audit and final
 comparison report follow the confirmation queue.
 
 Categorical width58/K16,width62/K8 and width72/K4 have independently audited
-above-target witnesses of92,238.31,88,381.03 and88,283.57 bits, so all three are
-rejected as capacity matches. Width62/FF232/K8 passed its own arithmetic audit
-at18,200 updates (hard-mode held-out99.0024%; recorded sampled96.5083%), and its
-four-cell capacity grid is running. Its own small random-label check is
-independently audited at100% hard-mode and99.61% sampled accuracy. The ordinary
-C capacity control is queued after scalar confirmation. Width70/FF288/K4
-completed120k below the arithmetic gate (98.27% final hard-mode held-out). Both width60/K8 initializations completed120k below the arithmetic
-gate (48.76% and46.83% hard-mode held-out); neither has random-label runs.
+above-target checkpoint witnesses of92,238.31,88,381.03 and88,283.57 bits.
+Width62/FF232/K8 completed its full four-cell grid and failed the fixed-dataset
+criterion: recorded per-seed maxima88,205.31 and88,119.97 bits exceed the target
+by10.52% and10.41%, respectively. All final checkpoints passed independent
+audit, but the historical peak weights were not retained; distinguish these
+recorded estimates from the independently reloaded lower-bound witnesses.
+Its queued C control was cancelled before any training. This recipe did pass
+arithmetic and its own small random-label learning checks. Width62/FF160/K8 is
+the new arithmetic-only follow-up, with3.0786x A's parameters and an ordinary
+C differing by-0.932% in count. No random labels are permitted before its own
+arithmetic gate and audit. Width70/FF288/K4 and both width60/K8 initializations
+completed120k below their arithmetic gates and have no random-label runs.
 
 Other audited scalar candidates, including normalized four-level width80/FF320,
 exceed the fixed capacity target. These rejection witnesses are lower bounds,
@@ -1403,3 +1407,24 @@ capacity-matched discrete model. The other two registered seeds continue with
 no changes to the frozen selection. Report95% and99% thresholds and observed
 train>=99%/held-out<90% intervals separately; intermittent99% crossings near
 98--99% generalization must not be presented as a classical memorization plateau.
+
+The width62/FF232/K8 grid completed all four120k budgets. Both n16384 traces
+record maxima above the fixed87,791.72-bit ceiling:88,205.31(seed61) and
+88,119.97(seed62). The final saved checkpoints are below the ceiling; historical
+peak weights were overwritten by later checkpoints. Therefore record this as
+a failed completed maximum-over-trace capacity assessment, not an independently
+reloaded above-target checkpoint witness. Independently audit all final weights
+and preserve all traces. Cancel the unstarted ordinary-C waiter with its process
+identity and explicit training_started=false record; no C training was run.
+
+Register a follow-up before launch: categorical width62, native FF160, K8,
+RMS,temperature0.1,sampled training,hard-mode primary evaluation,seed42,
+original optimizer,120k arithmetic budget,frozen v5 source. This preserves all
+62 discrete variables and changes only the native FF expansion;160 remains
+larger than the residual width. A larger FF reduction gives more capacity
+margin than another small move near the upper tolerance edge. It has232,314
+parameters (3.0786x A44); ordinary C is width108/FF160 with230,148
+parameters (-0.932%). The arithmetic gate and independent audit remain
+mandatory before random labels. If qualified, use the same120k,two-size,
+two-seed capacity grid and unchanged10% matching rules. The scalar confirmation
+continues under its frozen selection; none of its results changes this target.
