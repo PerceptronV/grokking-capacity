@@ -135,9 +135,10 @@ def check_gate(path, candidate=None):
     if not recomputed['arithmetic_gate_passed'] or not summary['arithmetic_gate_passed']:
         raise ValueError('Discrete arithmetic gate has not passed')
     if candidate is not None and candidate['model'] in DISCRETE_MODELS:
-        keys = ['model', 'p', 'operation', 'train_fraction', 'depth', 'heads', 'dim',
-                'latent_dim', 'levels', 'alphabet', 'categorical_temperature',
-                'quantizer_clip', 'quantizer_surrogate', 'dropout']
+        keys = ['model', 'p', 'operation', 'train_fraction', 'depth', 'heads', 'dim', 'mlp_dim',
+                'latent_dim', 'levels', 'alphabet', 'categorical_temperature', 'categorical_normalization',
+                'quantizer_clip', 'quantizer_surrogate', 'dropout',
+                'lr', 'weight_decay', 'beta1', 'beta2', 'batch_size']
         if any(candidate.get(k) != summary['config'].get(k) for k in keys):
             raise ValueError('This discrete architecture has not passed the arithmetic gate')
     if manifest['source_hashes'] != source_hashes():

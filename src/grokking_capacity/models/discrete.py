@@ -70,7 +70,7 @@ class ChannelTransformer(TransformerTorch):
 def make_model(config: dict):
     spec = dict(depth=config.get("depth", 2), dim=config["dim"],
                 heads=config.get("heads", 1), n_tokens=config["p"] + 2,
-                seq_len=4, dropout=config.get("dropout", 0.0))
+                seq_len=4, dropout=config.get("dropout", 0.0), mlp_dim=config.get("mlp_dim"))
     if config["model"] == "baseline":
         return TransformerTorch(**spec)
     if config["model"] in {"quantized", "categorical"}:
@@ -84,7 +84,8 @@ def make_model(config: dict):
                 **spec, levels=config["levels"], quantizer_clip=config.get("quantizer_clip", 1.0),
                 quantizer_surrogate=config.get("quantizer_surrogate", "identity"))
         return FullWidthCategoricalTransformer(**spec, alphabet=config["alphabet"],
-            categorical_temperature=config.get("categorical_temperature", 1.0))
+            categorical_temperature=config.get("categorical_temperature", 1.0),
+            categorical_normalization=config.get("categorical_normalization", "none"))
     if config["model"] not in {"discrete", "continuous"}:
         raise ValueError("Unknown model")
     if config["latent_dim"] * math.log2(config["levels"]) < math.log2(config["p"]):

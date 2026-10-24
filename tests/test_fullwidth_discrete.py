@@ -179,3 +179,37 @@ def test_temperature_uses_the_same_distribution_in_forward_and_backward():
     assert torch.equal(hard.argmax(-1), logits.argmax(-1))
     assert torch.equal(expected, actual)
     assert torch.all((hard == 0) | (hard == 1))
+
+
+def test_default_feedforward_size_is_unchanged_and_custom_size_is_full_width():
+    torch.manual_seed(123)
+    default = make_model(config(model='baseline'))
+    torch.manual_seed(123)
+    explicit = make_model(config(model='baseline', mlp_dim=32))
+    assert all(torch.equal(value, explicit.state_dict()[key]) for key, value in default.state_dict().items())
+    torch.manual_seed(124)
+    discrete = make_model(config(model='quantized', levels=2, mlp_dim=64))
+    torch.manual_seed(124)
+    continuous = make_model(config(model='baseline', mlp_dim=64))
+    assert count_parameters(discrete) == count_parameters(continuous)
+    assert all(torch.equal(value, continuous.state_dict()[key]) for key, value in discrete.state_dict().items())
+    for layer in discrete.layers:
+        assert layer.ff.w1.weight.shape == (64, 8)
+        assert layer.ff.w2.weight.shape == (8, 64)
+    assert all(quantizer.dim == 8 for quantizer in discrete.quantizers)
+
+
+def test_categorical_rms_normalization_keeps_hard_states_and_correct_gradient():
+    from grokking_capacity.models.fullwidth_discrete import FullWidthCategoricalState
+    state = FullWidthCategoricalState(4, 3, temperature=.3, normalization='rms').double()
+    x = torch.tensor([[.2, -.5, .7, 1.2]], dtype=torch.float64, requires_grad=True)
+    normalized = x * torch.rsqrt(x.square().mean(-1, keepdim=True) + 1e-5)
+    logits = state.to_logits(normalized).unflatten(-1, (4, 3)) / .3
+    weights = torch.arange(12, dtype=x.dtype).reshape(1,4,3)
+    expected = torch.autograd.grad((logits.softmax(-1) * weights).sum(), x)[0]
+    hard = state(x, sample=False)
+    actual = torch.autograd.grad((hard * weights).sum(), x)[0]
+    assert torch.equal(expected, actual)
+    assert torch.all((hard == 0) | (hard == 1))
+    assert torch.all(hard.sum(-1) == 1)
+    assert count_parameters(state) == 4 * 4 * 3

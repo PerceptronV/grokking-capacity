@@ -30,7 +30,7 @@ def fullwidth_control(b):
     """Ordinary continuous C, with the nearest valid width by total parameters."""
     if b['model'] not in {'quantized', 'categorical'}:
         raise ValueError('Expected a full-width discrete model')
-    extra = {'levels', 'alphabet', 'categorical_temperature', 'quantizer_clip', 'quantizer_surrogate', 'latent_dim'}
+    extra = {'levels', 'alphabet', 'categorical_temperature', 'categorical_normalization', 'quantizer_clip', 'quantizer_surrogate', 'latent_dim'}
     control = {key: value for key, value in b.items() if key not in extra}
     control['model'] = 'baseline'
     if b['model'] == 'categorical':
@@ -39,6 +39,9 @@ def fullwidth_control(b):
         project_out = int(heads != 1)
         quadratic = depth * (16 + project_out)
         linear = 2 * (b['p'] + 2) + depth * (2 + project_out) + 1
+        if b.get('mlp_dim') is not None:
+            quadratic = depth * (4 + project_out)
+            linear += 3 * depth * b['mlp_dim']
         root = (math.sqrt(linear ** 2 + 4 * quadratic * target) - linear) / (2 * quadratic)
         multiple = 2 * heads  # even head width for RoPE
         lower = max(multiple, int(root // multiple) * multiple)
@@ -61,11 +64,12 @@ def confirmation_runs(a, b):
                   max_steps=max(60000, a.get('max_steps', 60000), b.get('max_steps', 60000)), eval_every=100,
                   checkpoint_every=2000, sustained_evals=3, stop_on_success=True)
     if b['model'] in {'quantized', 'categorical'}:
-        keys = ('model', 'dim', 'levels', 'alphabet', 'categorical_temperature', 'quantizer_clip', 'quantizer_surrogate')
+        keys = ('model', 'dim', 'mlp_dim', 'levels', 'alphabet', 'categorical_temperature', 'categorical_normalization', 'quantizer_clip', 'quantizer_surrogate')
         discrete = {key: b[key] for key in keys if key in b}
         control = fullwidth_control(b)
-        arms = dict(A=dict(model='baseline', dim=a['dim']), B=discrete,
-                    C=dict(model='baseline', dim=control['dim']))
+        ordinary_keys = ('model', 'dim', 'mlp_dim')
+        arms = dict(A={key: a[key] for key in ordinary_keys if key in a}, B=discrete,
+                    C={key: control[key] for key in ordinary_keys if key in control})
     else:
         arms = dict(A=dict(model='baseline', dim=a['dim']),
                     B={key: b[key] for key in ('model', 'dim', 'latent_dim', 'levels')},

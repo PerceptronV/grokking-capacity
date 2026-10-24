@@ -48,3 +48,20 @@ def test_fullwidth_controls_are_ordinary_and_count_all_categorical_parameters():
             assert len(runs) == 9
             assert all(cfg['model'] == 'baseline' for name, cfg in runs if name[0] in 'AC')
             assert all(cfg['dim'] == c['dim'] for name, cfg in runs if name[0] == 'C')
+
+
+def test_custom_feedforward_control_keeps_architecture_and_parameter_pairing():
+    from grokking_capacity.experiments.discrete import DEFAULTS
+    from scripts.confirm_discrete import confirmation_runs, fullwidth_control
+    shared = {**DEFAULTS, 'p':149, 'dim':44, 'model':'baseline'}
+    b = {**shared, 'model':'quantized', 'dim':72, 'mlp_dim':576, 'levels':2,
+         'quantizer_clip':1., 'quantizer_surrogate':'clipped'}
+    c = fullwidth_control(b)
+    assert c['dim'] == 72 and c['mlp_dim'] == 576
+    assert count_parameters(make_model(b)) == count_parameters(make_model(c)) == 312408
+    runs = confirmation_runs(shared,b)
+    for name,cfg in runs:
+        if name.startswith(('B_', 'C_')):
+            assert cfg['dim'] == 72 and cfg['mlp_dim'] == 576
+        else:
+            assert cfg['dim'] == 44 and 'mlp_dim' not in cfg

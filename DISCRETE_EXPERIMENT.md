@@ -956,3 +956,35 @@ width96 exhausted60k below the sampled99% gate; no categorical random labels hav
 been trained. Temperature0.03 diagnostics reveal state collapse for width96 and
 limited learning for width58; these are optimization failures, not capacity
 measurements.
+
+## Full-width architecture tuning, source v4
+
+Both earlier scientific sources are frozen: scalar2d328cf and categorical31c5175
+in source-worktrees. Ongoing old runs remain bound to those versions.
+
+All tested two-block width96 scalar precisions exceed the target, so tune the
+ordinary transformer's native residual width and feed-forward hidden width
+independently. Register two-block (residual72, FF576) at2/4 levels and
+(residual80, FF480) at2 levels, clip1/clipped surrogate, original optimizer,
+seed42/120k arithmetic updates. Counts are312,408 and306,160, respectively,
+versus A44's75,460 (ratios4.14 and4.06). These are full-width ordinary transformer
+blocks with standard wider feed-forward networks: every residual coordinate
+is quantized, and there is no learned narrow channel between blocks. Each C
+uses exactly B's residual/FF widths, parameter shapes, and initial weights with
+quantization disabled. A keeps its independently calibrated smaller architecture.
+Default FF size remains4*residual_width, preserving existing model behavior.
+
+Categorical diagnostics showed near-uniform first-layer states and collapsed
+second-layer states in the sharp-temperature wide pilot. Register parameter-free
+RMS normalization of the full block output before categorical logits; only the
+resulting hard one-hots cross the boundary, with no norm/scale side channel.
+Test width96/K16/temperature0.3 and width58/K16/temperature0.1, original optimizer,
+seed42/120k updates. There are still96 and58 categorical variables respectively,
+and parameter counts are unchanged by normalization. This tests optimization,
+not a reduction in coordinate count. The 99% sampled arithmetic gate remains.
+
+All new recipes need their own v4 arithmetic audit before random-label testing.
+The fixed p149 split, target bits, ±10% matches, >=4 parameter ratio, multiple
+calibration sizes/seeds, and fresh paired A/B/C comparison remain unchanged.
+Gate matching now explicitly includes optimizer settings and the FF/normalization
+settings as well as all discrete architecture settings.

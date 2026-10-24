@@ -171,14 +171,19 @@ class TransformerTorch(nn.Module):
         dropout=0.,
         pool='cls',
         init_scale: float = 1.0,
+        mlp_dim: Optional[int] = None,
     ):
         super().__init__()
         assert pool in {'cls', 'mean'}
         self.pool = pool
 
+        if mlp_dim is None:
+            mlp_dim = dim * 4
+        if not isinstance(mlp_dim, int) or mlp_dim < 1:
+            raise ValueError('mlp_dim must be a positive integer')
         self.embedding = nn.Embedding(n_tokens, dim)
         self.layers = nn.ModuleList([
-            BlockTorch(dim, heads, dim // heads, dim * 4, seq_len, dropout)
+            BlockTorch(dim, heads, dim // heads, mlp_dim, seq_len, dropout)
             for _ in range(depth)
         ])
         self.norm = RMSNormTorch(dim)
