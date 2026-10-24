@@ -1170,3 +1170,12 @@ The width80/FF320/q16 capacity screen is rejected by an independently audited
 now passed arithmetic at91,300 updates (99.08% held-out); its own audit precedes
 its screen. The categorical width62/K8 two-size screen remains live and has not
 yet established a completed capacity estimate or plateau.
+
+The scalar width80/FF320/q4 screen exceeds the target in a saved checkpoint
+and is stopped for independent audit; it cannot be selected. Categorical
+width62/K8 is still within tolerance around40k, so start its already registered
+second seed at both sizes. It still needs completed budgets and drift checks.
+Categorical width72/K4 passed arithmetic at27,100 updates (hard-mode held-out
+99.23%); after its independent audit, screen n16,384 seed61 before continuing
+its registered two-seed/two-size calibration. No fresh confirmation seeds run
+until a complete capacity match is accepted.
