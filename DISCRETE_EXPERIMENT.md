@@ -1455,3 +1455,19 @@ B seed74 ended at 98.957% held-out accuracy. Its 99% crossing remains unobserved
 C stores at least 117,696.50 bits in the descriptive random-label control. That run is limited by its dataset, so this is a lower bound, not a saturated C capacity estimate. A/B matching uses the registered random-label protocol and 120k budget; it does not prove an intrinsic information bound or guarantee absent grokking. Wall times were recorded sequentially on a shared GPU and are descriptive.
 
 Full evidence: [confirmation table](reports/fullwidth_quantized_v6/confirmation.csv), [learning curves](reports/fullwidth_quantized_v6/learning_curves.png), [capacity curves](reports/fullwidth_quantized_v6/capacity_curves.png), [validation](reports/fullwidth_quantized_v6/validation.json). The categorical family remains unfinished and is not covered by this scalar conclusion.
+
+
+Register an intermediate categorical candidate before launch: native width62,
+FF216, K8, RMS normalization, temperature0.1, sampled training and hard-mode
+primary evaluation. Retain seed42, the original optimizer, frozen v5 source,
+and the120k arithmetic budget. FF232 learned arithmetic but its completed
+capacity estimates narrowly exceeded the ceiling. FF160 remains below the
+arithmetic gate near95k, suggesting the larger FF reduction may impair
+optimization. The intermediate candidate has253,146 parameters (3.3547x A44);
+ordinary C width104/FF216 has253,240 (+0.0371%). This changes only the native
+FF expansion and preserves all62 categorical variables. Its own arithmetic
+gate and independent checkpoint audit must precede random labels. If qualified,
+use the unchanged120k capacity grid at n16384/32768,seeds61/62, paired with A.
+The FF160 run will finish its registered budget; its prepared random runs
+remain prohibited until it qualifies. No confirmation result determines this
+capacity refinement, and no matching threshold is changed.
