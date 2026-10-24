@@ -8,6 +8,7 @@ import argparse
 import csv
 import hashlib
 import json
+import math
 from pathlib import Path
 import shutil
 from statistics import median
@@ -20,6 +21,7 @@ from grokking_capacity.experiments.discrete import check_gate, source_hashes, su
 from scripts.analyse_discrete import memorisation_intervals
 from scripts.assess_discrete_match import assess, load_run
 from scripts.confirm_discrete import confirmation_runs
+from scripts.confirm_discrete_unrestricted import unrestricted_runs, shared_initial_tensors
 
 
 def read(path):
@@ -79,7 +81,9 @@ def validate(root, c_paths):
         raise ValueError('All nine frozen runs must finish before final reporting')
     if state['inputs']['source_hashes'] != source_hashes():
         raise ValueError('Scientific training sources changed')
-    if state['inputs']['script_sha256'] != digest(Path('scripts/confirm_discrete.py')):
+    unrestricted = frozen.get('control') == 'unrestricted'
+    implementation = Path('scripts/confirm_discrete_unrestricted.py' if unrestricted else 'scripts/confirm_discrete.py')
+    if state['inputs']['script_sha256'] != digest(implementation):
         raise ValueError('Confirmation implementation changed')
     calibration = {}
     for arm in 'AB':
@@ -91,7 +95,8 @@ def validate(root, c_paths):
         for name, expected in hashes.items():
             if digest(Path(folder)/name) != expected:
                 raise ValueError(f'Calibration evidence changed: {folder}/{name}')
-    expected = confirmation_runs(calibration['A'][0]['config'], calibration['B'][0]['config'])
+    builder = unrestricted_runs if unrestricted else confirmation_runs
+    expected = builder(calibration['A'][0]['config'], calibration['B'][0]['config'])
     if frozen['runs'] != [dict(name=name, **cfg) for name, cfg in expected]:
         raise ValueError('Frozen confirmation configurations changed')
     calibration['C'] = [load_run(p) for p in c_paths]
@@ -99,11 +104,19 @@ def validate(root, c_paths):
         candidate = next(row for row in calibration['B'] if all(
             row['config'][key] == control['config'][key] for key in ('seed', 'n_samples')))
         expected_config = {**candidate['config'], 'model':'continuous'}
+        if unrestricted:
+            expected_config = {key:value for key,value in {**candidate['config'],'model':'baseline'}.items()
+                               if key not in ('latent_dim','levels')}
         if control['config'] != expected_config or control['source_hashes'] != source_hashes():
             raise ValueError('C calibration is not the exact continuous control')
         bm, cm = (read(Path(row['path'])/'manifest.json') for row in (candidate,control))
-        if any(bm[key] != cm[key] for key in ('param_count','dataset_sha256','initial_weights_sha256')):
-            raise ValueError('C calibration pairing failed')
+        if bm['dataset_sha256'] != cm['dataset_sha256']:
+            raise ValueError('C calibration data pairing failed')
+        if unrestricted:
+            if cm['param_count'] != frozen['c_params'] or not shared_initial_tensors(candidate['config'],control['config']):
+                raise ValueError('Unrestricted C calibration base tensor pairing failed')
+        elif any(bm[key] != cm[key] for key in ('param_count','initial_weights_sha256')):
+            raise ValueError('C calibration tensor pairing failed')
     gates = {}
     for row in calibration['B']:
         manifest = read(Path(row['path'])/'manifest.json')
@@ -123,6 +136,11 @@ def validate(root, c_paths):
         path = root/name
         manifest, summary, audit = (read(path/f'{kind}.json') for kind in ('manifest','summary','audit'))
         data = trace(path)
+        if (path/'inherited_run.json').exists():
+            inherited = read(path/'inherited_run.json')
+            for filename, expected_hash in inherited['artifact_hashes'].items():
+                if digest(path/filename) != expected_hash or digest(Path(inherited['path'])/filename) != expected_hash:
+                    raise ValueError(f'Inherited A/B evidence changed: {name}/{filename}')
         calculated = summarise(config, data, manifest['param_count'])
         if manifest['config'] != config or summary['config'] != config or manifest['source_hashes'] != source_hashes():
             raise ValueError(f'Configuration/source changed: {name}')
@@ -159,7 +177,12 @@ def validate(root, c_paths):
         a,b,c = (manifests[f'{arm}_s{seed}'] for arm in 'ABC')
         if len({m['dataset_sha256'] for m in (a,b,c)}) != 1:
             raise ValueError(f'Modular datasets are unpaired: {seed}')
-        if b['param_count'] != c['param_count'] or b['initial_weights_sha256'] != c['initial_weights_sha256']:
+        if unrestricted:
+            if b['param_count'] != frozen['b_params'] or c['param_count'] != frozen['c_params']:
+                raise ValueError(f'Amended B/C parameter counts changed: {seed}')
+            if not shared_initial_tensors(b['config'],c['config']):
+                raise ValueError(f'B/C shared base initialisation failed: {seed}')
+        elif b['param_count'] != c['param_count'] or b['initial_weights_sha256'] != c['initial_weights_sha256']:
             raise ValueError(f'B/C tensor pairing failed: {seed}')
     return rows, records, assessment, calibration, gates
 
@@ -204,7 +227,6 @@ def plots(output, rows, records, calibration, target):
             ax.axhline(target/1000,color='grey',ls=':',lw=.8)
             ax.set_title(f'Seed {seed}, n={n:,}')
             ax.set_xlim(0,60000)
-            ax.set_ylim(bottom=0)
             ax.grid(alpha=.15)
             ax.legend(frameon=False,loc='lower right')
     for ax in axes[-1]: ax.set_xlabel('Optimizer updates')
@@ -227,16 +249,19 @@ def report(root, output, c_paths):
     for arm,runs in calibration.items():
         for row in runs:
             capacities.append(dict(arm=arm,seed=row['config']['seed'],n_samples=row['config']['n_samples'],
-                params=row['params'],best_bits=row['best_bits'],tail_relative_drift=row['tail_relative_drift']))
+                params=row['params'],best_bits=row['best_bits'],tail_relative_drift=row['tail_relative_drift'],
+                dataset_limited=row['best_bits'] >= .95*row['config']['n_samples']*math.log2(row['config']['p']+2)))
     write_csv(output/'capacity.csv',capacities)
+    unrestricted = read(root/'selection.json').get('control') == 'unrestricted'
     write_json(output/'validation.json',dict(all_nine_complete=True,capacity_match=assessment,
-               checkpoint_audits=9,paired_datasets=True,paired_B_C_initial_tensors=True,
+               checkpoint_audits=9,paired_datasets=True,control='unrestricted' if unrestricted else 'compressed_continuous',
+               paired_B_C_initial_tensors=not unrestricted,paired_B_C_shared_base_initial_tensors=True,
                scientific_source_hashes=source_hashes(),arithmetic_before_random=gates))
     evidence=output/'evidence'
     for folder in [root/name for name in records]+[Path(row['path']) for runs in calibration.values() for row in runs]+[Path(g) for g in gates]:
         destination=evidence/folder.parent.name/folder.name
         destination.mkdir(parents=True,exist_ok=True)
-        for name in ('manifest.json','summary.json','trace.jsonl','audit.json'):
+        for name in ('manifest.json','summary.json','trace.jsonl','audit.json','inherited_run.json'):
             if (folder/name).exists(): shutil.copyfile(folder/name,destination/name)
     for name in ('selection.json','configuration.yaml','capacity_assessment.json','orchestrator.json'):
         shutil.copyfile(root/name,output/name)
