@@ -358,3 +358,64 @@ and start time rather than copying those fields from the parent. For earlier
 extensions, the manifest's device could be inherited; command-line provenance in
 scope_stop.json identifies the actual continuation device. No timing comparison
 uses those exploratory runs.
+
+## Confirmed task: p149 modular division, fixed 50% split
+
+The user selected prime149 with modular division. This supersedes p97 as the
+final comparison task; the training fraction remains fixed at 0.5. The target is
+79,810.6507 bits under the registered label-information metric. A and B must each
+be within 10% of this target and within 10% of each other. No arithmetic outcome
+at p149 has been observed when making this selection.
+
+Register configs/discrete_learning_p149.yaml: width96, two layers, seed42,
+16-coordinate channels with 8 or 16 levels; identical bounded-continuous control
+(the levels setting is inactive for C). All use lr0.001, weight decay1, dropout0,
+60k maximum updates, and the same sustained99 gate. The eight-level candidate
+was the fast development recipe at p97; the sixteen-level candidate tests whether
+more resolution restores learning on the larger task. There is no random-label
+training at p149 before a corresponding discrete arithmetic gate and audit pass.
+If neither recipe learns, preserve the failures and adapt using arithmetic
+results only; matching cannot be inferred from unsuccessful training.
+
+Based only on p97 calibration, width46 is a plausible small A starting point:
+71,642 demonstrated bits on that smaller vocabulary. This does not establish its
+p149 capacity. Recalibration will use the actual p149 vocabulary, at least two
+non-interpolated dataset sizes, two independent calibration seeds and horizon
+checks. Fresh modular confirmation seeds43/44/45 remain unused. The proposed
+width32/B_l8_q16 p97 match is abandoned, with its evidence retained.
+
+Prepared, but not launched before the gate: configs/discrete_capacity_p149.yaml.
+First screens use n16384 and seed61 for A widths44/46, successful B recipes, and
+C_l16. All have a 20k-update exploratory budget with horizon extension required
+before matching. A44/A46 have 75,460/81,834 parameters; B and C have 330,720, so
+both preserve the >=4x parameter-ratio criterion. Candidate screening uses the
+79,811-bit target; candidates already demonstrating more than87,792 bits are
+excluded, rather than matched to a larger A. A low short-budget estimate is not
+accepted as evidence of small capacity. A final candidate still needs n32768,
+independent seed62, and 60k horizon checks on both dataset sizes.
+
+`scripts/assess_discrete_match.py` enforces the fixed-target comparison from
+completed calibration artifacts. It requires paired seed/size cells, consistent
+scientific sources and optimisation settings, at least two seeds and sizes,
+60k updates, no dataset-limited calibration, and at most 5% absolute relative
+late-window drift. This numerical drift rule is registered before any p149
+capacity result. It checks both target matching and A/B matching on every seed,
+plus the >=4x parameter ratio. Passing means an empirical fixed-budget match,
+not a proof of finite representational capacity or absence of grokking. Tests
+explicitly reject an equal A/B pair that exceeds dataset complexity.
+
+Arithmetic-only precision follow-up: after both p149 eight- and sixteen-level
+runs slowed near90% held-out beyond13k updates, register a 64-level variant at
+the same16-coordinate width, seed42 and all other settings unchanged. This is a
+precision diagnostic, not a capacity match. It needs its own sustained99 gate and
+independent audit before random labels. The 79,811-bit target remains unchanged;
+a more accurate model that exceeds the target will be rejected for the final
+comparison. Initial recipes retain their60k budgets and are not declared failed
+based on an intermediate plateau. Config: discrete_learning_p149_precision.yaml.
+
+Prepare the same n16384/seed61 capacity screen for B_l16_q64, contingent on its
+own gate. It has the same330,720 parameters and initial tensors as the other
+16-coordinate candidates. At around4k updates its held-out accuracy is near99%,
+but the sustained gate has not yet passed. No calibration is launched on this
+intermediate result. The capacity-assessment tests and existing experiment tests
+all pass:15 focused checks.

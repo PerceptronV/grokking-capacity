@@ -1,0 +1,30 @@
+# Fixed modulus and split explicitly selected by the user. Arithmetic gates only.
+defaults:
+  task: modular
+  p: 149
+  operation: /
+  train_fraction: 0.5
+  depth: 2
+  heads: 1
+  dropout: 0.0
+  dim: 96
+  latent_dim: 16
+  seed: 42
+  lr: 0.001
+  weight_decay: 1.0
+  batch_size: 512
+  max_steps: 60000
+  eval_every: 100
+  checkpoint_every: 2000
+  sustained_evals: 3
+  stop_on_success: true
+runs:
+- name: B_l16_q8_p149_s42
+  model: discrete
+  levels: 8
+- name: C_l16_p149_s42
+  model: continuous
+  levels: 8
+- name: B_l16_q16_p149_s42
+  model: discrete
+  levels: 16
