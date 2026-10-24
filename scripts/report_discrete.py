@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 from grokking_capacity.experiments.discrete import check_gate, source_hashes, summarise
 from scripts.analyse_discrete import memorisation_intervals
 from scripts.assess_discrete_match import assess, load_run
-from scripts.confirm_discrete import confirmation_runs
+from scripts.confirm_discrete import confirmation_runs, fullwidth_control
 from scripts.confirm_discrete_unrestricted import unrestricted_runs, shared_initial_tensors
 
 
@@ -81,8 +81,9 @@ def validate(root, c_paths):
         raise ValueError('All nine frozen runs must finish before final reporting')
     if state['inputs']['source_hashes'] != source_hashes():
         raise ValueError('Scientific training sources changed')
-    unrestricted = frozen.get('control') == 'unrestricted'
-    implementation = Path('scripts/confirm_discrete_unrestricted.py' if unrestricted else 'scripts/confirm_discrete.py')
+    fullwidth = frozen.get('control') == 'fullwidth_unrestricted'
+    unrestricted = fullwidth or frozen.get('control') == 'unrestricted'
+    implementation = Path('scripts/confirm_discrete_unrestricted.py' if unrestricted and not fullwidth else 'scripts/confirm_discrete.py')
     if state['inputs']['script_sha256'] != digest(implementation):
         raise ValueError('Confirmation implementation changed')
     calibration = {}
@@ -95,7 +96,7 @@ def validate(root, c_paths):
         for name, expected in hashes.items():
             if digest(Path(folder)/name) != expected:
                 raise ValueError(f'Calibration evidence changed: {folder}/{name}')
-    builder = unrestricted_runs if unrestricted else confirmation_runs
+    builder = unrestricted_runs if unrestricted and not fullwidth else confirmation_runs
     expected = builder(calibration['A'][0]['config'], calibration['B'][0]['config'])
     if frozen['runs'] != [dict(name=name, **cfg) for name, cfg in expected]:
         raise ValueError('Frozen confirmation configurations changed')
@@ -104,7 +105,9 @@ def validate(root, c_paths):
         candidate = next(row for row in calibration['B'] if all(
             row['config'][key] == control['config'][key] for key in ('seed', 'n_samples')))
         expected_config = {**candidate['config'], 'model':'continuous'}
-        if unrestricted:
+        if fullwidth:
+            expected_config = fullwidth_control(candidate['config'])
+        elif unrestricted:
             expected_config = {key:value for key,value in {**candidate['config'],'model':'baseline'}.items()
                                if key not in ('latent_dim','levels')}
         if control['config'] != expected_config or control['source_hashes'] != source_hashes():
@@ -113,16 +116,33 @@ def validate(root, c_paths):
         if bm['dataset_sha256'] != cm['dataset_sha256']:
             raise ValueError('C calibration data pairing failed')
         if unrestricted:
-            if cm['param_count'] != frozen['c_params'] or not shared_initial_tensors(candidate['config'],control['config']):
+            if cm['param_count'] != frozen['c_params']:
+                raise ValueError('Unrestricted C calibration parameter count differs')
+            if candidate['config']['model'] != 'categorical' and not shared_initial_tensors(candidate['config'],control['config']):
                 raise ValueError('Unrestricted C calibration base tensor pairing failed')
         elif any(bm[key] != cm[key] for key in ('param_count','initial_weights_sha256')):
             raise ValueError('C calibration tensor pairing failed')
+    if fullwidth:
+        for runs in calibration.values():
+            for row in runs:
+                folder = Path(row['path'])
+                audit = read(folder/'audit_capacity.json')
+                if (audit['checkpoint_sha256'] != digest(folder/'checkpoint.pt') or
+                    audit['checkpoint_step'] != row['config']['max_steps'] or
+                    audit['param_count'] != row['params'] or
+                    audit['dataset_sha256'] != row['dataset_sha256'] or
+                    audit['scientific_source_hashes'] != row['source_hashes']):
+                    raise ValueError(f'Independent capacity checkpoint audit disagrees: {folder}')
     gates = {}
     for row in calibration['B']:
         manifest = read(Path(row['path'])/'manifest.json')
         gate = Path(manifest['gate']['path'])
         if check_gate(gate, row['config']) != manifest['gate']:
             raise ValueError('Arithmetic gate changed')
+        gate_config = read(gate/'summary.json')['config']
+        if any(row['config'].get(key) != gate_config.get(key) for key in
+               ('lr', 'weight_decay', 'beta1', 'beta2', 'batch_size', 'dropout')):
+            raise ValueError('Calibration optimizer differs from its arithmetic gate')
         audit = read(gate/'audit.json')
         if not audit['arithmetic_gate_passed'] or (gate/'audit.json').stat().st_mtime >= manifest['start_time']:
             raise ValueError('Arithmetic checkpoint audit did not precede random-label training')
@@ -151,7 +171,7 @@ def validate(root, c_paths):
             raise ValueError(f'Independent checkpoint audit disagrees: {name}')
         if any(audit[key] != manifest[key] for key in ('param_count','dataset_sha256','initial_weights_sha256')):
             raise ValueError(f'Independent provenance audit disagrees: {name}')
-        if config['model'] == 'discrete' and len(audit.get('hard_code_audit',[])) != config['depth']:
+        if config['model'] in {'discrete', 'quantized', 'categorical'} and len(audit.get('hard_code_audit',[])) != config['depth']:
             raise ValueError(f'Hard-code audit missing: {name}')
         if summary['termination'] == 'budget' and data[-1]['step'] != config['max_steps']:
             raise ValueError(f'Budget run ended early: {name}')
@@ -160,7 +180,7 @@ def validate(root, c_paths):
             raise ValueError(f'Success incorrectly recorded: {name}')
         intervals = memorisation_intervals(data)
         row = dict(name=name, arm=name[0], seed=config['seed'], params=manifest['param_count'],
-                   final_step=data[-1]['step'], final_train_acc=data[-1]['train_acc'],
+                   budget_steps=config['max_steps'], final_step=data[-1]['step'], final_train_acc=data[-1]['train_acc'],
                    final_val_acc=data[-1]['val_acc'], termination=summary['termination'],
                    delay_steps_99=calculated['metrics']['delay_steps_99'],
                    max_train_val_gap=calculated['metrics']['max_train_val_gap'],
@@ -180,7 +200,7 @@ def validate(root, c_paths):
         if unrestricted:
             if b['param_count'] != frozen['b_params'] or c['param_count'] != frozen['c_params']:
                 raise ValueError(f'Amended B/C parameter counts changed: {seed}')
-            if not shared_initial_tensors(b['config'],c['config']):
+            if b['config']['model'] != 'categorical' and not shared_initial_tensors(b['config'],c['config']):
                 raise ValueError(f'B/C shared base initialisation failed: {seed}')
         elif b['param_count'] != c['param_count'] or b['initial_weights_sha256'] != c['initial_weights_sha256']:
             raise ValueError(f'B/C tensor pairing failed: {seed}')
@@ -189,6 +209,7 @@ def validate(root, c_paths):
 
 def plots(output, rows, records, calibration, target):
     colors = dict(A='#3366a0', B='#d36a25', C='#25856d')
+    budget = max(row.get('budget_steps', 60000) for row in rows)
     fig, axes = plt.subplots(3,3, figsize=(12,8), sharex=True, sharey=True)
     for row in rows:
         name,arm = row['name'],row['arm']
@@ -199,8 +220,8 @@ def plots(output, rows, records, calibration, target):
                     color=colors[arm],lw=1.1,alpha=.85 if style=='-' else .6,label=label)
         ax.scatter([data[-1]['step']],[data[-1]['val_acc']],s=22,color=colors[arm],marker='x')
         ax.set_xscale('symlog', linthresh=1000)
-        ax.set_xlim(0,60000)
-        ax.set_xticks([0,1000,10000,60000],['0','1k','10k','60k'])
+        ax.set_xlim(0,budget)
+        ax.set_xticks([0,1000,10000,budget],['0','1k','10k',f'{budget//1000}k'])
         ax.set_ylim(0,1.025)
         ax.axhline(.99,ls=':',c='grey',lw=.7)
         ax.set_title(f"{name}: {'99% criterion met' if row['generalise_99_step'] is not None else '99% not reached by budget'}",fontsize=10)
@@ -212,13 +233,14 @@ def plots(output, rows, records, calibration, target):
     fig.tight_layout(rect=(0,0,1,.94))
     for suffix in ('png','pdf'): fig.savefig(output/f'learning_curves.{suffix}',dpi=170)
     plt.close(fig)
+    capacity_budget = max(row['config']['max_steps'] for runs in calibration.values() for row in runs)
     fig, axes = plt.subplots(2,2,figsize=(10,6),sharex=True,sharey=True)
     for arm, runs in calibration.items():
         for row in runs:
             config = row['config']
             ax = axes[config['seed']-61, [16384,32768].index(config['n_samples'])]
             data = trace(Path(row['path']))
-            ax.plot([r['step'] for r in data],[r['train_bits']/1000 for r in data],
+            ax.plot([r['step'] for r in data],[max(r['train_bits'], r.get('train_mode_bits', r['train_bits']))/1000 for r in data],
                     label=arm,color=colors[arm],lw=1.2)
     for i, seed in enumerate((61,62)):
         for j, n in enumerate((16384,32768)):
@@ -226,12 +248,12 @@ def plots(output, rows, records, calibration, target):
             ax.axhspan(.9*target/1000,1.1*target/1000,color='grey',alpha=.12)
             ax.axhline(target/1000,color='grey',ls=':',lw=.8)
             ax.set_title(f'Seed {seed}, n={n:,}')
-            ax.set_xlim(0,60000)
+            ax.set_xlim(0,capacity_budget)
             ax.grid(alpha=.15)
             ax.legend(frameon=False,loc='lower right')
     for ax in axes[-1]: ax.set_xlabel('Optimizer updates')
     for ax in axes[:,0]: ax.set_ylabel('Learned label information (kbits)')
-    fig.suptitle('Finite-budget capacity measurements\nGrey band: fixed modular dataset target ±10%; C is descriptive, seed 61 only',fontsize=12)
+    fig.suptitle('Finite-budget capacity measurements\nGrey: fixed target ±10%; categorical memory uses max(sampled, mode); C descriptive',fontsize=12)
     fig.tight_layout(rect=(0,0,1,.92))
     for suffix in ('png','pdf'): fig.savefig(output/f'capacity_curves.{suffix}',dpi=170)
     plt.close(fig)
@@ -249,19 +271,24 @@ def report(root, output, c_paths):
     for arm,runs in calibration.items():
         for row in runs:
             capacities.append(dict(arm=arm,seed=row['config']['seed'],n_samples=row['config']['n_samples'],
-                params=row['params'],best_bits=row['best_bits'],tail_relative_drift=row['tail_relative_drift'],
+                params=row['params'],best_bits=row['best_bits'],
+                best_sampled_bits=row.get('best_sampled_bits'),best_mode_bits=row.get('best_mode_bits'),
+                tail_relative_drift=row['tail_relative_drift'],
                 dataset_limited=row['best_bits'] >= .95*row['config']['n_samples']*math.log2(row['config']['p']+2)))
     write_csv(output/'capacity.csv',capacities)
-    unrestricted = read(root/'selection.json').get('control') == 'unrestricted'
+    control = read(root/'selection.json').get('control', 'compressed_continuous')
+    unrestricted = control in {'unrestricted', 'fullwidth_unrestricted'}
+    categorical = calibration['B'][0]['config']['model'] == 'categorical'
     write_json(output/'validation.json',dict(all_nine_complete=True,capacity_match=assessment,
-               checkpoint_audits=9,paired_datasets=True,control='unrestricted' if unrestricted else 'compressed_continuous',
-               paired_B_C_initial_tensors=not unrestricted,paired_B_C_shared_base_initial_tensors=True,
+               checkpoint_audits=9,paired_datasets=True,control=control,
+               paired_B_C_initial_tensors=(not unrestricted or (control == 'fullwidth_unrestricted' and not categorical)),
+               paired_B_C_shared_base_initial_tensors=not categorical,
                scientific_source_hashes=source_hashes(),arithmetic_before_random=gates))
     evidence=output/'evidence'
     for folder in [root/name for name in records]+[Path(row['path']) for runs in calibration.values() for row in runs]+[Path(g) for g in gates]:
         destination=evidence/folder.parent.name/folder.name
         destination.mkdir(parents=True,exist_ok=True)
-        for name in ('manifest.json','summary.json','trace.jsonl','audit.json','inherited_run.json'):
+        for name in ('manifest.json','summary.json','trace.jsonl','audit.json','audit_capacity.json','inherited_run.json'):
             if (folder/name).exists(): shutil.copyfile(folder/name,destination/name)
     for name in ('selection.json','configuration.yaml','capacity_assessment.json','orchestrator.json'):
         shutil.copyfile(root/name,output/name)
@@ -274,6 +301,7 @@ def report(root, output, c_paths):
                   gate=manifest.get('gate'),params=manifest['param_count'])
         if (path/'summary.json').exists(): item['summary']=read(path/'summary.json')
         if (path/'scope_stop.json').exists(): item['scope_stop']=read(path/'scope_stop.json')
+        if (path/'screen_rejection.json').exists(): item['screen_rejection']=read(path/'screen_rejection.json')
         history.append(item)
     write_json(output/'development_history.json',history)
     plots(output,rows,records,calibration,assessment['target_bits'])

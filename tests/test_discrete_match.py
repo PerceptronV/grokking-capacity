@@ -72,3 +72,23 @@ def test_distinct_full_width_alphabets_cannot_be_pooled():
     b[1]['config']['alphabet'] = 2
     assert not assess(a, b)['accepted']
     assert not assess(a, rows('continuous', 80000))['accepted']
+
+
+def test_sampling_noise_cannot_hide_categorical_memory(tmp_path):
+    import json
+    from scripts.assess_discrete_match import load_run
+    cfg = dict(model='categorical', task='random', p=149, max_steps=60000,
+               seed=61, n_samples=16384)
+    trace = [dict(step=step, train_bits=80000., train_mode_bits=100000.)
+             for step in [0, 36000, 48000, 60000]]
+    manifest = dict(config=cfg, param_count=400000, source_hashes={'code': 'hash'},
+                    dataset_sha256='data')
+    summary = dict(config=cfg, final=trace[-1], best_train_bits=80000.)
+    (tmp_path/'manifest.json').write_text(json.dumps(manifest))
+    (tmp_path/'summary.json').write_text(json.dumps(summary))
+    (tmp_path/'trace.jsonl').write_text(''.join(json.dumps(row)+'\n' for row in trace))
+    row = load_run(tmp_path)
+    assert row['best_bits'] == 100000.
+    assert row['best_sampled_bits'] == 80000.
+    assert row['best_mode_bits'] == 100000.
+    assert row['capacity_evaluation'] == 'max(sampled, hard-mode)'

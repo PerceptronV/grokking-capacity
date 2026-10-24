@@ -12,7 +12,7 @@ from pathlib import Path
 
 SHARED = ('p', 'operation', 'depth', 'heads', 'dropout', 'lr', 'weight_decay',
           'beta1', 'beta2', 'batch_size', 'max_steps')
-ARCH = ('model', 'dim', 'latent_dim', 'levels', 'alphabet', 'quantizer_clip', 'quantizer_surrogate')
+ARCH = ('model', 'dim', 'latent_dim', 'levels', 'alphabet', 'categorical_temperature', 'quantizer_clip', 'quantizer_surrogate')
 
 
 def load_run(path):
@@ -24,18 +24,29 @@ def load_run(path):
         raise ValueError(f'Inconsistent completed artifacts: {path}')
     if cfg['task'] != 'random' or trace[-1]['step'] != cfg['max_steps']:
         raise ValueError(f'Not a completed fixed-budget calibration: {path}')
-    best = max(r['train_bits'] for r in trace)
-    if abs(best - summary['best_train_bits']) > 1e-6:
+    sampled_best = max(r['train_bits'] for r in trace)
+    if abs(sampled_best - summary['best_train_bits']) > 1e-6:
         raise ValueError(f'Inconsistent peak memorisation: {path}')
-    recent = [r['train_bits'] for r in trace if r['step'] >= .8 * cfg['max_steps']]
-    previous = [r['train_bits'] for r in trace if .6 * cfg['max_steps'] <= r['step'] < .8 * cfg['max_steps']]
+    categorical = cfg['model'] == 'categorical'
+    if categorical and any('train_mode_bits' not in r for r in trace):
+        raise ValueError('Categorical capacity needs both sampled and mode evaluation')
+    mode_best = max(r['train_mode_bits'] for r in trace) if categorical else None
+    def information(row):
+        return max(row['train_bits'], row['train_mode_bits']) if categorical else row['train_bits']
+    # Sampling noise must not be mistaken for inability to store the labels:
+    # hard argmax states remain within the same categorical architecture.
+    best = max(information(r) for r in trace)
+    recent = [information(r) for r in trace if r['step'] >= .8 * cfg['max_steps']]
+    previous = [information(r) for r in trace if .6 * cfg['max_steps'] <= r['step'] < .8 * cfg['max_steps']]
     if not recent or not previous:
         raise ValueError(f'Insufficient late observations: {path}')
     mean = sum(recent) / len(recent)
     drift = (mean - sum(previous) / len(previous)) / max(abs(mean), 1.)
     return dict(path=str(path.resolve()), config=cfg, params=manifest['param_count'],
                 source_hashes=manifest['source_hashes'], dataset_sha256=manifest['dataset_sha256'],
-                best_bits=best, tail_relative_drift=drift)
+                best_bits=best, best_sampled_bits=sampled_best, best_mode_bits=mode_best,
+                capacity_evaluation='max(sampled, hard-mode)' if categorical else 'deterministic',
+                tail_relative_drift=drift)
 
 
 def assess(a, b, *, p=149, fraction=.5, tolerance=.1, min_steps=60000, max_drift=.05):

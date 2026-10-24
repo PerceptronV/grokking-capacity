@@ -81,10 +81,13 @@ class FullWidthQuantizedTransformer(TransformerTorch):
 
 
 class FullWidthCategoricalState(nn.Module):
-    def __init__(self, dim, alphabet):
+    def __init__(self, dim, alphabet, temperature=1.0):
         super().__init__()
         if not isinstance(alphabet, int) or alphabet < 2:
             raise ValueError('Categorical alphabet must contain at least two symbols')
+        if not math.isfinite(temperature) or temperature <= 0:
+            raise ValueError('Categorical temperature must be positive and finite')
+        self.temperature = float(temperature)
         self.dim, self.alphabet = dim, alphabet
         self.to_logits = nn.Linear(dim, dim * alphabet, bias=False)
 
@@ -94,15 +97,15 @@ class FullWidthCategoricalState(nn.Module):
 
     def forward(self, x, *, sample=True):
         logits = self.to_logits(x).unflatten(-1, (self.dim, self.alphabet))
-        return categorical_straight_through(logits, sample=sample)
+        return categorical_straight_through(logits / self.temperature, sample=sample)
 
 
 class FullWidthCategoricalTransformer(TransformerTorch):
-    def __init__(self, *, alphabet, **kwargs):
+    def __init__(self, *, alphabet, categorical_temperature=1.0, **kwargs):
         super().__init__(**kwargs)
         dim = kwargs['dim']
         self.categorical_states = nn.ModuleList([
-            FullWidthCategoricalState(dim, alphabet) for _ in self.layers
+            FullWidthCategoricalState(dim, alphabet, categorical_temperature) for _ in self.layers
         ])
         # Applied only to a hard one-hot state. These matrices implement the
         # next stage's embedding lookup/sum; they have no other input.

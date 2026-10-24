@@ -10,6 +10,7 @@ import torch
 
 from grokking_capacity.experiments.discrete import atomic_json
 from scripts.audit_discrete import audit
+from scripts.audit_discrete_capacity import audit_capacity
 from scripts.confirm_discrete import process_live
 from scripts.report_discrete import report
 
@@ -46,6 +47,12 @@ def finish(root,output,c_runs):
             state['phase']='waiting'
             atomic_json(state_path,state)
             time.sleep(10)
+        capacity_paths = [Path(p) for key in ('a_runs', 'b_runs') for p in queue['inputs'][key]] + c_runs
+        for path in capacity_paths:
+            if not (path/'audit_capacity.json').exists():
+                state.update(phase='auditing_capacity', current_run=str(path))
+                atomic_json(state_path, state)
+                audit_capacity(path)
         state['phase']='reporting'
         atomic_json(state_path,state)
         report(root,output,c_runs)

@@ -22,7 +22,7 @@ have passed independent arithmetic audits. q16's random-label screen already
 exceeds the dataset target (114,086.64 bits at a saved observation), so it is
 rejected as a capacity-matched B; this is a demonstrated lower bound, not a
 plateau estimate. q4 also exceeds the target in its saved capacity screen and is rejected. Fresh-source A44 calibration continues.
-Binary scalar and categorical models remain in arithmetic development. No new
+Binary scalar q2 has passed arithmetic, but its saved capacity screen also exceeds the target; categorical models remain in arithmetic development. No new
 A/B/C capacity-matched comparison has been selected yet.
 
 The fixed task remains **p149 modular division, 50% training split** and a
@@ -860,3 +860,99 @@ q2 with the clipped surrogate is still arithmetic-only.
 q4 passed its independent arithmetic audit: final held-out 99.083984%; sustained99% at update 11700. Register the same two-size, seed61 capacity screen as q16, with early rejection only when a saved checkpoint demonstrates memory above87,791.72 bits.
 
 q4 screen rejected by the same pre-recorded rule: its saved checkpoint establishes memory above the fixed target upper bound. Check `fullwidth-q4-capacity-v2/B_q4_d96_n16384_s61/screen_rejection.json` for the exact witness. Both q16 and q4 have learned arithmetic and random labels, but neither is a capacity-matched B. Binary quantization and categorical learning remain open.
+
+## Arithmetic tuning with frozen scalar source
+
+The scalar experiment's scientific source is frozen at commit2d328cf in
+`results/discrete/source-worktrees/fullwidth-scalar-v2`. All subsequent scalar
+gates/calibration/confirmation use that source. This permits categorical-only
+changes without altering the meaning or provenance of ongoing scalar runs.
+The main worktree remains on idea/discrete.
+
+Categorical temperature1 with decay1 remains below20% held-out at40k updates;
+decay0.1 has nearly memorized training labels in mode evaluation but held-out
+accuracy remains near chance. Neither passes the arithmetic gate. Register
+K16 temperatures0.3/0.1 at width96 with the original decay1, otherwise unchanged,
+seed42/60k updates. Sampling and the surrogate softmax use the SAME temperature;
+forward values remain hard one-hot. Lower temperature tests whether categorical
+noise is preventing arithmetic learning. This is an adaptation, not the exact
+DreamerV2 unit-temperature configuration. Any capacity tests of this family use
+the revised source and their own successful recipe gate.
+
+Register binary scalar lr0.0003 with the frozen scalar source, otherwise unchanged
+(clip1, clipped derivative, width96, decay1, seed42, 60k updates). The lr0.001 run
+still jitters below99%; a smaller optimizer step tests whether stable arithmetic
+learning is possible. If selected, A/B/C all use the same learning rate.
+
+Temperature0.1 improves sampled categorical arithmetic learning substantially
+in the first5k updates (held-out75.7%, mode82.5%, still below the gate). Register
+a full-width58/K16/temperature0.1 arithmetic candidate, with the same optimizer
+and seed42. It has340,750 parameters, 4.52 times A44; its ordinary count-matched
+C is width98 with337,414 parameters (0.98% fewer). This is a uniformly width58
+transformer with58 categorical variables per block, not a narrower learned
+channel inside a width96 transformer. It needs its own arithmetic gate before
+calibration. Selection remains based on measured capacity, not seed42 speed.
+
+If the binary scalar lr0.001 pilot exhausts60k below the gate, extend that
+completed run to120k updates without changing any optimizer or architecture
+setting. It has approached99% and merits a bounded continuation. The parent
+remains immutable; extension provenance records the parent checkpoint and exact
+optimizer/RNG/batch-position continuation. No random labels before a passed gate.
+
+Before any categorical random-label training, strengthen the measurement against
+a noise-only explanation: categorical empirical capacity is the maximum learned
+label information observed under sampled OR hard-argmax evaluation. Both use
+finite one-hot states. Record both traces separately and evaluate late drift of
+their per-observation maximum. Do not accept an80k sampled estimate if hard mode
+already stores more than the dataset target tolerance. The arithmetic gate and
+primary speed metrics continue to use sampled evaluation, with mode auxiliary.
+
+Further arithmetic-only registration: temperature0.03, categorical K16, widths96
+and58, original optimizer and60k updates. At temperature0.1 the wide model has
+reached sampled95.6% and mode97.3% at20.2k, while the narrower candidate is still
+learning. The lower temperature tests the remaining sampling error; it does not
+change the alphabet, parameter count, or one-hot forward representation.
+
+Also register a four-block scalar model, full width80 throughout, four levels
+after every block, clipped surrogate, original optimizer, seed42/60k updates,
+using frozen scalar source2d328cf. This tests the goal's suggestion of enough
+discrete layers after two-block q4/q16 exceeded capacity. There is no internal
+narrow projection. If it passes and is selected, its A and C controls will also
+have four blocks, with A calibrated to the same fixed p149 dataset and C ordinary
+width80 (434,480 parameters, exactly equal to B).
+
+Binary scalar q2 passed after the registered horizon extension: sustained held-out
+99% began at100,200 updates, confirmed at100,400; final train99.6282%, held-out
+99.3561%. Independent CPU reload reproduced accuracy and verified binary values
+at all96 coordinates in both blocks. Register n16,384/32,768 seed61 capacity
+screening at120k updates (not just60k, since arithmetic required over100k). Early
+above-target rejection remains permitted only with a saved checkpoint witness.
+If q2 is near the target, extend all paired A/B calibration cells to the same
+120k horizon before assessing a match. No mixed-horizon match is permitted.
+
+Capacity audit: q16's reloaded weights independently store113,880.62 bits at10k.
+q4's original GPU reproduces its recorded loss exactly; CPU loss differs by
+1.72e-5 nats with identical accuracy, consistent with finite-grid sensitivity to
+floating-point arithmetic. Capacity audits now require original-device loss
+agreement within1e-5 AND CPU agreement within1e-4, with accuracy within1e-6.
+This numerical tolerance represents under5 bits at the current dataset sizes,
+far below the matching tolerance. Above-target rejection must hold for both
+the CPU and original-device checkpoint measurements.
+
+A selected120k calibration uses a120k fresh A/B/C arithmetic budget for all arms,
+with the existing success stop and censoring rules. This avoids imposing a60k
+comparison limit on a recipe whose arithmetic development required100k. All
+capacity checkpoint audits are required before final full-width reporting; plots
+use the actual registered horizons rather than a fixed60k axis.
+
+The binary q2 width96/two-block model also exceeds the fixed target: its saved
+checkpoint at28000 updates stores96432.71 bits. Stop its
+screen by the registered above-target rule, preserve all artifacts, and cancel
+remaining cells. Thus all tested width96/two-block scalar alphabets (2/4/16) can
+learn arithmetic, but all store too many random labels to be the requested B.
+The hypothesis has not been tested with a valid full-width A/B capacity match yet.
+The four-block candidate remains arithmetic-only. Categorical temperature0.1
+width96 exhausted60k below the sampled99% gate; no categorical random labels have
+been trained. Temperature0.03 diagnostics reveal state collapse for width96 and
+limited learning for width58; these are optimization failures, not capacity
+measurements.

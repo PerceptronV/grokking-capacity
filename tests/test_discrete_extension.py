@@ -9,13 +9,14 @@ import grokking_capacity.experiments.discrete as runner
 from scripts.extend_discrete import extend
 
 
-def test_budget_extension_matches_uninterrupted_training(tmp_path, monkeypatch):
+@pytest.mark.parametrize('task', ['random', 'modular'])
+def test_budget_extension_matches_uninterrupted_training(tmp_path, monkeypatch, task):
     torch.set_num_threads(1)
     # The production gate is covered by test_discrete. This mock isolates state
     # continuation from external experiment artifacts; it never writes a gate.
     monkeypatch.setattr(runner, 'check_gate', lambda *_args: dict(path=str(tmp_path / 'fixture-gate'), summary_sha256='test'))
-    cfg = dict(model='baseline', task='random', p=7, dim=8, seed=12, n_samples=40,
-               batch_size=16, dropout=.2, stop_on_success=False,
+    cfg = dict(model='baseline', task=task, p=7, dim=8, seed=12, n_samples=40,
+               batch_size=16, dropout=.2, stop_on_success=task == 'modular',
                max_steps=4, eval_every=2, checkpoint_every=2)
     parent, child, full = (tmp_path / x for x in ['parent', 'extended', 'full'])
     runner.run(cfg, parent, torch.device('cpu'), gate=tmp_path / 'fixture-gate')

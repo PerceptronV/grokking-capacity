@@ -83,7 +83,8 @@ def make_model(config: dict):
             return FullWidthQuantizedTransformer(
                 **spec, levels=config["levels"], quantizer_clip=config.get("quantizer_clip", 1.0),
                 quantizer_surrogate=config.get("quantizer_surrogate", "identity"))
-        return FullWidthCategoricalTransformer(**spec, alphabet=config["alphabet"])
+        return FullWidthCategoricalTransformer(**spec, alphabet=config["alphabet"],
+            categorical_temperature=config.get("categorical_temperature", 1.0))
     if config["model"] not in {"discrete", "continuous"}:
         raise ValueError("Unknown model")
     if config["latent_dim"] * math.log2(config["levels"]) < math.log2(config["p"]):

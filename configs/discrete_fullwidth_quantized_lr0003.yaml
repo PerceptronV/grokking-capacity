@@ -1,0 +1,24 @@
+defaults:
+  task: modular
+  p: 149
+  operation: /
+  train_fraction: 0.5
+  depth: 2
+  heads: 1
+  dropout: 0.0
+  dim: 96
+  seed: 42
+  lr: 0.0003
+  weight_decay: 1.0
+  batch_size: 512
+  max_steps: 60000
+  eval_every: 100
+  checkpoint_every: 2000
+  sustained_evals: 3
+  stop_on_success: true
+runs:
+- name: B_quantized_d96_k2_clipgrad_lr0003_s42
+  model: quantized
+  levels: 2
+  quantizer_clip: 1.0
+  quantizer_surrogate: clipped

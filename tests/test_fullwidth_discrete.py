@@ -165,3 +165,17 @@ def test_clipped_surrogate_has_no_gradient_outside_fixed_range():
     assert torch.equal(identity, clipped)
     assert torch.equal(torch.autograd.grad(clipped.sum(), x)[0],
                        torch.tensor([[0., 1., 1., 0.]]))
+
+
+def test_temperature_uses_the_same_distribution_in_forward_and_backward():
+    from grokking_capacity.models.fullwidth_discrete import FullWidthCategoricalState
+    state = FullWidthCategoricalState(2, 3, temperature=0.3).double()
+    x = torch.tensor([[.2, -.5]], dtype=torch.float64, requires_grad=True)
+    logits = state.to_logits(x).unflatten(-1, (2, 3)) / .3
+    weights = torch.tensor([[[1., -2., 4.], [3., 5., -1.]]], dtype=x.dtype)
+    expected = torch.autograd.grad((logits.softmax(-1) * weights).sum(), x)[0]
+    hard = state(x, sample=False)
+    actual = torch.autograd.grad((hard * weights).sum(), x)[0]
+    assert torch.equal(hard.argmax(-1), logits.argmax(-1))
+    assert torch.equal(expected, actual)
+    assert torch.all((hard == 0) | (hard == 1))

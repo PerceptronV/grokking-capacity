@@ -30,7 +30,7 @@ def fullwidth_control(b):
     """Ordinary continuous C, with the nearest valid width by total parameters."""
     if b['model'] not in {'quantized', 'categorical'}:
         raise ValueError('Expected a full-width discrete model')
-    extra = {'levels', 'alphabet', 'quantizer_clip', 'quantizer_surrogate', 'latent_dim'}
+    extra = {'levels', 'alphabet', 'categorical_temperature', 'quantizer_clip', 'quantizer_surrogate', 'latent_dim'}
     control = {key: value for key, value in b.items() if key not in extra}
     control['model'] = 'baseline'
     if b['model'] == 'categorical':
@@ -57,10 +57,11 @@ def confirmation_runs(a, b):
     common = {key: a[key] for key in shared}
     if common['p'] != 149 or common['operation'] != '/':
         raise ValueError('The user fixed p149 modular division')
-    common.update(task='modular', train_fraction=.5, max_steps=60000, eval_every=100,
+    common.update(task='modular', train_fraction=.5,
+                  max_steps=max(60000, a.get('max_steps', 60000), b.get('max_steps', 60000)), eval_every=100,
                   checkpoint_every=2000, sustained_evals=3, stop_on_success=True)
     if b['model'] in {'quantized', 'categorical'}:
-        keys = ('model', 'dim', 'levels', 'alphabet', 'quantizer_clip', 'quantizer_surrogate')
+        keys = ('model', 'dim', 'levels', 'alphabet', 'categorical_temperature', 'quantizer_clip', 'quantizer_surrogate')
         discrete = {key: b[key] for key in keys if key in b}
         control = fullwidth_control(b)
         arms = dict(A=dict(model='baseline', dim=a['dim']), B=discrete,
@@ -116,6 +117,10 @@ def confirm(a_paths, b_paths, output, device, *, wait=False, resume=False):
         gate = Path(b_manifest['gate']['path'])
         if check_gate(gate, b[0]['config']) != b_manifest['gate']:
             raise ValueError('Arithmetic gate evidence changed')
+        gate_config = json.loads((gate/'summary.json').read_text())['config']
+        for key in ('lr', 'weight_decay', 'beta1', 'beta2', 'batch_size', 'dropout'):
+            if any(row['config'].get(key) != gate_config.get(key) for row in b):
+                raise ValueError(f'Calibration optimizer differs from the arithmetic gate: {key}')
         audit = json.loads((gate/'audit.json').read_text())
         if not audit['arithmetic_gate_passed']:
             raise ValueError('Discrete arithmetic audit has not passed')

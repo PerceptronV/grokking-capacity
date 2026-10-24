@@ -31,8 +31,12 @@ def extend(parent, output, max_steps, device):
     assert old['source_hashes'] == manifest['source_hashes'] == source_hashes()
     assert saved['step'] == summary['final']['step']
     assert saved['trace'] == [json.loads(x) for x in (parent / 'trace.jsonl').read_text().splitlines()]
-    if old['config']['task'] != 'random' or old['config']['stop_on_success']:
-        raise ValueError('Only completed fixed-budget random-label calibration runs can be extended')
+    if old['config']['task'] not in {'random', 'modular'}:
+        raise ValueError('Only random-label or arithmetic runs can be extended')
+    if old['config']['task'] == 'random' and old['config']['stop_on_success']:
+        raise ValueError('Random-label extensions require fixed-budget calibration')
+    if summary['termination'] != 'budget':
+        raise ValueError('Only budget-exhausted runs can be extended')
     if saved['step'] != old['config']['max_steps'] or max_steps <= saved['step']:
         raise ValueError('Parent must have completed its budget; new budget must be greater')
     config = {**old['config'], 'max_steps': max_steps}
@@ -59,7 +63,7 @@ def extend(parent, output, max_steps, device):
                 'gpu': torch.cuda.get_device_name(device) if device.type == 'cuda' else None,
                 'start_time': time.time()}
     atomic_json(output / 'manifest.json', manifest)
-    gate = Path(old['gate']['path'])
+    gate = Path(old['gate']['path']) if old['gate'] is not None else None
     run(config, output, device, resume=True, gate=gate)
 
 
