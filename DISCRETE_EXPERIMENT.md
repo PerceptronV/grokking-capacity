@@ -32,8 +32,10 @@ Categorical width58/K16,width62/K8 and width72/K4 have independently audited
 above-target witnesses of92,238.31,88,381.03 and88,283.57 bits, so all three are
 rejected as capacity matches. Width62/FF232/K8 passed its own arithmetic audit
 at18,200 updates (hard-mode held-out99.0024%; recorded sampled96.5083%), and its
-first capacity screen is running. Width70/FF288/K4 remains in arithmetic
-development. Both width60/K8 initializations completed120k below the arithmetic
+four-cell capacity grid is running. Its own small random-label check is
+independently audited at100% hard-mode and99.61% sampled accuracy. The ordinary
+C capacity control is queued after scalar confirmation. Width70/FF288/K4
+completed120k below the arithmetic gate (98.27% final hard-mode held-out). Both width60/K8 initializations completed120k below the arithmetic
 gate (48.76% and46.83% hard-mode held-out); neither has random-label runs.
 
 Other audited scalar candidates, including normalized four-level width80/FF320,
@@ -1372,3 +1374,32 @@ accuracy is99.00236%; recorded sampled accuracy is96.50826%. Start the registere
 n16384/seed61 capacity screen under frozen v5 source. Preserve both inference
 policies, and use max(sampled,hard-mode) for capacity. The other three cells
 remain registered, pending the first screen.
+
+The width70/FF288/K4 arithmetic run completed120k without the sustained99%
+gate (final hard-mode held-out98.2677%); no random labels are allowed for it.
+The qualified width62/FF232/K8 screen is about80,920 bits at15.4k, so launch
+its remaining three already registered capacity cells. All four use120k,
+paired data seeds61/62, and n16384/32768. Above-target saved-checkpoint
+rejection remains in force across the grid.
+
+Register the width62/FF232/K8 recipe's own small random-label learning check:
+n2048,seed61,10k updates,unchanged optimizer,v5 source,after its independent
+arithmetic audit. It is learning validation, not capacity selection evidence.
+Also register ordinary C width102/FF232 (256,530 parameters) at n16384,seed61,
+120k updates,as a descriptive capacity control. Queue this C on cuda:0 only
+after the scalar confirmation and its report worker finish; it must not compete
+with those timed arithmetic runs. Its capacity can be a dataset-limited lower
+bound and cannot influence B selection.
+
+The width62/FF232/K8 small random-label check completed10k updates and passed
+its independent checkpoint audit:100% hard-mode accuracy and99.609375% sampled
+accuracy on2048 labels. This establishes learning on a small random set;
+capacity matching still requires the separate complete four-cell grid.
+
+The scalar seed73 comparison is complete and independently audited: sustained
+99% held-out accuracy first occurs at3,000 actual optimizer updates for A,
+19,700 for B, and2,200 for C. This seed does not support a speedup from the
+capacity-matched discrete model. The other two registered seeds continue with
+no changes to the frozen selection. Report95% and99% thresholds and observed
+train>=99%/held-out<90% intervals separately; intermittent99% crossings near
+98--99% generalization must not be presented as a classical memorization plateau.

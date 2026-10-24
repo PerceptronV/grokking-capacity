@@ -39,6 +39,19 @@
         "summary_sha256": "30d0b7111cc8e263acdd05a4c876484df121f6ecb1539d127fdcc28c4a0d14a8"
       },
       "independently_audited": true
+    },
+    {
+      "family": "categorical",
+      "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-random-learning-v5/B_categorical_d62_ff232_k8_random_learning_n2048_s61",
+      "updates": 10000,
+      "sampled_or_deterministic_accuracy": 0.99609375,
+      "hard_mode_accuracy": 1.0,
+      "checkpoint_sha256": "f1e549513d9ab7b64b129dee2177a92cdc285c644f14f8949bf51003b684e9dd",
+      "arithmetic_gate": {
+        "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/fullwidth-learning-v5/B_categorical_d62_ff232_k8_rms_t01_mode_s42",
+        "summary_sha256": "d7e55dbb8be813f2ebfa8e58efeaf09da99e2e61f7e996af137a24884bc3c501"
+      },
+      "independently_audited": true
     }
   ]
 }
