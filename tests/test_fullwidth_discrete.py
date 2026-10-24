@@ -230,3 +230,21 @@ def test_hard_mode_policy_does_not_relabel_sampled_results():
     assert mode['primary_evaluation'] == 'hard_mode'
     trace[-1]['val_mode_acc'] = .9
     assert not summarise(config(categorical_evaluation='hard_mode'), trace, 100)['arithmetic_gate_passed']
+
+
+@pytest.mark.parametrize('levels', [2, 4])
+def test_rms_scalar_quantization_has_fixed_grid_and_normalized_clipped_gradient(levels):
+    x = torch.tensor([[.1, -.4, 1.2, 3.]], dtype=torch.float64, requires_grad=True)
+    quantize = FullWidthQuantizer(4, levels, 1., 'rms_clipped')
+    normalized = x * torch.rsqrt(x.square().mean(-1, keepdim=True) + 1e-5)
+    weights = torch.tensor([[1., 2., -3., 4.]], dtype=x.dtype)
+    z = quantize(x)
+    grid = torch.arange(levels, dtype=x.dtype) * (2 / (levels-1)) - 1
+    assert torch.all(torch.isin(z, grid))
+    expected = torch.autograd.grad((normalized.clamp(-1, 1) * weights).sum(), x)[0]
+    actual = torch.autograd.grad((z * weights).sum(), x)[0]
+    assert torch.equal(actual, expected)
+    assert z.shape == x.shape
+    assert list(quantize.parameters()) == []
+    if levels == 2:
+        assert torch.equal(z, FullWidthQuantizer(4, 2, 1., 'clipped')(x))

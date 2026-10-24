@@ -1179,3 +1179,31 @@ Categorical width72/K4 passed arithmetic at27,100 updates (hard-mode held-out
 99.23%); after its independent audit, screen n16,384 seed61 before continuing
 its registered two-seed/two-size calibration. No fresh confirmation seeds run
 until a complete capacity match is accepted.
+
+## Scalar normalization follow-up, source v6
+
+Freeze v5 at d428975 for all existing categorical calibration, audits, and
+confirmation. Source v6 changes only FullWidthQuantizer by adding rms_clipped:
+normalize the entire block output by its per-token RMS, then use the existing
+fixed grid, clipping derivative, and straight-through derivative through rounding.
+The RMS scale is never passed across the boundary. There are no new parameters
+or reduced-coordinate states. For binary codes, the mathematical forward sign
+is unchanged by positive normalization; the surrogate gradient and clipping mask
+change. Existing identity/clipped behavior and categorical classes are unchanged.
+
+Register native width80/FF320 at2 and4 levels with rms_clipped, seed42,
+original optimizer,120k arithmetic budget before launch. Both have229,360
+parameters and exact ordinary continuous controls. Each needs its own arithmetic
+gate/audit before any random labels. Keep old runs bound to their original source.
+A baseline-source equivalence check is required before reusing its calibration
+with this new scalar code; categorical v5 comparisons need no new source change.
+
+The v5/v6 baseline-equivalence audit passed: all source files except the
+FullWidthQuantizer class are unchanged, and baseline never instantiates that
+class. A64-update baseline replay gives exact model/optimizer/RNG/batch state
+and non-timing observations. Reuse A calibration only for this pinned file-hash
+pair, combined with the earlier verified v4/v5 runner equivalence. No arithmetic
+gate is transferred to rms_clipped; the new surrogate still requires its own
+successful arithmetic checkpoint. Discrete calibration and confirmation retain
+exact within-arm source matching. Evidence is saved in
+reports/fullwidth_development/scalar_normalization_source_equivalence.json.

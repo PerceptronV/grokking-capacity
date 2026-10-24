@@ -12,7 +12,8 @@ def statuses(root):
         directory = path.parent
         process = Path(f'/proc/{manifest["pid"]}/stat')
         try:
-            live = process.read_text().split()[21] == manifest['process_start_ticks']
+            fields = process.read_text().split()
+            live = fields[21] == manifest['process_start_ticks'] and fields[2] != 'Z'
         except (FileNotFoundError, ProcessLookupError):
             live = False
         records = []
@@ -29,10 +30,15 @@ def statuses(root):
                  'rejected/capacity-above-target' if (directory / 'screen_rejection.json').exists() else
                  'stopped/scope-change' if (directory / 'scope_stop.json').exists() else
                  'stopped/incomplete')
+        policy = manifest['config'].get('categorical_evaluation', 'sampled') if manifest['config']['model']=='categorical' else 'deterministic'
+        primary_train, primary_val = ('train_mode_acc', 'val_mode_acc') if policy=='hard_mode' else ('train_acc','val_acc')
         rows.append(dict(path=str(directory.relative_to(root)), status=state,
                          pid=manifest['pid'], device=manifest['device'],
                          step=last.get('step', 0), max_steps=manifest['config']['max_steps'],
-                         best_bits=max((r['train_bits'] for r in records), default=None),
+                         primary_evaluation=policy,
+                         best_bits=max((max(r['train_bits'], r.get('train_mode_bits', r['train_bits'])) for r in records), default=None),
+                         best_sampled_bits=max((r['train_bits'] for r in records), default=None),
+                         primary_train_acc=last.get(primary_train), primary_val_acc=last.get(primary_val),
                          train_acc=last.get('train_acc'), val_acc=last.get('val_acc')))
     return rows
 

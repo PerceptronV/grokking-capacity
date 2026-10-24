@@ -40,7 +40,7 @@ class FullWidthQuantizer(nn.Module):
             raise ValueError('Quantization requires at least two integer levels')
         if not math.isfinite(clip) or clip <= 0:
             raise ValueError('Quantization requires a positive finite fixed clip')
-        if surrogate not in {'identity', 'clipped'}:
+        if surrogate not in {'identity', 'clipped', 'rms_clipped'}:
             raise ValueError('Unknown quantizer surrogate')
         self.surrogate = surrogate
         self.dim, self.levels, self.clip = dim, levels, float(clip)
@@ -52,6 +52,10 @@ class FullWidthQuantizer(nn.Module):
     def forward(self, x):
         if x.shape[-1] != self.dim:
             raise ValueError('Quantize the entire residual width')
+        if self.surrogate == 'rms_clipped':
+            # Normalize all coordinates before the fixed grid. The scale is
+            # discarded: only hard grid values cross the layer boundary.
+            x = x * torch.rsqrt(x.square().mean(dim=-1, keepdim=True) + 1e-5)
         indices = ((x.detach().clamp(-self.clip, self.clip) + self.clip)
                    * ((self.levels - 1) / (2 * self.clip))).round()
         hard = indices * (2 * self.clip / (self.levels - 1)) - self.clip
@@ -59,7 +63,7 @@ class FullWidthQuantizer(nn.Module):
         # clamp's derivative (zero outside the range), preventing unbounded
         # activation growth driven by a surrogate insensitive to saturation.
         # Range is fixed: no input-dependent scale crosses the boundary.
-        soft = x.clamp(-self.clip, self.clip) if self.surrogate == 'clipped' else x
+        soft = x.clamp(-self.clip, self.clip) if self.surrogate in {'clipped', 'rms_clipped'} else x
         return hard + (soft - soft.detach())
 
 
