@@ -1471,3 +1471,10 @@ use the unchanged120k capacity grid at n16384/32768,seeds61/62, paired with A.
 The FF160 run will finish its registered budget; its prepared random runs
 remain prohibited until it qualifies. No confirmation result determines this
 capacity refinement, and no matching threshold is changed.
+
+Register FF216's own n2048,seed61,10k random-label learning validation,
+conditional on its arithmetic gate and independent audit. Its purpose is
+learning_validation, so it cannot enter the capacity estimate or selection.
+Also prepare ordinary C width104/FF216 at n16384,seed61,120k updates as a
+descriptive control. Launch that C only if B's full capacity grid is accepted.
+The small validation and C control use the unchanged original optimizer.
