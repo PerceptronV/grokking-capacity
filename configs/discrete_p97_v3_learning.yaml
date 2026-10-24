@@ -1,0 +1,27 @@
+defaults:
+  task: modular
+  p: 97
+  operation: /
+  train_fraction: 0.5
+  depth: 2
+  heads: 1
+  dropout: 0.0
+  seed: 42
+  lr: 0.001
+  weight_decay: 1.0
+  beta1: 0.9
+  beta2: 0.98
+  batch_size: 512
+  max_steps: 120000
+  eval_every: 100
+  checkpoint_every: 2000
+  sustained_evals: 3
+  stop_on_success: true
+runs:
+- name: B_quantized_d60_ff144_q2_rms_s42
+  model: quantized
+  dim: 60
+  mlp_dim: 144
+  levels: 2
+  quantizer_clip: 1.0
+  quantizer_surrogate: rms_clipped

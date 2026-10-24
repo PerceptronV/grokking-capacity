@@ -1967,3 +1967,35 @@ validation and, conditional on passing sustained99 plus final>=99, its four
 capacity cells. A28 calibration waits for the other arithmetic development job
 to release its GPU. The initial B52 candidate is still running; retain its
 outcome rather than calling an unfinished pilot a failure.
+
+
+B64's 2,048-example random-learning run completed10k updates with
+99.707031% final training accuracy and a sustained99 crossing;
+its checkpoint audit passed (SHA256 `b640d8ccef8a72e2720b941a36843f23be7dd82267eecc1d76529edd452609ed`). Its capacity
+calibration is now running under `results/discrete/p97-v2/capacity-B`.
+As in the earlier development screens, a candidate can be rejected early if
+an independently reloaded saved checkpoint itself exceeds110% of the target
+(33,952.912865 bits). Such a result is a lower-bound rejection witness, not a
+completed120k capacity estimate. A low partial value never establishes a match.
+
+
+The initial B52/FF208 arithmetic pilot exhausted120k updates at60.7174% held-out
+accuracy (65.8290% training); it failed its arithmetic gate and has no random
+runs. B64/FF128's seed61/n8192 capacity checkpoint at34,000 updates independently
+stores33990.332108 bits, above the33,952.912865-bit ceiling.
+The fixed saved checkpoint is retained as `above_target_checkpoint.pt` with
+SHA256 `b12493c90ab77781612a75240d203b20562460c4584d3da5bd6aebc1f7555482` and a passing `audit_capacity.json`.
+This rejects B64 as oversized, even before its full120k budget; no final-capacity
+estimate is claimed. Its worker was stopped after the independent witness audit.
+A28 calibration continues independently and can be paired with a later B.
+
+Before new training, register B60/FF144 (92,820 parameters,3.0164xA) as the next
+size candidate. It reduces residual width while staying above the registered
+B/A parameter ratio; optimizer, STE, seed42 and arithmetic budget are unchanged.
+Config: `configs/discrete_p97_v3_learning.yaml`. Require its own arithmetic gate
+and random-learning check before capacity calibration.
+
+B60's potential follow-up grids are registered before results in
+`configs/discrete_p97_v3_{random_learning,capacity_b,capacity_c}.yaml`, using the
+same dataset sizes, seeds and horizons. They remain conditional on its own
+successful arithmetic audit and small random-label learning validation.
