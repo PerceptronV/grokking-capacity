@@ -47,3 +47,22 @@ Use the following BibTeX entry to cite this work:
 Unless otherwise stated, the files and code in this repository are licensed under the GNU GENERAL PUBLIC LICENSE (Version 3), Copyright (C) 2026 Yiding Song and Hanming Ye.
 
 **Note:** the files [`modular.py`](src/grokking_capacity/data/modular.py) and [`transformer.py`](src/grokking_capacity/models/transformer.py) are adapted from the code by Amund Tveit (available at [adveit/torch_grokking](https://github.com/atveit/torch_grokking) under the MIT License), which itself is a PyTorch port of the original MLX code by Jason Stock (available at [stockeh/mlx-grokking](https://github.com/stockeh/mlx-grokking)). We have modified `modular.py` to add different split types and random data generation, and mostly left `transformer.py` untouched. The trainers used to finetune the neural network also takes inspiration from the code of Tveit and Stock.
+
+## Discrete latent experiment
+
+The `idea/discrete` experiment compares small continuous transformers with larger
+models containing finite scalar channels and parameter-matched continuous controls.
+The [protocol and evidence](DISCRETE_EXPERIMENT.md) specify an arithmetic-learning
+gate before random-label capacity calibration; development pilots are not yet a
+capacity-matched hypothesis test.
+
+```bash
+PYTHONPATH=src python -m grokking_capacity.experiments.discrete \
+  --config configs/discrete_learning.yaml --output results/discrete/learning-v1 --device cuda:1
+PYTHONPATH=src python scripts/analyse_discrete.py results/discrete/learning-v1
+PYTHONPATH=src python scripts/audit_discrete.py results/discrete/learning-v1/B_l32_q16
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=src python -m pytest -q tests/test_discrete.py
+```
+
+Inspect an existing run's process and checkpoint before using `--resume`. Completed
+runs are skipped; changed source/configuration/data cannot silently overwrite a run.

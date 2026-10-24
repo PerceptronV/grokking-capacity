@@ -1,0 +1,29 @@
+# Follow-up arithmetic-only development: narrower channels and quantisation resolution.
+# Each candidate must independently pass >=99% held-out accuracy before calibration.
+defaults:
+  task: modular
+  p: 97
+  operation: '/'
+  train_fraction: 0.5
+  depth: 2
+  heads: 1
+  dropout: 0.0
+  dim: 96
+  seed: 42
+  lr: 0.001
+  weight_decay: 1.0
+  batch_size: 512
+  max_steps: 30000
+  eval_every: 100
+  checkpoint_every: 1000
+  sustained_evals: 3
+  stop_on_success: true
+runs:
+  - {name: B_l32_q4, model: discrete, latent_dim: 32, levels: 4}
+  - {name: B_l16_q8, model: discrete, latent_dim: 16, levels: 8}
+  - {name: C_l16_q8, model: continuous, latent_dim: 16, levels: 8}
+  - {name: B_l8_q16, model: discrete, latent_dim: 8, levels: 16}
+  - {name: C_l8_q16, model: continuous, latent_dim: 8, levels: 16}
+  - {name: B_l32_q2, model: discrete, latent_dim: 32, levels: 2}
+  - {name: B_l16_q4_lr03, model: discrete, latent_dim: 16, levels: 4, lr: 0.0003}
+  - {name: C_l16_q4_lr03, model: continuous, latent_dim: 16, levels: 4, lr: 0.0003}

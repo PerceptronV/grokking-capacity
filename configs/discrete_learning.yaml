@@ -1,0 +1,29 @@
+# Development only. No random-label data until the discrete arithmetic gate passes.
+defaults:
+  task: modular
+  p: 97
+  operation: '/'
+  train_fraction: 0.5
+  depth: 2
+  heads: 1
+  dropout: 0.0
+  dim: 96
+  seed: 42
+  lr: 0.001
+  weight_decay: 1.0
+  batch_size: 512
+  max_steps: 30000
+  eval_every: 100
+  checkpoint_every: 1000
+  sustained_evals: 3
+  stop_on_success: true
+runs:
+  - {name: B_l32_q16, model: discrete, latent_dim: 32, levels: 16}
+  - {name: C_l32_q16, model: continuous, latent_dim: 32, levels: 16}
+  - {name: B_l16_q4, model: discrete, latent_dim: 16, levels: 4}
+  - {name: C_l16_q4, model: continuous, latent_dim: 16, levels: 4}
+  - {name: B_l8_q2, model: discrete, latent_dim: 8, levels: 2}
+  - {name: C_l8_q2, model: continuous, latent_dim: 8, levels: 2}
+  - {name: A_d16, model: baseline, dim: 16}
+  - {name: A_d24, model: baseline, dim: 24}
+  - {name: original_d96, model: baseline}
