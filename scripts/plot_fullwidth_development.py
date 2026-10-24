@@ -58,7 +58,15 @@ fig.text(.03,.02,'Circles/crosses: recorded maxima across two sizes at 120k upda
 fig.tight_layout(rect=(0,.1,1,1))
 for ext in ['png','pdf']:fig.savefig(root/f'capacity_development.{ext}',dpi=180)
 plt.close(fig)
-path=Path('results/discrete/fullwidth-learning-v5/B_categorical_d58_k16_rms_t01_mode_s42')
+with (root/'arithmetic.csv').open() as file:
+    qualified = [Path(row['path']) for row in csv.DictReader(file)
+                 if row['family'] == 'categorical'
+                 and row['arithmetic_gate_passed'] == 'True'
+                 and row['audit_present'] == 'True']
+path = max(qualified, key=lambda p: json.loads((p/'manifest.json').read_text())['start_time'])
+manifest = json.loads((path/'manifest.json').read_text())
+cfg = manifest['config']
+audit = json.loads((path/'audit.json').read_text())
 trace=[json.loads(line) for line in (path/'trace.jsonl').read_text().splitlines()]
 fig,ax=plt.subplots(figsize=(8,4.5))
 for key,label,color,style in [('val_mode_acc','Held out: hard argmax','#3069a2','-'),
@@ -67,10 +75,13 @@ for key,label,color,style in [('val_mode_acc','Held out: hard argmax','#3069a2',
                             ('train_acc','Train: sampled','#c66b28','--')]:
     ax.plot([r['step'] for r in trace],[100*r[key] for r in trace],label=label,color=color,ls=style,lw=1.4)
 ax.axhline(99,color='grey',ls=':',lw=1)
-ax.set(xlabel='Optimizer updates',ylabel='Accuracy (%)',ylim=(0,101),xlim=(0,13500),
-       title='Categorical arithmetic qualification: p149 division, seed 42')
+ax.set(xlabel='Optimizer updates',ylabel='Accuracy (%)',ylim=(0,101),xlim=(0,trace[-1]['step']),
+       title=f"Categorical arithmetic qualification: p{cfg['p']} division, seed {cfg['seed']}")
 ax.grid(alpha=.15);ax.legend(loc='lower right',frameon=False)
-fig.text(.03,.02,'Sampled training throughout. Width 58, alphabet 16; hard-mode primary evaluation.\nIndependent audit: 99.03% hard-mode held out; fresh sampled evaluations average 96.86%.',fontsize=9)
+fig.text(.03,.02,
+         f"Latest audited development recipe: width {cfg['dim']}, FF {cfg.get('mlp_dim') or 4*cfg['dim']}, alphabet {cfg['alphabet']}; sampled training.\n"
+         f"Independent audit: {100*audit['cpu_mode_val_acc']:.2f}% hard-mode held out; {100*audit['sampled_val_acc']:.2f}% sampled held out.",
+         fontsize=9)
 fig.tight_layout(rect=(0,.12,1,1))
 for ext in ['png','pdf']:fig.savefig(root/f'categorical_qualification.{ext}',dpi=180)
 plt.close(fig)
