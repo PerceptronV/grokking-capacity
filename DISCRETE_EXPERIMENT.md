@@ -2022,3 +2022,15 @@ A28/FF100 passed its modular learning check at9,600 updates with
 99.570447% held-out accuracy, independently audited. Its four-cell
 capacity grid starts at `results/discrete/p97-v4/capacity-A`, using the already
 successful B60 arithmetic gate for the random-task authorization check.
+
+
+B60/FF144 is rejected by its independently audited52,000-update n8192/seed61
+checkpoint: 34432.875994 bits, above the fixed ceiling.
+Witness SHA256:`50dac3a7fd322f9ec91f875aa4e933f8d41a2caa119461c750eed107f1e95563`. Its capacity worker stopped after the
+passing witness audit, with no completed-grid claim. Before new training,
+register B64/FF108 (87,232 parameters,3.033523x resized A), returning
+to a residual width already shown to learn arithmetic while reducing the FF
+width from128 to108. The approximately8% parameter reduction gives more margin
+below the fixed capacity ceiling. A28/FF100's grid continues unchanged.
+Configs:`configs/discrete_p97_v5_{learning,random_learning,capacity_b,capacity_c}.yaml`.
+The new recipe must pass its own arithmetic audit and small random validation.
