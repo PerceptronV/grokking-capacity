@@ -157,7 +157,7 @@ def confirmation_jobs():
         evidence,files=capacity_evidence(c['model'],family,strict=False)
         binding=dict(AB_selection_sha256=sha(RUN/f'{family}_AB_selection.json'),
                      C_construction_sha256=sha(RUN/f'{family}_C_construction.json'),C_evidence=evidence,
-                     C_exceeds_target={seed:e['final_bits']>1.1*TARGET for seed,e in evidence.items()},
+                     C_exceeds_target={seed:bool(e['final_bits']>1.1*TARGET) for seed,e in evidence.items()},
                      C_evidence_sha256=files,frozen_at=time.time())
         assert not (RUN/f'{family}_confirmation_binding.json').exists()
         atomic_json(RUN/f'{family}_confirmation_binding.json',binding)

@@ -113,3 +113,29 @@ def test_capacity_diagnostics_can_be_atomically_published(tmp_path):
     atomic_json(tmp_path/'selection.json',{'diagnostics':d})
     assert json.loads((tmp_path/'selection.json').read_text())['diagnostics']==d
     assert not (tmp_path/'selection.tmp').exists()
+
+
+def test_confirmation_binding_publication_and_shared_a(tmp_path,monkeypatch):
+    import sys,json
+    from pathlib import Path
+    sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
+    import manage_p97_multilevel as manager
+    monkeypatch.setattr(manager,'RUN',tmp_path)
+    monkeypatch.setattr(manager,'assert_sources',lambda:None)
+    monkeypatch.setattr(manager,'verify_inherited_a',lambda:{'models':{'model':'baseline','dim':32,'mlp_dim':128}})
+    registration={'families':{'q8':{},'categorical':{}},'common':{'p':97,'dropout':.2},
+                  'confirmation':{'seeds':list(range(201,211))}}
+    monkeypatch.setattr(manager,'reg',lambda:registration)
+    ev={'61':{'final_bits':np.float64(manager.TARGET*2)},'62':{'final_bits':np.float64(manager.TARGET)}}
+    monkeypatch.setattr(manager,'capacity_evidence',lambda *a,**k:(ev,{}))
+    for family in registration['families']:
+        selection=tmp_path/f'{family}_AB_selection.json'
+        selection.write_text(json.dumps({'models':{'B':{'model':'quantized' if family=='q8' else 'categorical'}},'evidence_sha256':{}}))
+        (tmp_path/f'{family}_C_construction.json').write_text(json.dumps({'model':{'model':'baseline'},'AB_selection_sha256':manager.sha(selection)}))
+    specs=manager.confirmation_jobs()
+    assert len(specs)==50
+    assert sum(j['config']['role']=='A' for j in specs)==10
+    for family in registration['families']:
+        binding=json.loads((tmp_path/f'{family}_confirmation_binding.json').read_text())
+        assert binding['C_exceeds_target']=={'61':True,'62':False}
+        assert len([j for j in specs if j['config']['family']==family])==20

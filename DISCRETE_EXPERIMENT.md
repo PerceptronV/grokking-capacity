@@ -3017,3 +3017,12 @@ A regression test reproduces and protects publication; all40 targeted tests
 pass. No scientific worker, optimizer, architecture or data source changed.
 The validated Q8 A/B selection was then republished from the same immutable
 capacity artifacts, before construction of C.
+
+The publication regression now also exercises the complete confirmation-plan
+binding with both families and exactly ten shared A runs (fifty trajectories
+in total). It caught the same NumPy-boolean risk in the future C-excess flag;
+that flag is converted to native bool before publication as well. All41
+focused tests pass. Restart only the idle queue controller to load the tested
+planner; preserve its previous launch/log and leave every training process
+running. This is a proactive bookkeeping repair, not a training restart or
+change in selection criteria.
