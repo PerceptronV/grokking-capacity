@@ -14,6 +14,12 @@ def read(p):return json.loads(p.read_text())
 def digest(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 
 
+def recipe(config):
+    keys=('model','dim','mlp_dim','levels','quantizer_clip','quantizer_surrogate',
+          'alphabet','categorical_temperature','categorical_normalization','categorical_training_sampling')
+    return {key:config[key] for key in keys if key in config}
+
+
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--require-complete',action='store_true');args=parser.parse_args()
     reg=yaml.safe_load((RUN/'registration.yaml').read_text())
@@ -36,17 +42,35 @@ def main():
                 assert result['finished_at']<=s['frozen_at']
         for path,h in s['evidence_sha256'].items():assert digest(Path(path))==h
         selections[family]=s;controls[family]=c
-    manifests=0;capacity_gates=0;c_after_freeze=0;confirmation=[]
+    manifests=0;capacity_gates=0;c_after_freeze=0;confirmation=[];manifest_names=set()
+    stage_jobs={};stage_states={}
+    for path in sorted((RUN/'stages').glob('*/controller.json')):
+        state=read(path);assert not state['errors'],path
+        assert all(job['exit_code']==0 for job in state['completed']),path
+        assert state['jobs']==read(path.parent/'jobs.json'),path
+        for job in state['jobs']:
+            assert job['name'] not in stage_jobs,job['name']
+            stage_jobs[job['name']]=job['config']
+        if args.require_complete:
+            assert state['phase']=='complete' and not state['running'] and not state['pending'],path
+            assert {j['name'] for j in state['completed']}=={j['name'] for j in state['jobs']},path
+        stage_states[path.parent.name]=dict(phase=state['phase'],completed=len(state['completed']),
+            running=len(state['running']),pending=len(state['pending']),controller_sha256=digest(path))
     for path in sorted((RUN/'jobs').glob('*/manifest.json')):
-        m=read(path);c=m['config'];manifests+=1
+        m=read(path);c=m['config'];manifests+=1;manifest_names.add(path.parent.name)
+        assert c==stage_jobs[path.parent.name]
         for key,v in reg['common'].items():assert c[key]==v,(path.parent.name,key)
         if c['task']=='capacity':
             gate=read(Path(c['gate_path'])/'summary.json')
             assert gate['learning_gate_passed'] and gate['finished_at']<=m['started_at']
+            assert recipe(gate['config'])==recipe(c)
+            assert all(gate['config'][key]==c[key] for key in reg['common'])
             if c['n_samples']>2048:
                 rnd=read(Path(c['random_gate_path'])/'summary.json')
                 assert rnd['config']['n_samples']==2048 and rnd['random_learning_passed']
                 assert rnd['finished_at']<=m['started_at']
+                assert recipe(rnd['config'])==recipe(c) and rnd['config']['seed']==c['seed']
+                assert all(rnd['config'][key]==c[key] for key in reg['common'])
             capacity_gates+=1
         if c['role']=='C':
             family=c['family'];control=controls[family]
@@ -58,15 +82,16 @@ def main():
             assert m['started_at']>=max(s['frozen_at'] for s in selections.values())
             assert c['seed'] in reg['confirmation']['seeds'];confirmation.append(c)
     if args.require_complete:
+        assert manifest_names==set(stage_jobs)
         assert len(confirmation)==50
         assert sum(c['role']=='A' for c in confirmation)==10
     OUT.mkdir(parents=True,exist_ok=True)
     result=dict(all_passed=True,manifests_checked=manifests,capacity_gates_verified=capacity_gates,
         C_jobs_after_AB_freeze=c_after_freeze,confirmation_started=len(confirmation),complete=args.require_complete,
         fixed_target_bits=target,selection_before_C=True,all_confirmation_after_both_selections=True,
-        verifier_sha256=digest(Path(__file__)))
+        stage_states=stage_states,verifier_sha256=digest(Path(__file__)))
     temp=OUT/'ordering_validation.tmp';temp.write_text(json.dumps(result,indent=2)+'\n');temp.replace(OUT/'ordering_validation.json')
-    print(json.dumps(result,indent=2))
+    print(json.dumps({**{k:v for k,v in result.items() if k!='stage_states'},'stages_checked':len(stage_states)},indent=2))
 
 
 if __name__=='__main__':main()

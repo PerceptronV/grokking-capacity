@@ -2,13 +2,18 @@
 
 Branch: `idea/discrete`. Initial registration: 2026-10-24. The p97 dropout rematch was registered 2026-10-25 before its training.
 
-New experiments are running: eight-level scalar quantization and normalized
-categorical one-hot latents, both at p97/dropout0.2. The fixed dataset is
-selected first; A/B must pass learning and capacity gates before C is
-constructed. A/B selections for both families are frozen, and both continuous
-controls have completed validation/calibration. The fifty fresh confirmation
-trajectories are running without further model selection. See `configs/discrete_p97_multilevel_dropout.yaml`, the prospective section
-at the end of this record, and `reports/p97_multilevel_dropout/`.
+Latest result: both new p97/dropout-0.2 experiments are complete across ten
+fresh seeds. The fixed dataset was chosen first, A/B were validated and matched
+to its 30,866-bit target, and ordinary continuous C was constructed only after
+A/B were frozen. Eight-level B reaches sustained held-out 99% on 5/10 seeds
+versus C's 10/10; its all-seed median is >49,205 updates versus C's 9,390.
+Categorical B and C both succeed on 10/10, with medians 4,035 and 3,235 updates.
+Shared A succeeds on 8/10 with median 11,660. Categorical B improves on A, but
+C wins nine of ten paired 99% comparisons. Neither discrete model eliminates
+positive measured delay. All 115 new checkpoints passed independent audits.
+See the [completed comparison](#completed-p97-eight-level-and-categorical-matched-experiments),
+[all outcomes](reports/p97_multilevel_dropout/confirmation_runs.csv), and
+[validated summary](reports/p97_multilevel_dropout/summary.json).
 
 Previous result: the capacity-matched p97 A/B/C rerun with dropout 0.2 is complete
 across ten fresh seeds per model. A and binary B match the fixed dataset within
@@ -3080,3 +3085,134 @@ at the largest tested N16384, so these are lower bounds rather than saturated
 capacity estimates. The fifty fresh trajectories201–210 are now running with
 frozen selections: ten shared A, ten of each B and ten of each C. There will be
 no resizing, seed replacement or recipe changes based on these outcomes.
+
+
+## Completed p97 eight-level and categorical matched experiments
+
+Both experiments are complete on `idea/discrete`, with dropout 0.2 and fresh
+seeds 201–210. The order was fixed dataset, validated/capacity-matched A and B,
+frozen A/B selection, construction of ordinary continuous C from B, C validation
+and capacity measurement, then confirmation. The independent ordering audit
+verified all 115 job manifests and all 51 completed stages, including all 49
+random-label cells' prerequisite learning gates. No confirmation outcome was
+used to choose or resize a model. All 50 confirmation trajectories are retained;
+the ten A trajectories are shared between comparisons, not independent duplicates.
+
+The fixed task is p=97 modular division, with a 50% split and 4,656 training
+examples, giving the registered target of 30,866.284423 bits = 4,656 log2(99).
+Each seed has a paired split shared by A/B/C; the ten seeds are not the same
+individual split. Every selected discrete recipe first passed its own arithmetic
+gate, then its N=2,048 random-label gate at both calibration seeds. The full
+capacity grid uses N=2,048/4,096/8,192/16,384 and seeds 61/62. All A/B maxima
+are interior at N=8,192, have late drift below 1%, and match both the target and
+each other within 10% on each seed. A's same-protocol calibration was reused
+with explicit source/configuration/artifact verification.
+
+| Model | Residual / FF width | Parameters | Capacity seed 61 / seed 62 (bits) |
+| --- | ---: | ---: | ---: |
+| A, ordinary continuous (shared) | 32 / 128 | 39,264 | 31,288.33 / 31,254.55 |
+| Eight-level B | 56 / 48 | 52,584 | 33,909.84 / 32,825.22 |
+| Eight-level C | 56 / 48 | 52,584 | 34,822.64 / 34,140.47 |
+| Categorical B | 42 / 16 | 83,118 | 33,582.24 / 33,264.72 |
+| Categorical C | 42 / 240 | 83,118 | ≥55,972.63 / ≥57,582.81 |
+
+Eight-level B quantizes every native residual coordinate at each block boundary
+to eight equally spaced values in [-1,1], using the registered RMS-clipped STE.
+Its C removes those parameter-free quantizers; B/C have exactly the same
+parameter shapes and paired initial tensors. Their measured capacities differ
+by only 2.69% and 4.01%, so this is a weak capacity contrast.
+
+Categorical B uses 42 categorical slots per token at each block boundary, each
+with eight symbols: learned logits, per-slot nonaffine LayerNorm before softmax,
+hard argmax one-hots in the forward pass, and softmax STE in the backward pass.
+The learned 336-to-42 consumer is the sum of slot-specific symbol embeddings.
+There is no continuous bypass and no 16-coordinate latent: FF16 is only the
+within-block feedforward hidden width. Training is deterministic argmax with
+normalized-softmax STE, not categorical sampling. C is an ordinary continuous
+width-42 transformer with FF240, accounting for B's categorical projection
+parameters. This comparison changes parameter allocation as well as
+discreteness, and complete B/C initial tensors are not identical. C's largest-N
+maxima are lower bounds; they already establish substantially higher capacity.
+
+All times below are **optimizer updates**, with ten updates per epoch. Sustained
+accuracy means three consecutive end-of-epoch held-out evaluations. Each run
+stops when that held-out 99% condition and current dropout-active training 99%
+hold, otherwise at 5,000 epochs / 50,000 updates.
+
+| Model | Sustained 95% successes | Median updates to 95%, all ten | Sustained 99% successes | Median updates to 99%, all ten |
+| --- | ---: | ---: | ---: | ---: |
+| A (shared) | 9/10 | 6,775 | 8/10 | 11,660 |
+| Eight-level B | 7/10 | 33,915 | 5/10 | >49,205 (censored) |
+| Eight-level C | 10/10 | 4,935 | 10/10 | 9,390 |
+| Categorical B | 10/10 | 3,165 | 10/10 | 4,035 |
+| Categorical C | 10/10 | 2,925 | 10/10 | 3,235 |
+
+For eight-level B, five 99% crossings are observed and five are right-censored
+at 50,000 updates. The fifth observed crossing is 48,410 updates; the sixth is
+unobserved, so the conventional ten-seed sample median is >49,205 updates,
+not a success-only median. Final held-out 99% counts equal the sustained-success
+counts for all five model groups.
+
+At 99%, eight-level C beats B on all ten paired seeds: C is faster in the five
+pairs where both succeed and succeeds in the other five where B does not. A
+is faster than B on four mutually successful pairs; A alone succeeds on four,
+B alone on one, and neither on one. A versus eight-level C is mixed: A is faster
+on three, C on five, and C alone succeeds on two.
+
+Categorical B reaches 99% before A on seven mutually successful pairs, A wins
+one, and B alone succeeds on two. Categorical C beats B on nine seeds, with B
+faster on one; C beats A on all eight mutually successful seeds and succeeds
+on the two A failures. At 95%, B beats categorical C on three seeds and C wins
+seven. Thus categorical B improves speed and reliability relative to matched A,
+but does not improve on its ordinary continuous C control. Eight-level B is
+substantially slower and less reliable than C. These are capacity-rematched
+architectures, not a precision-only ablation of the earlier binary result.
+
+The registered paper-style delay is max(0, first held-out 98% update minus
+first dropout-active online training 99% update). The secondary delay uses
+end-of-epoch dropout-free training accuracy. These first-crossing delays are
+distinct from the sustained-accuracy speed metric. Missing thresholds stay
+undefined. The requested minimum across ten seeds is reported alongside the
+positive / zero / undefined counts, so a zero minimum does not imply that
+every seed has zero delay or that an unsuccessful model avoids grokking.
+
+| Model | Paper-style minimum (updates) | Positive / zero / undefined | Eval-training minimum (updates) | Positive / zero / undefined |
+| --- | ---: | ---: | ---: | ---: |
+| A (shared) | 0 | 1 / 8 / 1 | 0 | 7 / 2 / 1 |
+| Eight-level B | 0 | 1 / 4 / 5 | 380 | 6 / 0 / 4 |
+| Eight-level C | 0 | 0 / 10 / 0 | 120 | 10 / 0 / 0 |
+| Categorical B | 0 | 8 / 2 / 0 | 110 | 10 / 0 / 0 |
+| Categorical C | 0 | 7 / 3 / 0 | 40 | 10 / 0 / 0 |
+
+A still has positive measured delay on one paper-style seed and seven
+eval-training seeds. Categorical B has positive paper-style delay on eight
+seeds and eval-training delay on all ten, with a minimum of 110 updates under
+the latter definition. Eight-level B has positive eval-training delay on all
+six defined seeds, minimum 380 updates, with four undefined. Neither discrete
+recipe supports a universal claim of never grokking. These finite-budget
+capacity estimates and threshold delays also do not establish intrinsic
+capacity bounds or a theorem that dataset-matched A cannot grok.
+
+All 115 new final checkpoints passed independent reload/evaluation audits,
+including all 65 development/calibration jobs and 50 confirmations. Every
+initial checkpoint and dataset was reconstructed; all 66 arithmetic traces
+had thresholds recomputed with an independent NumPy implementation, and all
+20 family/seed pairings passed data, parameter, initialization, and frozen
+configuration checks. The largest capacity recomputation error was 0.035624
+bits; CPU/GPU discrepancies are retained and verified on GPU at the original
+strict tolerances. The 41 focused tests passed. Failed pilots and rejected
+capacity candidates remain in the exported arithmetic/capacity tables. The
+previously documented metadata publication repairs changed no scientific
+worker, model, optimizer, dataset or training trajectory.
+
+Artifacts: [all 50 outcomes](reports/p97_multilevel_dropout/confirmation_runs.csv),
+[full summary](reports/p97_multilevel_dropout/summary.json),
+[checkpoint validation](reports/p97_multilevel_dropout/validation.json), and
+[ordering/stage audit](reports/p97_multilevel_dropout/ordering_validation.json).
+Figures are exported as both PNG and PDF:
+[eight-level speed](reports/p97_multilevel_dropout/q8_speed.png),
+[categorical speed](reports/p97_multilevel_dropout/categorical_speed.png),
+[eight-level capacity](reports/p97_multilevel_dropout/q8_capacity.png),
+[categorical capacity](reports/p97_multilevel_dropout/categorical_capacity.png),
+[eight-level train/test](reports/p97_multilevel_dropout/q8_train_test.png), and
+[categorical train/test](reports/p97_multilevel_dropout/categorical_train_test.png).

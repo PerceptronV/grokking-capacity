@@ -53,8 +53,9 @@ def main():
         target=summary['target_bits']/1000
         ax.axhspan(.9*target,1.1*target,color='grey',alpha=.15,label='Fixed dataset ±10%')
         ax.axhline(target,color='black',lw=.7)
+        note='\nC capacity estimates are lower bounds: maxima at largest tested N' if any(v['lower_bound_only'] for v in evidence['C'].values()) else ''
         ax.set(xscale='log',xlabel='Random-label examples',ylabel='Final learned information (kbit)',
-               title=f'p=97 · dropout 0.2 · {family}: measured capacity')
+               title=f'p=97 · dropout 0.2 · {family}: measured capacity'+note)
         ax.legend(ncol=2,fontsize=8);save(fig,f'{family}_capacity')
         fig,axes=plt.subplots(1,3,figsize=(13,4),sharex=True,sharey=True)
         for ax,role in zip(axes,'ABC'):
