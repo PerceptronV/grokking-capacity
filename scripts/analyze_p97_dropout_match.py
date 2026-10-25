@@ -74,12 +74,18 @@ def audit_extension(path,s):
     model=make_model(c);model.load_state_dict(saved['model_state_dict'],strict=True)
     evaluation=evaluate(model,*datasets,'cpu',512)
     bits=len(datasets[1])*(np.log2(c['p']+2)-evaluation['loss']/np.log(2))
-    assert abs(bits-effective['final_bits'])<.05
+    boundary=boundary_audit(model,datasets[0],c,'cpu');extra={'verification_device':'cpu'}
+    if abs(bits-effective['final_bits'])>=.05 or evaluation['acc']!=effective['final_eval']['acc']:
+        extra=dict(cpu_bits_error=float(bits-effective['final_bits']),cpu_train_eval=evaluation,
+                   cpu_gpu_discrepancy=True,verification_device='cuda:0')
+        evaluation=evaluate(model.to('cuda:0'),*datasets,'cuda:0',512)
+        bits=len(datasets[1])*(np.log2(c['p']+2)-evaluation['loss']/np.log(2))
+    assert abs(bits-effective['final_bits'])<.05,(extension.name,bits-effective['final_bits'])
     assert evaluation['acc']==effective['final_eval']['acc']
     assert d['late_drift']<=.01 and not d['epoch_limit']
     return dict(name=extension.name,kind='capacity_continuation',epochs=effective['epochs'],
                 bits_error=abs(bits-effective['final_bits']),final_bits=effective['final_bits'],
-                boundary=boundary_audit(model,datasets[0],c,'cpu'),primary_trace_prefix_identical=True)
+                boundary=boundary,primary_trace_prefix_identical=True,**extra)
 
 
 def audit_job(path,s):
@@ -101,12 +107,17 @@ def audit_job(path,s):
     dropout_modules=[m for m in fresh.modules() if isinstance(m,torch.nn.Dropout)]
     assert dropout_modules and all(m.p==.2 for m in dropout_modules)
     train=evaluate(fresh,*datasets[:2],'cpu',512)
-    result=dict(name=path.name,config=c,params=s['param_count'],train_eval=train,
+    result=dict(name=path.name,config=c,params=s['param_count'],train_eval=train,verification_device='cpu',
                 boundary=boundary_audit(fresh,datasets[0],c,'cpu'))
     if c['task']=='capacity':
         bits=len(datasets[1])*(np.log2(c['p']+2)-train['loss']/np.log(2))
+        if abs(bits-s['final_bits'])>=.05 or train['acc']!=s['final_eval']['acc']:
+            result.update(cpu_bits_error=float(bits-s['final_bits']),cpu_train_eval=train,
+                          verification_device='cuda:0',cpu_gpu_discrepancy=True)
+            fresh=fresh.to('cuda:0');train=evaluate(fresh,*datasets[:2],'cuda:0',512)
+            bits=len(datasets[1])*(np.log2(c['p']+2)-train['loss']/np.log(2));result['train_eval']=train
         result.update(recomputed_bits=float(bits),bits_error=abs(bits-s['final_bits']))
-        assert result['bits_error']<.05
+        assert result['bits_error']<.05,(path.name,result['bits_error'])
         assert abs(train['acc']-s['final_eval']['acc'])<1e-9
         assert read(Path(c['gate_path'])/'summary.json')['learning_gate_passed']
         if c['n_samples']>2048:
@@ -115,6 +126,10 @@ def audit_job(path,s):
         val=evaluate(fresh,*datasets[2:],'cpu',512);result['val_eval']=val
         trace=rows(path/'trace.jsonl')
         assert len(trace)==s['epochs'] and trace[-1]==s['final'] and metrics(trace)==s['metrics']
+        if train['acc']!=trace[-1]['train_eval_acc'] or val['acc']!=trace[-1]['val_acc']:
+            result.update(cpu_train_eval=train,cpu_val_eval=val,verification_device='cuda:0',cpu_gpu_discrepancy=True)
+            fresh=fresh.to('cuda:0');train=evaluate(fresh,*datasets[:2],'cuda:0',512)
+            val=evaluate(fresh,*datasets[2:],'cuda:0',512);result.update(train_eval=train,val_eval=val)
         assert abs(train['acc']-trace[-1]['train_eval_acc'])<1e-9
         assert abs(val['acc']-trace[-1]['val_acc'])<1e-9
         assert all(r['epoch']==i+1 and r['step']==10*(i+1) for i,r in enumerate(trace))
@@ -134,6 +149,7 @@ def build(require_complete=False):
     assert frozen['registration_sha256']==sha(RUN/'registration.yaml')
     all_jobs=[(p,read(p/'summary.json')) for p in sorted((RUN/'jobs').iterdir()) if (p/'summary.json').exists()]
     capacity=[];arithmetic=[];files={str(RUN/'manifest.json'):sha(RUN/'manifest.json')}
+    for artifact in (RUN/'diagnostics').glob('*.json'):files[str(artifact)]=sha(artifact)
     for p,s in all_jobs:
         for f in ('summary.json','manifest.json','model.pt','model_init.pt','trace.jsonl','trace.npz'):
             if (p/f).exists():files[str(p/f)]=sha(p/f)
@@ -222,6 +238,8 @@ def build(require_complete=False):
                         'Paper delay uses dropout-active online train99 and held-out eval98.',
                         'Each epoch is ten optimizer updates; shared GPU wall time is not a model speed metric.'])
     REPORT.mkdir(parents=True,exist_ok=True)
+    numeric=RUN/'diagnostics/cpu_gpu_quantization_audit.json'
+    if numeric.exists():(REPORT/numeric.name).write_bytes(numeric.read_bytes())
     csv_write(REPORT/'capacity_cells.csv',capacity);csv_write(REPORT/'capacity_maxima.csv',maxima)
     csv_write(REPORT/'arithmetic_runs.csv',arithmetic);csv_write(REPORT/'confirmation_runs.csv',confirm)
     atomic_json(REPORT/'summary.json',summary);atomic_json(REPORT/'input_hashes.json',files)
@@ -276,8 +294,11 @@ def main():
         atomic_json(REPORT/'checkpoint_audits.json',audits)
         atomic_json(REPORT/'validation.json',dict(checkpoints_audited=len(audits),all_passed=True,
             max_capacity_bits_error=max((a.get('bits_error',0.) for a in audits),default=0.),
+            max_abs_cpu_bits_error=max((abs(a.get('cpu_bits_error',a.get('bits_error',0.))) for a in audits),default=0.),
             initial_weights_recreated=True,datasets_recreated=True,binary_train_eval_boundaries_verified=True,
-            BC_pairing_verified=len(summary['pairing']),analysis_sha256=sha(Path(__file__))))
+            BC_pairing_verified=len(summary['pairing']),analysis_sha256=sha(Path(__file__)),
+            cpu_gpu_discrepancies=[a['name'] for a in audits if a.get('cpu_gpu_discrepancy')],
+            note='CPU differences, if present, are retained and independently verified again on GPU; no accuracy tolerance is relaxed.'))
     if args.plots:plots(jobs,summary)
     print(json.dumps({k:summary[k] for k in ('completed_jobs','capacity_cells','arithmetic_runs','aggregates','paired_speeds')},indent=2))
 

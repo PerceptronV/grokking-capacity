@@ -2628,3 +2628,29 @@ C's same-grid measurements establish excess capacity directly. If its maximum
 is still at a data boundary or drifting, it is reported as a lower bound;
 precisely locating C's upper capacity is not required to establish that it
 exceeds A/B. A/B matching requires converged, interior maxima.
+
+The architecture selection is now frozen in
+`reports/p97_dropout_match/selection.json`, before confirmation seeds 101–110:
+
+| Model | Width / FF width | Parameters | Capacity, seeds 61 / 62 (bits) |
+|---|---:|---:|---:|
+| A: ordinary continuous | 32 / 128 | 39,264 | 31,288.33 / 31,254.55 |
+| B: full-width binary | 88 / 72 | 117,832 | 33,071.14 / 32,316.36 |
+| C: ordinary continuous | 88 / 72 | 117,832 | at least 59,578.93 / 59,272.47 |
+
+A/B match the 30,866.28-bit dataset and each other within 10% on both seeds.
+B/C have exactly the same parameter count and will use identical same-seed
+initial weights. B's seed-62 continuation reproduced the original 864-epoch
+trajectory bit for bit, then trained 200 further epochs with the same optimizer
+state. Its late drift fell from 1.339% to 0.644%; the primary estimate remains
+archived at 32,090.53 bits. Both accepted A/B maxima are interior N=8,192
+points and pass all convergence flags. C's maxima are at the largest tested
+N=16,384, so they establish lower bounds rather than a saturated upper capacity.
+
+Checkpoint verification retains CPU/GPU differences at hard binary thresholds.
+One N=4,096 binary run changes a single prediction on CPU: a first-layer input
+is -9.31e-10 on CPU versus +1.86e-9 on GPU. Its independently reloaded GPU
+checkpoint reproduces the saved accuracy and information. The continuation
+checkpoint also has a small CPU information difference (0.186 bits); its GPU
+recheck agrees. No accuracy tolerance is relaxed; these discrepancies are
+recorded in the audit artifacts. Confirmation outcomes are still pending.
