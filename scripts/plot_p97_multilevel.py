@@ -56,7 +56,21 @@ def main():
         ax.set(xscale='log',xlabel='Random-label examples',ylabel='Final learned information (kbit)',
                title=f'p=97 · dropout 0.2 · {family}: measured capacity')
         ax.legend(ncol=2,fontsize=8);save(fig,f'{family}_capacity')
-    print('Saved speed and capacity PNG/PDF figures for both families.')
+        fig,axes=plt.subplots(1,3,figsize=(13,4),sharex=True,sharey=True)
+        for ax,role in zip(axes,'ABC'):
+            for row in selected:
+                if row['role']!=role:continue
+                trace=[json.loads(line) for line in (RUN/'jobs'/row['name']/'trace.jsonl').read_text().splitlines()]
+                x=[r['step'] for r in trace];color=colors(int(row['seed'])-201)
+                ax.plot(x,[r['train_eval_acc'] for r in trace],color=color,ls='--',lw=.65,alpha=.45)
+                ax.plot(x,[r['val_acc'] for r in trace],color=color,lw=.8,alpha=.7,label=row['seed'])
+            ax.set(title=role,xlabel='Optimizer updates (log scale)',xscale='log',xlim=(10,50000),ylim=(0,1.02))
+            ax.axhline(.99,color='black',ls=':',lw=.6)
+        axes[0].set_ylabel('Accuracy');axes[-1].legend(title='Seed',ncol=2,fontsize=6)
+        fig.suptitle(f'p=97 · dropout 0.2 · {family}\nDashed: dropout-free training; solid: held-out; curves end at actual stopping updates')
+        save(fig,f'{family}_train_test')
+
+    print('Saved speed, capacity, and train/test PNG/PDF figures for both families.')
 
 
 if __name__=='__main__':main()

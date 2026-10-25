@@ -5,12 +5,12 @@ Branch: `idea/discrete`. Initial registration: 2026-10-24. The p97 dropout remat
 New experiments are running: eight-level scalar quantization and normalized
 categorical one-hot latents, both at p97/dropout0.2. The fixed dataset is
 selected first; A/B must pass learning and capacity gates before C is
-constructed. A/B selections for both families are frozen. Their continuous
-controls are undergoing validation/calibration; no confirmation result exists
-yet. See `configs/discrete_p97_multilevel_dropout.yaml`, the prospective section
+constructed. A/B selections for both families are frozen, and both continuous
+controls have completed validation/calibration. The fifty fresh confirmation
+trajectories are running without further model selection. See `configs/discrete_p97_multilevel_dropout.yaml`, the prospective section
 at the end of this record, and `reports/p97_multilevel_dropout/`.
 
-Latest result: the capacity-matched p97 A/B/C rerun with dropout 0.2 is complete
+Previous result: the capacity-matched p97 A/B/C rerun with dropout 0.2 is complete
 across ten fresh seeds per model. A and binary B match the fixed dataset within
 10% on both capacity seeds; B/C have exactly 117,832 parameters. Sustained
 held-out 99% success is A 9/10, B 5/10, C 10/10. C is fastest on every paired
@@ -3069,3 +3069,14 @@ Immutable selection/construction evidence has been copied into
 already-authorized C calibration cells, after their own arithmetic/random
 gates. It never constructs or resizes a model, reserves slots for pending
 stages, and stops adding calibration jobs once confirmation is submitted.
+
+
+Both C controls subsequently passed arithmetic and random-label gates. Their
+capacity sweeps finished before the confirmation bindings were published. Q8 C
+measures34,822.639505/34,140.472513 bits, with interior N8192 maxima; this is only
+2.69%/4.01% above its paired B estimates, and12.82%/10.61% above the fixed dataset.
+Categorical C measures at least55,972.625079/57,582.807941 bits. Both maxima are
+at the largest tested N16384, so these are lower bounds rather than saturated
+capacity estimates. The fifty fresh trajectories201–210 are now running with
+frozen selections: ten shared A, ten of each B and ten of each C. There will be
+no resizing, seed replacement or recipe changes based on these outcomes.
