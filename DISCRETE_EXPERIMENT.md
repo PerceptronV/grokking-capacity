@@ -2849,3 +2849,67 @@ Recompute the report and audits with:
 OMP_NUM_THREADS=2 PYTHONPATH=src python scripts/analyze_p97_dropout_match.py --require-complete --audit --plots
 python scripts/verify_p97_dropout_results.py
 ```
+
+## Prospective p97 eight-level and categorical matched experiments — 25 October 2026
+
+The user requests two new A/B/C comparisons and explicitly fixes the order:
+choose p97 data first, find capacity-matched A/B, and only then construct
+continuous C from the selected B. The dataset remains modular division at
+50% training fraction: 4,656 training examples and 30,866.284423 bits. Common
+training remains dropout0.2, two blocks, one head, AdamW1e-3/WD1/betas0.9,0.98,
+batch512 and at most5,000 epochs (50,000 optimizer updates for arithmetic).
+Registration: `configs/discrete_p97_multilevel_dropout.yaml`.
+
+The scalar family uses eight evenly spaced fixed levels in [-1,1] at every
+full-width block boundary, with the existing RMS-clipped STE. The categorical
+family uses eight symbols per slot and L=d slots per token at every block:
+learned d-to-(L*8) logits, nonaffine per-slot LayerNorm eps1e-4, hard argmax
+one-hots, softmax STE at temperature1, then learned (L*8)-to-d re-embedding.
+No continuous feature bypasses the hard state. Categorical training is
+**deterministic**, following the language-regularisation interface; this is
+explicitly different from the earlier sampled Dreamer-style runs. Earlier
+sampled normalized p149 failures remain valid and are not overwritten.
+
+A32/FF128 (39,264 parameters) already passed this unchanged arithmetic and
+random-label protocol, with seed61/62 capacity31,288.3301/31,254.5454 bits.
+Reuse those calibration artifacts with verified source/config/trace/checkpoint
+hashes rather than estimate A from a fitted constant. Ten new A confirmation
+seeds201–210 will be shared across the two experiments, counted as ten runs.
+No prior confirmation outcome is used to tune either B.
+
+Initial scalar development candidates are d36/FF144 and d44/FF176. Initial
+categorical candidates are d36/FF144 and d48/FF192. Every exact candidate must
+first reach sustained hard-eval held-out99% and final training-eval99%, then
+learn N2048 random labels to final99% before any larger random-label cell.
+Development seeds41/42; calibration seeds61/62 and N2048/4096/8192/16384.
+N8192 seed61 may screen size before the rest of the grid. Retain all attempts.
+Resize width/FF from development evidence only. Require both A/B within10%
+of dataset and each other on both seeds. The selected capacity maxima must
+be interior, below95% label entropy, under the epoch cap, and have <=1% late
+drift. Preserve original patience-stop result and continue the exact live
+optimizer/RNG in200-epoch segments when late drift exceeds1%, staying within
+5,000 total epochs. B must be larger than A; do not require the binary
+experiment's particular parameter ratio for the more expressive channels.
+
+Freeze A/B before constructing or training any C. Scalar C removes quantizers
+and exactly matches B's shapes/initial tensors. Categorical C is an ordinary
+continuous transformer at the selected B width/depth; its FF width increases
+by round(2*alphabet*dim/3), accounting for both categorical projection
+matrices per block. This is exact when d is divisible by3, as in the initial
+candidates; otherwise require <=0.1% parameter difference. It has no
+categorical adapters, softmax channel or artificial bottleneck. Differing FF
+shapes mean categorical B/C cannot have identical complete initial weights.
+C is measured on the same random-label grid after construction, retaining
+lower-bound flags and explicitly reporting whether excess capacity exists;
+C outcomes never resize B. Confirmation uses all ten seeds201–210 for each
+B/C and the shared ten A runs. Speed, sustained windows, paper/eval delay,
+minimum-over-seeds and right-censoring rules match the completed binary study.
+
+The new worker `multilevel_dropout.py` and launcher
+`run_p97_multilevel_stage.py` preserve all earlier scientific source hashes.
+The 38 targeted tests pass, including exact scalar training/RNG parity with
+the completed protocol, eight-level and one-hot boundary checks in train/eval,
+nonzero categorical gradients, deterministic hard evaluation, embedding-sum
+identity, and unrestricted parameter-matched C construction. GPU1 is shared
+with unrelated jobs; start with four small workers and monitor resources.
+No scientific result from these new experiments exists at registration.
