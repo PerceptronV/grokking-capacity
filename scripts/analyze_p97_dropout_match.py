@@ -43,7 +43,43 @@ def capacity_diagnostics(path,s):
     return dict(late_drift=drift,epoch_limit=s['epochs']>=s['config']['epochs'],
                 entropy_fraction=s['final_bits']/entropy,
                 late_drift_flag=drift is None or drift>.01,
-                entropy_limited=s['final_bits']>=.95*entropy)
+                entropy_limited=bool(s['final_bits']>=.95*entropy))
+
+
+
+def effective_capacity(path,s):
+    extension=RUN/'diagnostics'/path.name
+    if not (extension/'summary.json').exists():return s,capacity_diagnostics(path,s),None
+    e=read(extension/'summary.json');m=read(extension/'manifest.json')
+    assert e['config']==s['config'] and e['primary_job']==path.name and e['replay_exact']
+    assert m['primary_summary_sha256']==sha(path/'summary.json')
+    assert m['primary_checkpoint_sha256']==sha(path/'model.pt')
+    assert m['source_hashes']==source_hashes()
+    assert m['extension_source_sha256']==sha(extension/'extension_source.py')
+    assert e['converged'] and e['epochs']<=s['config']['epochs']
+    assert sha(extension/'model.pt')==e['checkpoint_sha256']
+    original=np.load(path/'trace.npz');continued=np.load(extension/'trace.npz')
+    for key in ('bits_trace','train_loss_trace','train_acc_trace'):
+        np.testing.assert_array_equal(original[key],continued[key][:s['epochs']])
+    updated={**s,'final_bits':e['final_bits'],'final_eval':e['final_eval'],'epochs':e['epochs'],
+             'peak_bits':float(continued['bits_trace'].max()*s['config']['n_samples'])}
+    return updated,capacity_diagnostics(extension,updated),extension
+
+
+def audit_extension(path,s):
+    effective,d,extension=effective_capacity(path,s)
+    if extension is None:return None
+    c=s['config'];datasets=data(c);saved=torch.load(extension/'model.pt',map_location='cpu',weights_only=True)
+    assert saved['config']==c
+    model=make_model(c);model.load_state_dict(saved['model_state_dict'],strict=True)
+    evaluation=evaluate(model,*datasets,'cpu',512)
+    bits=len(datasets[1])*(np.log2(c['p']+2)-evaluation['loss']/np.log(2))
+    assert abs(bits-effective['final_bits'])<.05
+    assert evaluation['acc']==effective['final_eval']['acc']
+    assert d['late_drift']<=.01 and not d['epoch_limit']
+    return dict(name=extension.name,kind='capacity_continuation',epochs=effective['epochs'],
+                bits_error=abs(bits-effective['final_bits']),final_bits=effective['final_bits'],
+                boundary=boundary_audit(model,datasets[0],c,'cpu'),primary_trace_prefix_identical=True)
 
 
 def audit_job(path,s):
@@ -61,6 +97,9 @@ def audit_job(path,s):
     assert saved['config']==c
     fresh.load_state_dict(saved['model_state_dict'],strict=True)
     assert count_parameters(fresh)==s['param_count']==manifest['param_count']
+    assert c['dropout']==.2
+    dropout_modules=[m for m in fresh.modules() if isinstance(m,torch.nn.Dropout)]
+    assert dropout_modules and all(m.p==.2 for m in dropout_modules)
     train=evaluate(fresh,*datasets[:2],'cpu',512)
     result=dict(name=path.name,config=c,params=s['param_count'],train_eval=train,
                 boundary=boundary_audit(fresh,datasets[0],c,'cpu'))
@@ -101,9 +140,15 @@ def build(require_complete=False):
         c=s['config'];base=dict(name=p.name,role=c['role'],recipe=recipe(c),seed=c['seed'],params=s['param_count'],
                               dim=c['dim'],mlp_dim=c['mlp_dim'],phase=c['phase'],epochs=s['epochs'])
         if s['task']=='capacity':
-            capacity.append({**base,'n_samples':c['n_samples'],'final_bits':s['final_bits'],
-                'peak_bits':s['peak_bits'],'ratio_to_dataset':s['final_bits']/TARGET,
-                'train_eval_acc':s['final_eval']['acc'],**capacity_diagnostics(p,s)})
+            effective,diagnostics,extension=effective_capacity(p,s)
+            capacity.append({**base,'epochs':effective['epochs'],'primary_epochs':s['epochs'],
+                'n_samples':c['n_samples'],'final_bits':effective['final_bits'],'primary_final_bits':s['final_bits'],
+                'peak_bits':effective['peak_bits'],'ratio_to_dataset':effective['final_bits']/TARGET,
+                'train_eval_acc':effective['final_eval']['acc'],'continuation_path':str(extension) if extension else None,
+                **diagnostics})
+            if extension:
+                for artifact in extension.iterdir():
+                    if artifact.is_file():files[str(artifact)]=sha(artifact)
         else:
             arithmetic.append({**base,**s['metrics'],'final_train_online':s['final']['train_online_acc'],
                 'final_train_eval':s['final']['train_eval_acc'],'final_val':s['final']['val_acc'],
@@ -147,6 +192,7 @@ def build(require_complete=False):
                 if c['phase']=='confirmation' and c['role']==role:
                     assert {k:c[k] for k in selection['models'][role]}==selection['models'][role]
                     assert read(p/'manifest.json')['started_at']>=selection['frozen_at']
+                    assert c['selection_sha256']==sha(RUN/'selection.json')
         for seed in range(101,111):
             pp={s['config']['role']:(p,s) for p,s in all_jobs if s['config']['phase']=='confirmation' and s['config']['seed']==seed}
             if len(pp)!=3:continue
@@ -201,7 +247,7 @@ def plots(all_jobs,summary):
         for role,color in zip('ABC',('tab:blue','tab:orange','tab:green')):
             model=summary['selection']['models'][role]
             for seed in (61,62):
-                points=sorted((s['config']['n_samples'],s['final_bits']/1000) for p,s in all_jobs
+                points=sorted((s['config']['n_samples'],effective_capacity(p,s)[0]['final_bits']/1000) for p,s in all_jobs
                     if s['task']=='capacity' and s['config']['seed']==seed
                     and all(s['config'].get(k)==v for k,v in model.items()))
                 ax.plot(*zip(*points),color=color,marker='o',ls='-' if seed==61 else '--',
@@ -223,6 +269,9 @@ def main():
         audits=[]
         for i,(p,s) in enumerate(jobs):
             audits.append(audit_job(p,s))
+            if s['task']=='capacity':
+                extension_audit=audit_extension(p,s)
+                if extension_audit:audits.append(extension_audit)
             if i%10==0:print(f'audited {i+1}/{len(jobs)}',flush=True)
         atomic_json(REPORT/'checkpoint_audits.json',audits)
         atomic_json(REPORT/'validation.json',dict(checkpoints_audited=len(audits),all_passed=True,

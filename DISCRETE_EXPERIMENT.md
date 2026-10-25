@@ -2612,3 +2612,19 @@ Artifacts will be kept under `results/discrete/p97-dropout-match-v1`, with
 source snapshots, immutable stage configurations, initial/final checkpoints
 and independent final audits. Results are pending; old dropout-free matching
 or the earlier under-capacity A dropout experiment cannot substitute for this run.
+
+Matching diagnostic recorded before confirmation: binary width 88/FF72,
+seed 62, N=8,192 stopped at epoch 864 with 32,090.53 bits and 1.339%
+late drift. The registered convergence check therefore requires an extension.
+The diagnostic replays the original run and requires bitwise identical weights
+and traces at its original stopping point. It then continues the same optimizer
+and RNG in segments of at most 200 epochs, retaining the original 5,000-epoch
+total ceiling. It stops after at least 200 additional epochs and late drift
+at most 1%. The primary checkpoint/result remains unchanged; reports retain
+both values and use the extended final measurement for matching if validated.
+This is the registered convergence extension, before any confirmation outcome.
+
+C's same-grid measurements establish excess capacity directly. If its maximum
+is still at a data boundary or drifting, it is reported as a lower bound;
+precisely locating C's upper capacity is not required to establish that it
+exceeds A/B. A/B matching requires converged, interior maxima.

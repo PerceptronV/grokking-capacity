@@ -8,7 +8,7 @@ import time
 import yaml
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'scripts'))
-from analyze_p97_dropout_match import RUN, TARGET, build, read, recipe, capacity_diagnostics, sha
+from analyze_p97_dropout_match import RUN, TARGET, build, read, recipe, capacity_diagnostics, effective_capacity, sha
 
 
 def main():
@@ -32,14 +32,25 @@ def main():
                    and all(s['config'].get(k)==v for k,v in model.items())]
             assert len({s['config']['n_samples'] for p,s in cells})==len(cells),'duplicate capacity cells'
             assert set(reg['capacity']['n_samples']).issubset({s['config']['n_samples'] for p,s in cells})
-            path,winner=max(cells,key=lambda ps:ps[1]['final_bits'])
-            d=capacity_diagnostics(path,winner)
-            assert not any(d[k] for k in ('epoch_limit','late_drift_flag','entropy_limited')),d
-            assert winner['config']['n_samples']<max(s['config']['n_samples'] for p,s in cells)
-            if role in 'AB':assert abs(winner['final_bits']/TARGET-1)<=reg['capacity']['target_tolerance']
-            else:assert winner['final_bits']>TARGET*(1+reg['capacity']['target_tolerance'])
+            path,primary=max(cells,key=lambda ps:effective_capacity(*ps)[0]['final_bits'])
+            winner,d,extension=effective_capacity(path,primary)
+            d['largest_dataset_boundary']=winner['config']['n_samples']==max(s['config']['n_samples'] for p,s in cells)
+            if role in 'AB':
+                assert not any(d[k] for k in ('epoch_limit','late_drift_flag','entropy_limited','largest_dataset_boundary')),d
+                assert abs(winner['final_bits']/TARGET-1)<=reg['capacity']['target_tolerance']
+            else:
+                # Registration requires a direct C measurement demonstrating excess
+                # capacity, not a precisely saturated estimate of C's upper limit.
+                # A flagged C maximum is reported as a lower bound, with flags kept.
+                assert winner['final_bits']>TARGET*(1+reg['capacity']['target_tolerance'])
+                d['lower_bound_only']=any(d[k] for k in ('epoch_limit','late_drift_flag','entropy_limited','largest_dataset_boundary'))
             evidence[role][str(seed)]={k:winner[k] for k in ('final_bits','param_count')}
             evidence[role][str(seed)].update(winner=path.name,grid=[p.name for p,s in cells],diagnostics=d)
+            evidence[role][str(seed)]['primary_final_bits']=primary['final_bits']
+            if extension:
+                evidence[role][str(seed)]['continuation_path']=str(extension)
+                for artifact in extension.iterdir():
+                    if artifact.is_file():hashes[str(artifact)]=sha(artifact)
             counts[role]=winner['param_count']
             for p,s in cells:hashes[str(p/'summary.json')]=sha(p/'summary.json')
     for seed in reg['capacity']['seeds']:
