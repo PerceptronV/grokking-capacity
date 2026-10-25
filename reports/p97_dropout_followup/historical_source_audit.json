@@ -1,0 +1,20 @@
+{
+  "commits": {
+    "43b8ee0": {
+      "CapacityTrainer_AST_identical": true,
+      "data_module_identical": true,
+      "model_diff": "diff --git a/src/grokking_capacity/models/transformer.py b/src/grokking_capacity/models/transformer.py\nindex 30fa8da..7d4685f 100644\n--- a/src/grokking_capacity/models/transformer.py\n+++ b/src/grokking_capacity/models/transformer.py\n@@ -171,14 +171,19 @@ class TransformerTorch(nn.Module):\n         dropout=0.,\n         pool='cls',\n         init_scale: float = 1.0,\n+        mlp_dim: Optional[int] = None,\n     ):\n         super().__init__()\n         assert pool in {'cls', 'mean'}\n         self.pool = pool\n \n+        if mlp_dim is None:\n+            mlp_dim = dim * 4\n+        if not isinstance(mlp_dim, int) or mlp_dim < 1:\n+            raise ValueError('mlp_dim must be a positive integer')\n         self.embedding = nn.Embedding(n_tokens, dim)\n         self.layers = nn.ModuleList([\n-            BlockTorch(dim, heads, dim // heads, dim * 4, seq_len, dropout)\n+            BlockTorch(dim, heads, dim // heads, mlp_dim, seq_len, dropout)\n             for _ in range(depth)\n         ])\n         self.norm = RMSNormTorch(dim)\n"
+    },
+    "4adeb6f": {
+      "CapacityTrainer_AST_identical": true,
+      "data_module_identical": true,
+      "model_diff": "diff --git a/src/grokking_capacity/models/transformer.py b/src/grokking_capacity/models/transformer.py\nindex 30fa8da..7d4685f 100644\n--- a/src/grokking_capacity/models/transformer.py\n+++ b/src/grokking_capacity/models/transformer.py\n@@ -171,14 +171,19 @@ class TransformerTorch(nn.Module):\n         dropout=0.,\n         pool='cls',\n         init_scale: float = 1.0,\n+        mlp_dim: Optional[int] = None,\n     ):\n         super().__init__()\n         assert pool in {'cls', 'mean'}\n         self.pool = pool\n \n+        if mlp_dim is None:\n+            mlp_dim = dim * 4\n+        if not isinstance(mlp_dim, int) or mlp_dim < 1:\n+            raise ValueError('mlp_dim must be a positive integer')\n         self.embedding = nn.Embedding(n_tokens, dim)\n         self.layers = nn.ModuleList([\n-            BlockTorch(dim, heads, dim // heads, dim * 4, seq_len, dropout)\n+            BlockTorch(dim, heads, dim // heads, mlp_dim, seq_len, dropout)\n             for _ in range(depth)\n         ])\n         self.norm = RMSNormTorch(dim)\n"
+    },
+    "b74349f": {
+      "CapacityTrainer_AST_identical": true,
+      "data_module_identical": true,
+      "model_diff": "diff --git a/src/grokking_capacity/models/transformer.py b/src/grokking_capacity/models/transformer.py\nindex 30fa8da..7d4685f 100644\n--- a/src/grokking_capacity/models/transformer.py\n+++ b/src/grokking_capacity/models/transformer.py\n@@ -171,14 +171,19 @@ class TransformerTorch(nn.Module):\n         dropout=0.,\n         pool='cls',\n         init_scale: float = 1.0,\n+        mlp_dim: Optional[int] = None,\n     ):\n         super().__init__()\n         assert pool in {'cls', 'mean'}\n         self.pool = pool\n \n+        if mlp_dim is None:\n+            mlp_dim = dim * 4\n+        if not isinstance(mlp_dim, int) or mlp_dim < 1:\n+            raise ValueError('mlp_dim must be a positive integer')\n         self.embedding = nn.Embedding(n_tokens, dim)\n         self.layers = nn.ModuleList([\n-            BlockTorch(dim, heads, dim // heads, dim * 4, seq_len, dropout)\n+            BlockTorch(dim, heads, dim // heads, mlp_dim, seq_len, dropout)\n             for _ in range(depth)\n         ])\n         self.norm = RMSNormTorch(dim)\n"
+    }
+  },
+  "limitation": "Recorded commits match training math and default architecture; dirty historical working trees cannot be reconstructed. Fresh checkpoints are independently audited."
+}

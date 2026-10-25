@@ -2,7 +2,22 @@
 
 Branch: `idea/discrete`. Registered 2026-10-24 before new training.
 
-Latest follow-up: the p=97 binary A/B/C replication is complete and audited.
+Latest follow-up: the fixed-A dropout rerun and local capacity calibration are
+complete. Across ten p97 seeds at dropout 0.2, four delays are observed and all
+are zero; six runs never reach online training 99% within 5,000 epochs. Five
+reach held-out 99% at least once, and four finish with both accuracies >=99%.
+The fresh local matched-protocol capacity slope is 0.807907 bits/parameter,
+versus 0.816713 on the earlier seed and 2.095545 under historical defaults.
+Direct A capacity is now 21,663–21,820 bits, only 70.2–70.7% of the fixed dataset
+size: **A no longer meets the required capacity match under this protocol**.
+All 74 new final checkpoints passed independent audits. See the
+[ten-seed outcomes](reports/p97_dropout_followup/A_runs.csv),
+[local calibration](reports/p97_dropout_followup/summary.json), and completed
+follow-up sections at the end of this record. The paper-style rerun changes
+measurement, shuffling, optimizer implementation and stopping as well as dropout;
+it is not a dropout-only causal ablation.
+
+Earlier follow-up: the p=97 binary A/B/C replication is complete and audited.
 A26/FF104 has 26,910 parameters; binary B72/FF62 and ordinary continuous C
 have exactly 82,872 each. A/B capacities match the fixed dataset within 10%
 on both calibration seeds. Median updates to sustained 95% are A 7,500,
@@ -2363,6 +2378,8 @@ There are material differences from our binary comparison:
   `docs/papers/2026 Grokking Capacity/submissions/logs/p01a_capacity_provenance.md`
   records that the historical 2.16 fit could not be recovered from its available
   records. This verification checks the delay traces, not that missing fit.
+  The completed follow-up below verifies separate September local calibration
+  runs; those do not recover the provenance of the original published 2.16 fit.
 
 The new A's positive first-passage delays remain correct for its three runs.
 Describing them as a direct contradiction of the original paper, or describing
@@ -2412,3 +2429,151 @@ sources/configs are snapshotted and hashed before dispatch. The only change to
 the capacity training module is an optional `--save-model` output for final
 checkpoint audits; training updates, stopping and measurements are unchanged.
 No new categorical or binary B experiment is implied by this A-only follow-up.
+
+
+## Completed ten-seed A dropout follow-up (2026-10-25)
+
+The registered arithmetic rerun is complete. With dropout 0.2, fixed A26/FF104
+(26,910 parameters), and the original paper-style training/measurement protocol,
+four seeds have fully observed delays and all four are **zero**. Six seeds never
+reach online training 99% within 5,000 epochs. None has an observed positive delay.
+Five seeds reach held-out 99% at least once, but only four finish with both train
+and held-out accuracy at least 99%. Thus the positive-minimum grokking criterion
+is not met; this is not evidence that all ten seeds generalize successfully.
+
+The minimum over the four observed delays is zero. A complete ten-seed delay
+vector is unavailable: missing crossings remain null rather than being imputed
+as zero. One epoch is ten optimizer updates; the ceiling is 50,000 updates.
+
+| Seed | First online train 99% epoch | First held-out 98% epoch | First held-out 99% epoch | Delay (epochs) | Final train / held-out (%) |
+|---|---:|---:|---:|---:|---:|
+| 73 | — | — | — | — | 96.78 / 96.80 |
+| 74 | — | — | — | — | 54.83 / 45.12 |
+| 75 | — | 4975 | — | — | 96.59 / 98.05 |
+| 76 | 1768 | 1542 | 1832 | 0 | 99.29 / 99.25 |
+| 77 | 1665 | 682 | 965 | 0 | 99.01 / 99.74 |
+| 78 | 2243 | 866 | 1022 | 0 | 99.12 / 99.44 |
+| 79 | 1005 | 917 | 920 | 0 | 99.05 / 100.00 |
+| 80 | — | — | — | — | 86.68 / 83.46 |
+| 81 | — | — | — | — | 86.10 / 84.28 |
+| 82 | — | 1509 | 1854 | — | 97.08 / 98.37 |
+
+Seed 82 reaches held-out 99% transiently and finishes at 98.37%; it is included
+in the five first-crossing successes, not the four final joint successes.
+Independent CPU checkpoint evaluation reproduces all ten final held-out
+accuracies, and all ten saved initial states exactly match same-seed reconstruction.
+The final eval-mode training accuracies are exported separately as diagnostics;
+they do not replace the primary online training observable.
+
+For the three seeds shared with the earlier dropout-free experiment, data hashes
+and initial-weight hashes match exactly. However, this rerun uses the original
+`GrokkingTrainer` to match the paper: shuffling uses the global CPU RNG instead
+of a separate generator, AdamW is not explicitly fused, training accuracy is
+measured online with dropout, evaluation is every epoch rather than every ten,
+and stopping uses one joint 99% epoch with a 5,000-epoch maximum rather than
+three sustained evaluations with a 12,000-epoch maximum. Therefore this is not
+a controlled dropout-only causal ablation. Dropout here acts on each block
+feedforward hidden activation, as implemented by the original transformer.
+
+Artifacts: [all ten outcomes](reports/p97_dropout_followup/A_runs.csv),
+[learning curves](reports/p97_dropout_followup/A_accuracy.png),
+[checkpoint audits](reports/p97_dropout_followup/checkpoint_audits.json), and
+[paired protocol comparison](reports/p97_dropout_followup/protocol_comparison.json).
+The reproducible analysis is `scripts/report_p97_dropout_followup.py`.
+
+### Direct capacity of fixed A with dropout
+
+All eight direct p97 random-label tests are complete: n2048/4096/8192/16384
+on seeds 61 and 62, with dropout 0.2, weight decay 1, patience 100 epochs and
+minimum online-loss improvement 1e-4. The estimate is the maximum final
+eval-mode learned bits over the four dataset sizes, not a maximum over epochs.
+
+| Capacity seed | Maximum final bits | Fraction of 30,866.284-bit target | Winning random dataset size | Late 100-vs-100 epoch drift |
+|---|---:|---:|---:|---:|
+| 61 | 21,663.493 | 70.1850% | 8,192 | 0.605% |
+| 62 | 21,819.783 | 70.6913% | 8,192 | 0.409% |
+
+Both maxima are at n8192, below the largest tested size; both n16384 values
+are lower. Neither winning run reaches the 5,000-epoch ceiling or the label
+entropy limit. Both late drifts are below 1%. These checks support the registered
+finite-training estimate; they do not establish an intrinsic capacity bound.
+
+Fixed A is therefore **not capacity-matched to the dataset under this new
+protocol**: both estimates are about 30% below the target, outside the required
+10% tolerance. A was deliberately not resized after seeing the outcomes.
+The prior dropout-free 31.6k-bit match remains correct for its own frozen
+protocol; changing dropout, random-data generation and stopping requires
+remeasurement. This follow-up does not establish a new matched A/B/C setup.
+
+All eight final checkpoints reproduce their learned-bit totals in independent
+CPU evaluation. See [capacity rows](reports/p97_dropout_followup/capacity_runs.csv),
+[direct A curves](reports/p97_dropout_followup/A_capacity.png), and
+[summary](reports/p97_dropout_followup/summary.json).
+
+
+### Completed local capacity-constant calibration
+
+Both historical 56-cell grids and the fresh 56-cell confirmation are verified.
+All were run on this H100 host (`68-209-74-145`). Each grid uses p113, random
+tokens and labels, seven widths 10–22, and eight dataset sizes 1000–9300. At
+each width, take the maximum **final** learned bits over dataset sizes, then
+fit `M = C * P + b` with a free intercept. The through-origin slope is a
+separate sensitivity analysis; the two matched seeds are never pooled by
+selecting the more favorable seed at each width.
+
+| Protocol | Seed | C (bits/parameter) | Intercept (bits) | R² | Through-origin slope |
+|---|---:|---:|---:|---:|---:|
+| Historical defaults: dropout 0, WD 0.01 | 42 | 2.095545 | 303.536 | 0.998226 | 2.116457 |
+| Matched: dropout 0.2, WD 1 | 42 | 0.816713 | 372.861 | 0.998241 | 0.842402 |
+| Fresh matched: dropout 0.2, WD 1 | 61 | 0.807907 | 498.515 | 0.998577 | 0.842253 |
+
+The independent matched-seed slopes differ by 1.08%; the through-origin
+slopes are both about 0.842. The fresh slope's 95% width-bootstrap interval is
+[0.7840, 0.8402]. This resamples seven width points and measures fit
+sensitivity, not population uncertainty across independent training seeds.
+
+No selected maximum in any of the three grids reaches 95% of label entropy,
+occurs at the largest tested dataset size, reaches the epoch ceiling, or has
+more than 1% relative drift between the last two 100-epoch windows. For the
+fresh grid, selected-maxima drift ranges from 0.26% to 0.68%. The alternative
+maximum-over-training-trace fit has slope 0.808611, close to the primary 0.807907.
+These are finite-training estimates for these data and optimization settings.
+
+The two historical grids were collected on 2026-09-26 in separate local
+registries. All 112 saved traces agree with their registry identities and
+learned-bit formulas. The default grid has clean recorded source state. The
+matched grid has 44 rows with a dirty-source flag, so its full uncommitted
+source cannot be reconstructed. Recorded commits have an identical
+`CapacityTrainer` AST and byte-identical data module; the model change only
+adds optional feedforward width with the same default. The fresh confirmation
+uses the registered, snapshotted scientific source at `0c30587`, checked before
+every launch and at completion, and saves every final checkpoint. Working-tree
+dirty flags caused by report work do not change those verified source hashes.
+
+The historical July audit remains correct about not recovering the published
+2.16 fit. These newly located September data provide an independent local fit,
+2.095545 under the documented defaults, not the original missing fit. The
+matched-protocol value is about 0.81. Both grids use this same machine, while
+dropout and weight decay both differ between regimes; their difference cannot
+be attributed to hardware or dropout alone. A fitted p113 slope also does not
+replace direct p97 calibration, which found fixed A below the dataset target.
+
+All 74 new final checkpoints and ten initial arithmetic checkpoints passed
+independent checks. The largest capacity reconstruction error is
+0.001118 bits; held-out accuracy matches to floating-point
+precision. The 186 traces (112 historical plus 74 new) and saved weights/source
+are covered by 277 input-artifact hashes. All registered jobs exited zero,
+the controller is complete, and no controller process remains. Shared GPUs
+were used, so elapsed time is not a controlled speed benchmark.
+
+Artifacts: [capacity fits](reports/p97_dropout_followup/capacity_fits.png),
+[all dataset-size curves](reports/p97_dropout_followup/capacity_grid.png),
+[all capacity rows](reports/p97_dropout_followup/capacity_runs.csv),
+[registry provenance](reports/p97_dropout_followup/registry_rows.csv),
+[source audit](reports/p97_dropout_followup/historical_source_audit.json), and
+[completion validation](reports/p97_dropout_followup/validation.json). PDF
+versions of all figures are saved alongside the PNGs. Recompute with:
+
+```bash
+OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 python scripts/report_p97_dropout_followup.py --audit --plots
+```

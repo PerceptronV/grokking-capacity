@@ -1,0 +1,60 @@
+name: p97_A_dropout_and_local_capacity
+registered: '2026-10-25'
+common:
+  depth: 2
+  heads: 1
+  init_scale: 1.0
+  lr: 0.001
+  beta1: 0.9
+  beta2: 0.98
+  weight_decay: 1.0
+  dropout: 0.2
+  batch_size: 512
+  epochs: 5000
+arithmetic:
+  p: 97
+  operation: /
+  train_fraction: 0.5
+  split_type: random
+  dim: 26
+  mlp_dim: 104
+  seeds: [73, 74, 75, 76, 77, 78, 79, 80, 81, 82]
+  primary: Original per-epoch training-mode accuracy and held-out eval-mode accuracy.
+  stopping: First epoch with both training and held-out accuracy at least 99%, or 5000 epochs.
+  delay: max(0, first held-out 98% epoch minus first training 99% epoch).
+  aggregation: Minimum delay across ten seeds; report observed count and missing crossings separately, never impute missing zero.
+capacity_confirmation:
+  p: 113
+  dimensions: [10, 12, 14, 16, 18, 20, 22]
+  n_samples: [1000, 1374, 1891, 2601, 3576, 4917, 6761, 9300]
+  seeds: [61]
+  dataset_type: random
+  patience: 100
+  min_delta: 0.0001
+  fit: Max final eval-mode learned bits across dataset sizes at each parameter count; OLS with free intercept, plus through-origin sensitivity fit and R-squared.
+  uncertainty: Bootstrap width points describes fit sensitivity only; compare independent seed 61 against existing seed 42 explicitly.
+A_direct_capacity:
+  p: 97
+  dimensions: [26]
+  n_samples: [2048, 4096, 8192, 16384]
+  seeds: [61, 62]
+  dataset_type: random
+  patience: 100
+  min_delta: 0.0001
+  purpose: Directly check A under dropout 0.2; do not transfer the p113 fit as an exact p97 capacity.
+existing_local_capacity:
+  historical_defaults_database: /home/ubuntu/capacity_defaults_runs.db
+  matched_database: /home/ubuntu/capacity_matched_runs.db
+  expected_host: 68-209-74-145
+  p: 113
+  dimensions: [10, 12, 14, 16, 18, 20, 22]
+  n_samples: [1000, 1374, 1891, 2601, 3576, 4917, 6761, 9300]
+  seed: 42
+  historical_defaults: {dropout: 0.0, weight_decay: 0.01}
+  matched: {dropout: 0.2, weight_decay: 1.0}
+  validation: Check random-data metadata, all 56 cells per regime, saved trace identities, source commits, numerical formula and hashes. Preserve dirty-source flags.
+limits:
+  - These are protocol-dependent finite-training estimates, not architecture-only bounds.
+  - Changing dropout can change capacity; keep A fixed for the grokking question rather than resizing it after seeing outcomes.
+  - Inspect dataset-limited maxima and late drift; flag unresolved saturation rather than force agreement with 2.16.
+  - Original and new arithmetic horizons differ: 5000 epochs here versus 12000 previously.

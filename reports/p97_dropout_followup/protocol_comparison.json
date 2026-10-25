@@ -1,0 +1,43 @@
+{
+  "paired_with_previous_dropout_free_A": [
+    {
+      "seed": 73,
+      "dataset_sha256": "3a7ddbcda59760e5ebde2e7881bbc42eefa59a97e3e1ab5b984dab424588ceb2",
+      "initial_weights_sha256": "ab8be88cd53a37930165725fd209fca89f2ee7ec2257866e5625df61d714824b",
+      "same_data": true,
+      "same_initial_weights": true
+    },
+    {
+      "seed": 74,
+      "dataset_sha256": "933fbfacee9b820c86b1329227dbc8187c5574f6c070aafe7290a5f95453f520",
+      "initial_weights_sha256": "911972e8d22e4fa1ccea4651c9d88416ad7ef6715257e670d72928d3108fd181",
+      "same_data": true,
+      "same_initial_weights": true
+    },
+    {
+      "seed": 75,
+      "dataset_sha256": "a55cf0b880fc597ed0dcced02ee3afe23b986f9baf71dfa0c150de725c66c1a0",
+      "initial_weights_sha256": "7e0a8244d6325cf5d760601e3fc2ce1cebed6248636bf96940a239121c1323d7",
+      "same_data": true,
+      "same_initial_weights": true
+    }
+  ],
+  "fresh_environment": {
+    "host": "68-209-74-145",
+    "python": "3.12.3",
+    "torch": "2.7.0",
+    "cuda_build": "12.8",
+    "numpy": "1.26.4",
+    "gpu": "NVIDIA H100 80GB HBM3, 580.105.08\nNVIDIA H100 80GB HBM3, 580.105.08"
+  },
+  "protocol_differences": [
+    "Dropout 0 -> 0.2 (feedforward hidden activation in each block).",
+    "Discrete runner -> original GrokkingTrainer.",
+    "Independent shuffle generator -> global CPU torch RNG shuffle.",
+    "Explicit fused AdamW -> default AdamW implementation.",
+    "Fixed-checkpoint evaluation of training accuracy -> online training-mode minibatch accuracy.",
+    "Evaluation every 10 epochs -> every epoch.",
+    "12000-epoch maximum with sustained 99% stopping -> 5000 epochs with single-epoch joint 99% stopping."
+  ],
+  "interpretation": "Same paired data and initialization; multiple training and measurement changes prevent attributing the outcome to dropout alone."
+}
