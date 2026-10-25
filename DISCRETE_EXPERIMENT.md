@@ -2948,3 +2948,15 @@ review. It uses at most four workers on GPU1 and two on GPU0 and preserves
 unrelated processes. All preceding attempted runs finish before the fifty-run
 confirmation queue (ten shared A plus twenty B and twenty C). Its source is
 recorded at launch, and each immutable stage retains exact submitted jobs.
+
+Additional development probes, registered before launch: intermediate N8192
+traces for the successful initial B sizes are already around or above the
+30,866-bit target, although none is yet a final capacity estimate. Add Q8
+**d56/FF48** and categorical **d42/FF32**, retaining all channel/training
+settings. These test smaller FF budgets while preserving enough residual
+width to learn; they do not change the data or any confirmation choice.
+Both receive the same seed41 arithmetic gate before random labels. Keep all
+ongoing calibration to its original stop and report final values separately
+from these provisional observations. GPU0 uses about24GiB of80GiB; permit
+these two extra small pilots, temporarily bounding our concurrency at four
+workers per GPU. Shared-device wall times remain descriptive only.
