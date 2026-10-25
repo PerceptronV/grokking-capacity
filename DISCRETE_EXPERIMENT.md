@@ -2577,3 +2577,38 @@ versions of all figures are saved alongside the PNGs. Recompute with:
 ```bash
 OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 python scripts/report_p97_dropout_followup.py --audit --plots
 ```
+
+
+## p=97 A/B/C rematching with dropout 0.2 (registered 2026-10-25)
+
+The new experiment is registered in `configs/discrete_p97_dropout_match.yaml`.
+The fixed modular-division training set remains 4,656 examples, or
+30,866.2844 label-information bits. All three models use dropout 0.2,
+AdamW learning rate 0.001, weight decay 1, batch size 512, and the original
+optimizer implementation. A and binary B are resized using direct random-label
+capacity estimates on seeds 61/62; both must match the dataset and each other
+within 10%. C is the ordinary continuous transformer with exactly B's
+architecture size, parameter count and same-seed initialization.
+
+Each candidate must first pass a same-recipe arithmetic learning gate and then
+learn 2,048 random labels before larger capacity datasets are authorized.
+The capacity grid is 2,048/4,096/8,192/16,384 samples with the original
+CapacityTrainer. Selected maxima are checked for dataset limits, epoch limits
+and late drift. The initial candidates are A width 32/FF128 and B
+width 72/FF62, 80/FF104, 88/FF128; all development attempts are retained.
+Only width/feedforward dimensions may change during matching.
+
+Sizes will be frozen before ten fresh confirmation seeds 101–110 are run.
+Each arithmetic run has a 5,000-epoch ceiling (50,000 optimizer updates),
+and stops after three consecutive held-out 99% epochs when the current
+online training accuracy is also at least 99%. Paper-style first-passage
+delay uses online training 99% and held-out 98%; eval-mode training produces
+a separately reported sensitivity result. Missing crossings remain missing.
+Speed uses sustained held-out 95%/99% in optimizer updates. All three models
+share this protocol. CPU parity tests verify identical parameters and RNG
+state against the original GrokkingTrainer for continuous and binary models.
+
+Artifacts will be kept under `results/discrete/p97-dropout-match-v1`, with
+source snapshots, immutable stage configurations, initial/final checkpoints
+and independent final audits. Results are pending; old dropout-free matching
+or the earlier under-capacity A dropout experiment cannot substitute for this run.
