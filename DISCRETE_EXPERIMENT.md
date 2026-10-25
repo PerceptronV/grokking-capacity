@@ -2,6 +2,13 @@
 
 Branch: `idea/discrete`. Initial registration: 2026-10-24. The p97 dropout rematch was registered 2026-10-25 before its training.
 
+New experiments are running: eight-level scalar quantization and normalized
+categorical one-hot latents, both at p97/dropout0.2. The fixed dataset is
+selected first; A/B must pass learning and capacity gates before C is
+constructed. Candidate calibration is in progress and no confirmation result
+exists yet. See `configs/discrete_p97_multilevel_dropout.yaml`, the prospective
+section at the end of this record, and `reports/p97_multilevel_dropout/`.
+
 Latest result: the capacity-matched p97 A/B/C rerun with dropout 0.2 is complete
 across ten fresh seeds per model. A and binary B match the fixed dataset within
 10% on both capacity seeds; B/C have exactly 117,832 parameters. Sustained
@@ -2984,3 +2991,16 @@ bound, while the56/FF32 arithmetic pilot is still learning. Register Q8
 **d56/FF40**, seed41, as an intermediate FF probe to bracket capacity without
 reducing residual width. All prior runs continue and all protocol settings
 remain fixed. Use one currently free GPU0 worker slot.
+
+Interim audited evidence (not architecture acceptance):33 completed jobs
+have passed independent checkpoint and metric checks. Q8 d56/FF48's N8192
+screens are33,909.836/32,825.2 bits on seeds61/62, while its largest-N cells
+remain active. Q8 d56/FF32's first N8192 screen is29,520.3 bits. Categorical
+d42/FF16's first N8192 screen is33,582.2 bits. All these candidates first
+passed their own arithmetic and random N2048 gates. Two larger-N Q8 cells
+and the categorical seed61 largest-N cell use available GPU0 slots, bounded
+at four workers there; only our queue controller was briefly paused to avoid
+duplicate submission, with all training processes left running. The interim
+report explicitly has `complete: false`, no A/B selection and zero
+confirmation runs. Continuous C remains unconstructed until the full
+registered calibration passes.

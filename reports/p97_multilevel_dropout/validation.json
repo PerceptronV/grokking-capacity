@@ -1,0 +1,9 @@
+{
+  "all_passed": true,
+  "checkpoints_audited": 33,
+  "metrics_independently_recomputed": 10,
+  "pairings_verified": 0,
+  "analysis_sha256": "77dc698c40f221b288e6621ee6a044efb31874809142cb00d96d1aff9683d215",
+  "complete": false,
+  "max_bits_error": 0.011850935439724708
+}

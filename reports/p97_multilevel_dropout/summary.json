@@ -1,0 +1,453 @@
+{
+  "target_bits": 30866.284423090663,
+  "completed_jobs": 33,
+  "families": {
+    "q8": {
+      "AB_selection": null,
+      "C_construction": null,
+      "confirmation_binding": null,
+      "aggregates": {
+        "A": {
+          "runs": 0,
+          "paper_delay_updates": {
+            "min_observed": null,
+            "positive": 0,
+            "zero": 0,
+            "undefined": 0,
+            "median_observed": null
+          },
+          "eval_delay_updates": {
+            "min_observed": null,
+            "positive": 0,
+            "zero": 0,
+            "undefined": 0,
+            "median_observed": null
+          },
+          "val95_updates": {
+            "reached": 0,
+            "censored": 0,
+            "median_all_ten": null,
+            "median_all_ten_lower_bound": null,
+            "median_observed_only": null
+          },
+          "val99_updates": {
+            "reached": 0,
+            "censored": 0,
+            "median_all_ten": null,
+            "median_all_ten_lower_bound": null,
+            "median_observed_only": null
+          },
+          "final_held99": 0
+        },
+        "B": {
+          "runs": 0,
+          "paper_delay_updates": {
+            "min_observed": null,
+            "positive": 0,
+            "zero": 0,
+            "undefined": 0,
+            "median_observed": null
+          },
+          "eval_delay_updates": {
+            "min_observed": null,
+            "positive": 0,
+            "zero": 0,
+            "undefined": 0,
+            "median_observed": null
+          },
+          "val95_updates": {
+            "reached": 0,
+            "censored": 0,
+            "median_all_ten": null,
+            "median_all_ten_lower_bound": null,
+            "median_observed_only": null
+          },
+          "val99_updates": {
+            "reached": 0,
+            "censored": 0,
+            "median_all_ten": null,
+            "median_all_ten_lower_bound": null,
+            "median_observed_only": null
+          },
+          "final_held99": 0
+        },
+        "C": {
+          "runs": 0,
+          "paper_delay_updates": {
+            "min_observed": null,
+            "positive": 0,
+            "zero": 0,
+            "undefined": 0,
+            "median_observed": null
+          },
+          "eval_delay_updates": {
+            "min_observed": null,
+            "positive": 0,
+            "zero": 0,
+            "undefined": 0,
+            "median_observed": null
+          },
+          "val95_updates": {
+            "reached": 0,
+            "censored": 0,
+            "median_all_ten": null,
+            "median_all_ten_lower_bound": null,
+            "median_observed_only": null
+          },
+          "val99_updates": {
+            "reached": 0,
+            "censored": 0,
+            "median_all_ten": null,
+            "median_all_ten_lower_bound": null,
+            "median_observed_only": null
+          },
+          "final_held99": 0
+        }
+      },
+      "paired_speeds": {
+        "95": {
+          "A_vs_B": {
+            "left_faster": 0,
+            "right_faster": 0,
+            "tie": 0,
+            "left_only": 0,
+            "right_only": 0,
+            "neither": 0,
+            "missing": 10
+          },
+          "A_vs_C": {
+            "left_faster": 0,
+            "right_faster": 0,
+            "tie": 0,
+            "left_only": 0,
+            "right_only": 0,
+            "neither": 0,
+            "missing": 10
+          },
+          "B_vs_C": {
+            "left_faster": 0,
+            "right_faster": 0,
+            "tie": 0,
+            "left_only": 0,
+            "right_only": 0,
+            "neither": 0,
+            "missing": 10
+          }
+        },
+        "99": {
+          "A_vs_B": {
+            "left_faster": 0,
+            "right_faster": 0,
+            "tie": 0,
+            "left_only": 0,
+            "right_only": 0,
+            "neither": 0,
+            "missing": 10
+          },
+          "A_vs_C": {
+            "left_faster": 0,
+            "right_faster": 0,
+            "tie": 0,
+            "left_only": 0,
+            "right_only": 0,
+            "neither": 0,
+            "missing": 10
+          },
+          "B_vs_C": {
+            "left_faster": 0,
+            "right_faster": 0,
+            "tie": 0,
+            "left_only": 0,
+            "right_only": 0,
+            "neither": 0,
+            "missing": 10
+          }
+        }
+      }
+    },
+    "categorical": {
+      "AB_selection": null,
+      "C_construction": null,
+      "confirmation_binding": null,
+      "aggregates": {
+        "A": {
+          "runs": 0,
+          "paper_delay_updates": {
+            "min_observed": null,
+            "positive": 0,
+            "zero": 0,
+            "undefined": 0,
+            "median_observed": null
+          },
+          "eval_delay_updates": {
+            "min_observed": null,
+            "positive": 0,
+            "zero": 0,
+            "undefined": 0,
+            "median_observed": null
+          },
+          "val95_updates": {
+            "reached": 0,
+            "censored": 0,
+            "median_all_ten": null,
+            "median_all_ten_lower_bound": null,
+            "median_observed_only": null
+          },
+          "val99_updates": {
+            "reached": 0,
+            "censored": 0,
+            "median_all_ten": null,
+            "median_all_ten_lower_bound": null,
+            "median_observed_only": null
+          },
+          "final_held99": 0
+        },
+        "B": {
+          "runs": 0,
+          "paper_delay_updates": {
+            "min_observed": null,
+            "positive": 0,
+            "zero": 0,
+            "undefined": 0,
+            "median_observed": null
+          },
+          "eval_delay_updates": {
+            "min_observed": null,
+            "positive": 0,
+            "zero": 0,
+            "undefined": 0,
+            "median_observed": null
+          },
+          "val95_updates": {
+            "reached": 0,
+            "censored": 0,
+            "median_all_ten": null,
+            "median_all_ten_lower_bound": null,
+            "median_observed_only": null
+          },
+          "val99_updates": {
+            "reached": 0,
+            "censored": 0,
+            "median_all_ten": null,
+            "median_all_ten_lower_bound": null,
+            "median_observed_only": null
+          },
+          "final_held99": 0
+        },
+        "C": {
+          "runs": 0,
+          "paper_delay_updates": {
+            "min_observed": null,
+            "positive": 0,
+            "zero": 0,
+            "undefined": 0,
+            "median_observed": null
+          },
+          "eval_delay_updates": {
+            "min_observed": null,
+            "positive": 0,
+            "zero": 0,
+            "undefined": 0,
+            "median_observed": null
+          },
+          "val95_updates": {
+            "reached": 0,
+            "censored": 0,
+            "median_all_ten": null,
+            "median_all_ten_lower_bound": null,
+            "median_observed_only": null
+          },
+          "val99_updates": {
+            "reached": 0,
+            "censored": 0,
+            "median_all_ten": null,
+            "median_all_ten_lower_bound": null,
+            "median_observed_only": null
+          },
+          "final_held99": 0
+        }
+      },
+      "paired_speeds": {
+        "95": {
+          "A_vs_B": {
+            "left_faster": 0,
+            "right_faster": 0,
+            "tie": 0,
+            "left_only": 0,
+            "right_only": 0,
+            "neither": 0,
+            "missing": 10
+          },
+          "A_vs_C": {
+            "left_faster": 0,
+            "right_faster": 0,
+            "tie": 0,
+            "left_only": 0,
+            "right_only": 0,
+            "neither": 0,
+            "missing": 10
+          },
+          "B_vs_C": {
+            "left_faster": 0,
+            "right_faster": 0,
+            "tie": 0,
+            "left_only": 0,
+            "right_only": 0,
+            "neither": 0,
+            "missing": 10
+          }
+        },
+        "99": {
+          "A_vs_B": {
+            "left_faster": 0,
+            "right_faster": 0,
+            "tie": 0,
+            "left_only": 0,
+            "right_only": 0,
+            "neither": 0,
+            "missing": 10
+          },
+          "A_vs_C": {
+            "left_faster": 0,
+            "right_faster": 0,
+            "tie": 0,
+            "left_only": 0,
+            "right_only": 0,
+            "neither": 0,
+            "missing": 10
+          },
+          "B_vs_C": {
+            "left_faster": 0,
+            "right_faster": 0,
+            "tie": 0,
+            "left_only": 0,
+            "right_only": 0,
+            "neither": 0,
+            "missing": 10
+          }
+        }
+      }
+    }
+  },
+  "confirmation_runs": 0,
+  "arithmetic_runs": 10,
+  "capacity_cells": 23,
+  "pairing": [],
+  "inherited_A": {
+    "source_selection": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/selection.json",
+    "models": {
+      "model": "baseline",
+      "dim": 32,
+      "mlp_dim": 128
+    },
+    "evidence": {
+      "61": {
+        "final_bits": 31288.33005669216,
+        "param_count": 39264,
+        "winner": "A32f128_capacity_n8192_s61",
+        "grid": [
+          "A32f128_capacity_n16384_s61",
+          "A32f128_capacity_n4096_s61",
+          "A32f128_capacity_n8192_s61",
+          "A32f128_random_n2048_s61"
+        ],
+        "diagnostics": {
+          "late_drift": 0.004487896647539236,
+          "epoch_limit": false,
+          "entropy_fraction": 0.5761307539339601,
+          "late_drift_flag": false,
+          "entropy_limited": false,
+          "largest_dataset_boundary": false
+        },
+        "primary_final_bits": 31288.33005669216
+      },
+      "62": {
+        "final_bits": 31254.54538872341,
+        "param_count": 39264,
+        "winner": "A32f128_capacity_n8192_s62",
+        "grid": [
+          "A32f128_capacity_n16384_s62",
+          "A32f128_capacity_n4096_s62",
+          "A32f128_capacity_n8192_s62",
+          "A32f128_random_n2048_s62"
+        ],
+        "diagnostics": {
+          "late_drift": 0.0037790117378966315,
+          "epoch_limit": false,
+          "entropy_fraction": 0.5755086566154718,
+          "late_drift_flag": false,
+          "entropy_limited": false,
+          "largest_dataset_boundary": false
+        },
+        "primary_final_bits": 31254.54538872341
+      }
+    },
+    "param_count": 39264,
+    "files_sha256": {
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/selection.json": "039d48ceab7338ce6ab0c4de18f86f17144542ee9236a0b3951ac90b6c6bee77",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n16384_s61/summary.json": "bb5adae86bf4cc4e7cc9f9c8ea86c26c47c069323c70cbcd89de0d98053178cf",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n16384_s61/manifest.json": "321141dbd776565842f1b7917d0cd54d101e5a63a9bc3854f55f87ab77de9385",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n16384_s61/model.pt": "32e5c1add6ae21c149e32382589a8cb25c3edb585ec580f7a38fbbc5c90e0ef8",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n16384_s61/model_init.pt": "6c78b0c4f224b7ca7868ea84f365d526d88611f95a403d24a908a635d9d0e2a4",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n16384_s61/trace.npz": "be937a96d111c044b3b53a6087c69c0023af0fae474ac40bbb6ecff837d36cc0",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_pilot_s41/summary.json": "0a4090d62e358772ffad032c2584ef6cc6812572851719b62ddee703bf59576e",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_pilot_s41/manifest.json": "8d339d06b27c8cc8ae4df8e14db1b19748b22bf056b463b896ad4e1bd1dbf9db",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_pilot_s41/model.pt": "af8a47f380ccc9261265a9cd19b9366f92517ba4c1c79547a94217795a1fa1ae",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_pilot_s41/trace.jsonl": "dc099c1227e983423ba67146326b1ff402a9090952f2b25dcc1616eb66031556",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n4096_s61/summary.json": "af150ff7e93cc82774acd21b6bd59d22f78ea0a583b42467efb6d40200c6952b",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n4096_s61/manifest.json": "6459a3ae3620265710bc249c7ea23ff560a50fe0a6f5a4c507030aeebdd24cd5",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n4096_s61/model.pt": "01216c1e603384f7fd24036fb9c88a2ee3d8d3e51aca0a2b71d27b88de590338",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n4096_s61/model_init.pt": "09293a32332df53de7edcde0d994ee2bdcb18122780ce0d002a619b6b998354c",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n4096_s61/trace.npz": "040d21ed8d649bf34d91c726bdb395d6cc363b3f4be4a17a47b4d1ca51efc98a",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s61/summary.json": "8dd34cf4c52260eee9052df886f0fb3a1bd05189b60c0cba9367a3bdaf1091a6",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s61/manifest.json": "cec0649273b9252bbf2e8be9ad681aefcd55e795f47b8fd4cae5a1c6a9277cb0",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s61/model.pt": "a78f3a10d39a2c41deb10ddd8cfad0d82f78c1736b0555fe7c5cd6cf3ce1c330",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s61/model_init.pt": "8a9f5b8761270fd9d57d4cb2b5a35946f269f7b54266f6c64ac8397e9d3c5190",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s61/trace.npz": "d8e14fd7dee80541963b8ebfec512dfd972c90c75b117796786a06d5193f7c4f",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s61/summary.json": "8a1d2cc98ebb47e51fe757b04dcb8df4a2fcf95ddc35586286c6f648682aaa58",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s61/manifest.json": "42eae20c4185d2f607c0b0d8de1fb795eb8bf789ecbe586f96cda0ce50b695a1",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s61/model.pt": "7c6455945cb09baf48caa991b15bb04bf3bf7d5eff699aba741839b877f79c5b",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s61/model_init.pt": "ddf890139d71e66c018f448f468aa0df1dc656ea4d5e4dc4663573e3f8d607b4",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s61/trace.npz": "ced3b97f960fc8becfbfa3d47ec7e5a43aa9134cadbf7e312fe12b0b0cede50a",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n16384_s62/summary.json": "d58ec72410460df6e282ccdda8dd06663866d8855474ec3083bb30f4be77eb64",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n16384_s62/manifest.json": "64b6f8e89c5d2a7a332b394547c912715e8236989a58df08087d8be761a175e5",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n16384_s62/model.pt": "bbdfd1dc00c2f2999bdbe97acdfb91e2a504b466e575aac4dcb46a11be506401",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n16384_s62/model_init.pt": "ca9d634a8c395916e595628e2414b7d3de9fdc48a029d6945f0ad75e3e250e49",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n16384_s62/trace.npz": "e17867e05a2c4d34530906281cdbc065341c43efdd516d5a79c67275aede6a20",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n4096_s62/summary.json": "ea11c1087b3c07cb489b47e551f1875030c15720d127a8dd79c99f9624c61fbe",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n4096_s62/manifest.json": "2912d68e43623c48ad0544658b9556e8e401d81240994eeb1bb9c0151c509ca0",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n4096_s62/model.pt": "f6b74b4ed16581d33a28533ea832c9ae2e44585b8a1991a48da8bc27700e9c47",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n4096_s62/model_init.pt": "99d6e9d074bd5baa6d1b62806f49e11886e606c5085e1c573c29bc1c34398f1c",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n4096_s62/trace.npz": "a1270abb7f52e71c36ea0ff759536404c97c3043ccfef3724c0c999c60d52f95",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s62/summary.json": "1da8c83229b39db06f599c209bcf4b847e822c17f00ce42698f6edc9cbcc7f63",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s62/manifest.json": "fe02bf0205ebd09bae7f91dbb363942ef47455b1a7c48e371a491dfc59c789d6",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s62/model.pt": "701b11610e33059a74a2354b641c1f6b1b0460d9f9270d9f05e5f4e4e8e0627f",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s62/model_init.pt": "798af172e26def0321260c75a1bfdba2d0c7b40b685d09209c773d3f02ef86d9",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s62/trace.npz": "13b73bef1bab661d8308bcd0fad94c857df94db4fa358e4efc369e0fea3d6e79",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s62/summary.json": "87a6f0d2176bc00fdf6049a717e58f0f09377abfd32cab841d723ef168ac6c0c",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s62/manifest.json": "e89597ca2c50ec3b085f6df7310520ea6a6d4c480b2d8e40f30bd51de533f55f",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s62/model.pt": "2c7996d5ce58250c8a9094a0b62dda7de7c11eec838fc7e959f274e556ed5b06",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s62/model_init.pt": "1cb61bf848c462f73f193b49b293720723472f0469dc7d003063e6591a53d4e5",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s62/trace.npz": "a352ac13a54cf9c1a6bf324624598fdad362ceeea4cb9102cdb9f25a35db42de"
+    },
+    "prior_source_hashes": {
+      "src/grokking_capacity/experiments/matched_dropout.py": "bf3ac44bda270b9a5a49e41582d6f4a9dbac1b9c78d5f7f61f33cee90367b9fa",
+      "src/grokking_capacity/experiments/capacity.py": "0f90cdca09de4ece2e06a42a2bfac993bd76e596c6a126008b2868338d68a1f7",
+      "src/grokking_capacity/experiments/groks.py": "7ec991a4f059a796e82e53cca81c441cb188b1b00cd910cf6d003a5c47100af0",
+      "src/grokking_capacity/models/discrete.py": "5ec7a68fbd27fa923b933bcbecb4652ef9b76a47146db1c399938a31dfc024d3",
+      "src/grokking_capacity/models/fullwidth_discrete.py": "da11dd2d747f9731eed96b6cc2ef9ec072ac8689e1768626a405080639822f9c",
+      "src/grokking_capacity/models/transformer.py": "691dd08dc7febb2449ae200051d5a323068d8bfe40e554928923450dd84a926c",
+      "src/grokking_capacity/data/modular.py": "8d5dfe63984b75cb931cbc91c98d0925e422e9cae2ace3e32752d3ee05361f65",
+      "src/grokking_capacity/utils/optim.py": "c55eb9766e2e9c9d354da62f846bf6a24fe1a2a1aa596878119aae295f13cbe4",
+      "scripts/run_p97_dropout_match.py": "e357686477e992897e794440e6d064fe224c0ee235c6d426e85e42850d50a02e"
+    },
+    "reason": "Identical baseline architecture/data/optimizer/dropout/capacity stopping; scalar arithmetic optimizer/RNG parity tested."
+  },
+  "notes": [
+    "The same ten new A trajectories are shared across families, not twenty independent runs.",
+    "Missing threshold crossings stay undefined; speed medians include all ten seeds with censoring.",
+    "Categorical B uses deterministic argmax with normalized-softmax STE; no sampled training.",
+    "All arithmetic speeds are optimizer updates, ten per epoch; wall time is descriptive on shared GPUs.",
+    "Capacity matching and finite-budget delay estimates are not intrinsic capacity bounds or a theorem."
+  ]
+}
