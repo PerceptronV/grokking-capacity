@@ -2975,3 +2975,12 @@ learning gate unchanged. Their purpose is to bracket a match without changing
 p, split, dropout, alphabet or estimator. This is prospective adaptation from
 development traces, not a final estimate or a confirmation outcome. No C has
 been constructed. Two available worker slots keep total concurrency bounded.
+
+The categorical42/FF32 final N8192 seed61 estimate is34,730.807 bits: above
+the allowed33,952.913-bit upper bound, so it is excluded despite successful
+learning. Its smaller42/FF16 arithmetic pilot has now passed and is entering
+random validation. Q8 56/FF48's ongoing N8192 trace is also near the upper
+bound, while the56/FF32 arithmetic pilot is still learning. Register Q8
+**d56/FF40**, seed41, as an intermediate FF probe to bracket capacity without
+reducing residual width. All prior runs continue and all protocol settings
+remain fixed. Use one currently free GPU0 worker slot.
