@@ -2960,3 +2960,18 @@ ongoing calibration to its original stop and report final values separately
 from these provisional observations. GPU0 uses about24GiB of80GiB; permit
 these two extra small pilots, temporarily bounding our concurrency at four
 workers per GPU. Shared-device wall times remain descriptive only.
+
+Capacity screening finished for the larger eight-level candidates: Q8
+44/FF176 gives42,825.695 bits and64/FF64 gives41,331.828 bits at N8192,
+seed61; both exceed the fixed target+10% and are rejected. Categorical
+48/FF192 gives47,205.891 bits, also rejected. Q8 56/FF48 passed arithmetic
+at1,524 epochs (train-eval99.9141%, held-out99.5919%) and its N2048 gate at
+100%; categorical42/FF32 passed arithmetic at610 epochs and N2048 at99.4629%.
+
+The latter two N8192 screening traces are approaching the upper matching
+boundary before their final stops. Register additional smaller-FF probes
+Q8 **d56/FF32** and categorical **d42/FF16**, with every other setting and
+learning gate unchanged. Their purpose is to bracket a match without changing
+p, split, dropout, alphabet or estimator. This is prospective adaptation from
+development traces, not a final estimate or a confirmation outcome. No C has
+been constructed. Two available worker slots keep total concurrency bounded.
