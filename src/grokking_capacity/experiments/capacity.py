@@ -151,6 +151,8 @@ def _train_capacity(args, *, device: str) -> Dict:
         max_epochs=args.epochs, patience=args.patience, min_delta=args.min_delta, verbose=True,
     )
     results['param_count'] = param_count
+    if getattr(args, 'save_model', False):
+        results['model_state_dict'] = {key: value.detach().cpu() for key, value in model.state_dict().items()}
     return results
 
 
@@ -168,6 +170,8 @@ def main():
     parser.add_argument('--patience', type=int, default=100,
                         help='Epochs without improvement before early stop')
     parser.add_argument('--min-delta', type=float, default=1e-4)
+    parser.add_argument('--save-model', action='store_true',
+                        help='Save final weights for independent capacity verification')
     args = parser.parse_args()
 
     np.random.seed(args.seed)
@@ -218,6 +222,14 @@ def main():
                 train_acc_trace=results['train_acc_trace'],
                 bits_trace=results['bits_trace'],
             )
+            if args.save_model:
+                from pathlib import Path
+                torch.save({'model_state_dict': results['model_state_dict'],
+                            'metadata': {'dim': args.dim, 'depth': args.depth,
+                                         'heads': args.heads, 'dropout': args.dropout,
+                                         'p': args.p, 'n_tokens': args.p + 2, 'seq_len': 4,
+                                         'param_count': results['param_count']}},
+                           Path(h.artefacts_dir) / 'model.pt')
             h.finalise(results={
                 'param_count': int(results['param_count']),
                 'epochs_trained': int(results['epochs_trained']),

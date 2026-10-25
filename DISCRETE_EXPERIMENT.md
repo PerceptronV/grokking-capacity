@@ -2371,3 +2371,44 @@ strong. Differences in training accuracy measurement and calibration must be
 controlled before such a claim. The present evidence does not identify which
 protocol difference causes the discrepancy, and no new training was run for
 this verification.
+
+
+## Registered dropout follow-up and local capacity calibration (2026-10-25)
+
+Before fresh outcomes, freeze `configs/discrete_p97_dropout_followup.yaml`.
+Keep A at width 26/FF104, 26,910 parameters, p97 division and the same 50% split.
+Run ten seeds 73–82 with dropout 0.2 and the original `GrokkingTrainer`: training
+accuracy is accumulated during minibatch updates, held-out accuracy is evaluated
+at the end of every epoch. Use the paper's 5,000-epoch limit (50,000 updates),
+early stop only when both train and held-out accuracy reach 99%, and report the
+minimum first-train 99%/first-held-out 98% delay with all per-seed outcomes and
+censoring counts. This differs from the prior 12,000-epoch ceiling and must remain
+explicit. No architecture or hyperparameter tuning based on these outcomes.
+
+Complete local calibration data were found in the separately stored
+`/home/ubuntu/capacity_defaults_runs.db` and `capacity_matched_runs.db`: each has
+56 completed random-label runs from this host, seven widths 10–22 and eight
+sizes 1000–9300, p113, seed 42, trained 2026-09-26. Verify saved traces, registry
+identities, recorded source commits (including dirty flags), formulas, and hashes
+before quoting a fit. The defaults use dropout 0/weight decay 0.01; the matched
+regime uses dropout 0.2/weight decay 1. These differ in two regularization settings,
+so their difference is not an isolated dropout effect.
+
+A fresh independent seed 61 will repeat the full 56-cell matched calibration grid
+with saved final checkpoints. Eight additional random-label cells measure A
+itself at p97: n2048/4096/8192/16384, seeds 61/62, dropout 0.2/weight decay 1.
+These direct measurements avoid assuming the p113 fitted constant transfers
+exactly to width 26 or vocabulary 99. Use the original capacity patience 100 epochs,
+minimum loss improvement 1e-4, and 5,000-epoch ceiling. Fit maximum *final* learned
+bits over dataset sizes at each parameter count, with a free intercept and
+through-origin sensitivity fit; retain all traces, report saturation and data
+limitations, and do not force agreement with 2.16. Bootstrap over widths is fit
+sensitivity, not a multi-seed confidence interval. Compare the two matched seed
+fits explicitly rather than silently pooling seed maxima.
+
+`run_p97_dropout_followup.py` uses four worker slots, two per GPU, with isolated
+registries and output paths; it leaves unrelated GPU jobs alone. Scientific
+sources/configs are snapshotted and hashed before dispatch. The only change to
+the capacity training module is an optional `--save-model` output for final
+checkpoint audits; training updates, stopping and measurements are unchanged.
+No new categorical or binary B experiment is implied by this A-only follow-up.
