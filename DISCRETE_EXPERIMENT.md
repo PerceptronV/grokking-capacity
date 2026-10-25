@@ -2930,3 +2930,21 @@ GPU0 has about22GiB allocated and8% sampled utilization from an unrelated job;
 run only these two small additional workers there, preserving that process.
 The gate/selection planner and report now have independent NumPy metric
 recomputation and explicitly censored all-seed medians;39 targeted tests pass.
+
+Further development: Q8 d44/FF176 passed at1,057 epochs/10,570 updates
+(final train-eval99.6993%, held-out99.0550%). Categorical d42/FF96 passed at
+369 epochs/3,690 updates (train-eval99.8282%, held-out99.3342%). The first
+categorical d48/FF192 N2048 random gate passed at final99.8535%; its N8192
+capacity screening and Q8 d44's N2048 random gate have started. These are
+learning-gate outcomes, not matched-model confirmations.
+
+`advance_p97_multilevel.py` advances only registered candidates. It independently
+checks completed arithmetic checkpoints before random gates, enforces each
+seed's N2048 gate, screens N8192, completes candidate grids, and freezes A/B
+before constructing C. It never invents architecture candidates or changes
+confirmed recipes. Capacity already above target+10% rejects a size; failed
+random/arithmetic gates and incomplete/nonconverged matches request development
+review. It uses at most four workers on GPU1 and two on GPU0 and preserves
+unrelated processes. All preceding attempted runs finish before the fifty-run
+confirmation queue (ten shared A plus twenty B and twenty C). Its source is
+recorded at launch, and each immutable stage retains exact submitted jobs.
