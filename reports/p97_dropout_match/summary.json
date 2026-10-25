@@ -1,0 +1,701 @@
+{
+  "target_bits": 30866.284423090663,
+  "completed_jobs": 68,
+  "capacity_cells": 29,
+  "arithmetic_runs": 39,
+  "selection": {
+    "frozen_at": 1792955385.6917322,
+    "models": {
+      "A": {
+        "model": "baseline",
+        "dim": 32,
+        "mlp_dim": 128
+      },
+      "B": {
+        "model": "quantized",
+        "dim": 88,
+        "mlp_dim": 72,
+        "levels": 2,
+        "quantizer_clip": 1.0,
+        "quantizer_surrogate": "rms_clipped"
+      },
+      "C": {
+        "dim": 88,
+        "mlp_dim": 72,
+        "model": "baseline"
+      }
+    },
+    "param_counts": {
+      "A": 39264,
+      "B": 117832,
+      "C": 117832
+    },
+    "evidence": {
+      "A": {
+        "61": {
+          "final_bits": 31288.33005669216,
+          "param_count": 39264,
+          "winner": "A32f128_capacity_n8192_s61",
+          "grid": [
+            "A32f128_capacity_n16384_s61",
+            "A32f128_capacity_n4096_s61",
+            "A32f128_capacity_n8192_s61",
+            "A32f128_random_n2048_s61"
+          ],
+          "diagnostics": {
+            "late_drift": 0.004487896647539236,
+            "epoch_limit": false,
+            "entropy_fraction": 0.5761307539339601,
+            "late_drift_flag": false,
+            "entropy_limited": false,
+            "largest_dataset_boundary": false
+          },
+          "primary_final_bits": 31288.33005669216
+        },
+        "62": {
+          "final_bits": 31254.54538872341,
+          "param_count": 39264,
+          "winner": "A32f128_capacity_n8192_s62",
+          "grid": [
+            "A32f128_capacity_n16384_s62",
+            "A32f128_capacity_n4096_s62",
+            "A32f128_capacity_n8192_s62",
+            "A32f128_random_n2048_s62"
+          ],
+          "diagnostics": {
+            "late_drift": 0.0037790117378966315,
+            "epoch_limit": false,
+            "entropy_fraction": 0.5755086566154718,
+            "late_drift_flag": false,
+            "entropy_limited": false,
+            "largest_dataset_boundary": false
+          },
+          "primary_final_bits": 31254.54538872341
+        }
+      },
+      "B": {
+        "61": {
+          "final_bits": 33071.13962700466,
+          "param_count": 117832,
+          "winner": "B88f72_capacity_n8192_s61",
+          "grid": [
+            "B88f72_capacity_n16384_s61",
+            "B88f72_capacity_n4096_s61",
+            "B88f72_capacity_n8192_s61",
+            "B88f72_random_n2048_s61"
+          ],
+          "diagnostics": {
+            "late_drift": 0.00727702659141638,
+            "epoch_limit": false,
+            "entropy_fraction": 0.6089586939359907,
+            "late_drift_flag": false,
+            "entropy_limited": false,
+            "largest_dataset_boundary": false
+          },
+          "primary_final_bits": 33071.13962700466
+        },
+        "62": {
+          "final_bits": 32316.361428762473,
+          "param_count": 117832,
+          "winner": "B88f72_capacity_n8192_s62",
+          "grid": [
+            "B88f72_capacity_n16384_s62",
+            "B88f72_capacity_n4096_s62",
+            "B88f72_capacity_n8192_s62",
+            "B88f72_random_n2048_s62"
+          ],
+          "diagnostics": {
+            "late_drift": 0.006443640407917339,
+            "epoch_limit": false,
+            "entropy_fraction": 0.5950605110793706,
+            "late_drift_flag": false,
+            "entropy_limited": false,
+            "largest_dataset_boundary": false
+          },
+          "primary_final_bits": 32090.532937551536,
+          "continuation_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/diagnostics/B88f72_capacity_n8192_s62"
+        }
+      },
+      "C": {
+        "61": {
+          "final_bits": 59578.93452744682,
+          "param_count": 117832,
+          "winner": "C88f72_capacity_n16384_s61",
+          "grid": [
+            "C88f72_capacity_n16384_s61",
+            "C88f72_capacity_n4096_s61",
+            "C88f72_capacity_n8192_s61",
+            "C88f72_random_n2048_s61"
+          ],
+          "diagnostics": {
+            "late_drift": 0.003700934641835296,
+            "epoch_limit": false,
+            "entropy_fraction": 0.5485312959446084,
+            "late_drift_flag": false,
+            "entropy_limited": false,
+            "largest_dataset_boundary": true,
+            "lower_bound_only": true
+          },
+          "primary_final_bits": 59578.93452744682
+        },
+        "62": {
+          "final_bits": 59272.47297959526,
+          "param_count": 117832,
+          "winner": "C88f72_capacity_n16384_s62",
+          "grid": [
+            "C88f72_capacity_n16384_s62",
+            "C88f72_capacity_n4096_s62",
+            "C88f72_capacity_n8192_s62",
+            "C88f72_random_n2048_s62"
+          ],
+          "diagnostics": {
+            "late_drift": 0.0024299428933631795,
+            "epoch_limit": false,
+            "entropy_fraction": 0.5457097659636926,
+            "late_drift_flag": false,
+            "entropy_limited": false,
+            "largest_dataset_boundary": true,
+            "lower_bound_only": true
+          },
+          "primary_final_bits": 59272.47297959526
+        }
+      }
+    },
+    "target_bits": 30866.284423090663,
+    "registration_sha256": "c76d03bfcd87e62a6696b4fde9d69e65f96594aa4eb9498a08fd2e95e310d788",
+    "evidence_sha256": {
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n16384_s61/summary.json": "bb5adae86bf4cc4e7cc9f9c8ea86c26c47c069323c70cbcd89de0d98053178cf",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n4096_s61/summary.json": "af150ff7e93cc82774acd21b6bd59d22f78ea0a583b42467efb6d40200c6952b",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s61/summary.json": "8dd34cf4c52260eee9052df886f0fb3a1bd05189b60c0cba9367a3bdaf1091a6",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s61/summary.json": "8a1d2cc98ebb47e51fe757b04dcb8df4a2fcf95ddc35586286c6f648682aaa58",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n16384_s62/summary.json": "d58ec72410460df6e282ccdda8dd06663866d8855474ec3083bb30f4be77eb64",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n4096_s62/summary.json": "ea11c1087b3c07cb489b47e551f1875030c15720d127a8dd79c99f9624c61fbe",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s62/summary.json": "1da8c83229b39db06f599c209bcf4b847e822c17f00ce42698f6edc9cbcc7f63",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s62/summary.json": "87a6f0d2176bc00fdf6049a717e58f0f09377abfd32cab841d723ef168ac6c0c",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/B88f72_capacity_n16384_s61/summary.json": "62624543a3496d529c0b46b159b53ca8265d2b3466291e1fe47b352e5313cbdc",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/B88f72_capacity_n4096_s61/summary.json": "0a6c17fc2f4ca5157741aeaae73e960ea7a24bcf9a97de01d67519e6bf6ae51c",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/B88f72_capacity_n8192_s61/summary.json": "12f3e5b36c8607f82af0f246dadca489536214b9493f3e35c7deb55ad674ba33",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/B88f72_random_n2048_s61/summary.json": "32d6e761f45e4cf50ec8851997b0e29d44de2528f8b42084b19efc7ec69b67dd",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/diagnostics/B88f72_capacity_n8192_s62/extension_source.py": "ac44913278fec4ce8cdd1196fc4f506527ec625c8d94c93483699a79dc290311",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/diagnostics/B88f72_capacity_n8192_s62/manifest.json": "f4c466e643bf62bafc8147427bd7e62108cef259b4e6762d7c27f0adc571716b",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/diagnostics/B88f72_capacity_n8192_s62/model.pt": "627a5cc72d6e18a9eaa773960aca0ef64d087d1633590f48179bfdf12dae437e",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/diagnostics/B88f72_capacity_n8192_s62/progress.json": "4b56c1711ce57bd9d3c816324583441dba55abb2eaafdf9a9a3aa3a823ca0a4d",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/diagnostics/B88f72_capacity_n8192_s62/replay_verified.json": "1f1e21680c39808dc95f85eb28d3e6b671762fe8f4a1ffbb888a71a7b11b91ee",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/diagnostics/B88f72_capacity_n8192_s62/summary.json": "95e58f5076105f65feb24c7c9b509589cf2032a36ea667c329d1f06c25504652",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/diagnostics/B88f72_capacity_n8192_s62/trace.npz": "4eaaff725c2b4dbe9b48f8427c334156fea2220db21938a4b2b96284f0892b4f",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/B88f72_capacity_n16384_s62/summary.json": "11ca597c660ca179408b8debdc7e4c19d47eac9dedbd9a4ba2fd9e3a0c96c6df",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/B88f72_capacity_n4096_s62/summary.json": "899a04a11c4d6b5423d55f9416ec715249c34ef392e7a2e197514c569a40d144",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/B88f72_capacity_n8192_s62/summary.json": "1b47d19ad7550d3ad1704646477d0bd3163ef1fdc652df32169662f198b20c1e",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/B88f72_random_n2048_s62/summary.json": "52f4a3631fe0a4d31ed7462815eb7c9b94b243f4b737a513b785c392b476a25c",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/C88f72_capacity_n16384_s61/summary.json": "aa5ae9bb3f1de7f7182355e3c8ddc8784b499facae2ad44daa382dbaeddcf5eb",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/C88f72_capacity_n4096_s61/summary.json": "1c937a7486a4cf1ba3695014e7e4e224ae5dce1b17dfca2a2097405ffebb0483",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/C88f72_capacity_n8192_s61/summary.json": "6bad8ad5f96a98e19c1fdbcb42adba9316463ef76c9d65bcf2c1ff4fe7344340",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/C88f72_random_n2048_s61/summary.json": "2a5fb455847453bb0d72c87a99d5520efc106267ccdff683cc0e459aa2c18ef3",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/C88f72_capacity_n16384_s62/summary.json": "12188e10233308a52f278a326333d51bfb65d78ba90c1f55c2942b1d7b80ba7c",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/C88f72_capacity_n4096_s62/summary.json": "b7c68ac35921ccb9455c27824fd0fe9c4c7443d1bc32d474e5aaf9040d059e4b",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/C88f72_capacity_n8192_s62/summary.json": "4a2a383a8bc03d444a52054e860b8f2736f40ff624604bc91bbd6f49230f630f",
+      "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/C88f72_random_n2048_s62/summary.json": "c93185e902ef4f166af5db6240ee3b778b89d7253ae7078e7f140af13783b259"
+    },
+    "rule": "Capacity and learning gates only; all confirmation seeds unseen."
+  },
+  "capacity_maxima": [
+    {
+      "name": "A32f128_capacity_n8192_s61",
+      "role": "A",
+      "recipe": "baseline_d32_f128",
+      "seed": 61,
+      "params": 39264,
+      "dim": 32,
+      "mlp_dim": 128,
+      "phase": "capacity",
+      "epochs": 1625,
+      "primary_epochs": 1625,
+      "n_samples": 8192,
+      "final_bits": 31288.33005669216,
+      "primary_final_bits": 31288.33005669216,
+      "peak_bits": 31355.992288137473,
+      "ratio_to_dataset": 1.0136733540006444,
+      "train_eval_acc": 0.61767578125,
+      "continuation_path": null,
+      "late_drift": 0.004487896647539236,
+      "epoch_limit": false,
+      "entropy_fraction": 0.5761307539339601,
+      "late_drift_flag": false,
+      "entropy_limited": false,
+      "largest_dataset_boundary": false,
+      "n_grid": "2048,4096,8192,16384"
+    },
+    {
+      "name": "A32f128_capacity_n8192_s62",
+      "role": "A",
+      "recipe": "baseline_d32_f128",
+      "seed": 62,
+      "params": 39264,
+      "dim": 32,
+      "mlp_dim": 128,
+      "phase": "capacity",
+      "epochs": 1584,
+      "primary_epochs": 1584,
+      "n_samples": 8192,
+      "final_bits": 31254.54538872341,
+      "primary_final_bits": 31254.54538872341,
+      "peak_bits": 31332.85532524685,
+      "ratio_to_dataset": 1.0125788047667408,
+      "train_eval_acc": 0.62841796875,
+      "continuation_path": null,
+      "late_drift": 0.0037790117378966315,
+      "epoch_limit": false,
+      "entropy_fraction": 0.5755086566154718,
+      "late_drift_flag": false,
+      "entropy_limited": false,
+      "largest_dataset_boundary": false,
+      "n_grid": "2048,4096,8192,16384"
+    },
+    {
+      "name": "C80f104_random_n2048_s61",
+      "role": "C",
+      "recipe": "baseline_d80_f104",
+      "seed": 61,
+      "params": 117360,
+      "dim": 80,
+      "mlp_dim": 104,
+      "phase": "random_gate",
+      "epochs": 590,
+      "primary_epochs": 590,
+      "n_samples": 2048,
+      "final_bits": 13568.848970419416,
+      "primary_final_bits": 13568.848970419416,
+      "peak_bits": 13570.08303261424,
+      "ratio_to_dataset": 0.43960098288567373,
+      "train_eval_acc": 1.0,
+      "continuation_path": null,
+      "late_drift": 2.9261336168984187e-05,
+      "epoch_limit": false,
+      "entropy_fraction": 0.9994053595291489,
+      "late_drift_flag": false,
+      "entropy_limited": true,
+      "largest_dataset_boundary": true,
+      "n_grid": "2048"
+    },
+    {
+      "name": "C88f72_capacity_n16384_s61",
+      "role": "C",
+      "recipe": "baseline_d88_f72",
+      "seed": 61,
+      "params": 117832,
+      "dim": 88,
+      "mlp_dim": 72,
+      "phase": "capacity",
+      "epochs": 1412,
+      "primary_epochs": 1412,
+      "n_samples": 16384,
+      "final_bits": 59578.93452744682,
+      "primary_final_bits": 59578.93452744682,
+      "peak_bits": 59894.01350693901,
+      "ratio_to_dataset": 1.9302269657982092,
+      "train_eval_acc": 0.56353759765625,
+      "continuation_path": null,
+      "late_drift": 0.003700934641835296,
+      "epoch_limit": false,
+      "entropy_fraction": 0.5485312959446084,
+      "late_drift_flag": false,
+      "entropy_limited": false,
+      "largest_dataset_boundary": true,
+      "n_grid": "2048,4096,8192,16384"
+    },
+    {
+      "name": "C88f72_capacity_n16384_s62",
+      "role": "C",
+      "recipe": "baseline_d88_f72",
+      "seed": 62,
+      "params": 117832,
+      "dim": 88,
+      "mlp_dim": 72,
+      "phase": "capacity",
+      "epochs": 1434,
+      "primary_epochs": 1434,
+      "n_samples": 16384,
+      "final_bits": 59272.47297959526,
+      "primary_final_bits": 59272.47297959526,
+      "peak_bits": 59566.98713975151,
+      "ratio_to_dataset": 1.920298282978767,
+      "train_eval_acc": 0.5545654296875,
+      "continuation_path": null,
+      "late_drift": 0.0024299428933631795,
+      "epoch_limit": false,
+      "entropy_fraction": 0.5457097659636926,
+      "late_drift_flag": false,
+      "entropy_limited": false,
+      "largest_dataset_boundary": true,
+      "n_grid": "2048,4096,8192,16384"
+    },
+    {
+      "name": "B88f128_capacity_n8192_s61",
+      "role": "B",
+      "recipe": "quantized_d88_f128",
+      "seed": 61,
+      "params": 147400,
+      "dim": 88,
+      "mlp_dim": 128,
+      "phase": "capacity",
+      "epochs": 1092,
+      "primary_epochs": 1092,
+      "n_samples": 8192,
+      "final_bits": 40611.91520073513,
+      "primary_final_bits": 40611.91520073513,
+      "peak_bits": 40794.05875542263,
+      "ratio_to_dataset": 1.315737088535149,
+      "train_eval_acc": 0.7711181640625,
+      "continuation_path": null,
+      "late_drift": 0.007562183621152796,
+      "epoch_limit": false,
+      "entropy_fraction": 0.747811509304157,
+      "late_drift_flag": false,
+      "entropy_limited": false,
+      "largest_dataset_boundary": false,
+      "n_grid": "2048,4096,8192,16384"
+    },
+    {
+      "name": "B88f72_capacity_n8192_s61",
+      "role": "B",
+      "recipe": "quantized_d88_f72",
+      "seed": 61,
+      "params": 117832,
+      "dim": 88,
+      "mlp_dim": 72,
+      "phase": "capacity",
+      "epochs": 1394,
+      "primary_epochs": 1394,
+      "n_samples": 8192,
+      "final_bits": 33071.13962700466,
+      "primary_final_bits": 33071.13962700466,
+      "peak_bits": 33446.8968291531,
+      "ratio_to_dataset": 1.0714324786777567,
+      "train_eval_acc": 0.593994140625,
+      "continuation_path": null,
+      "late_drift": 0.00727702659141638,
+      "epoch_limit": false,
+      "entropy_fraction": 0.6089586939359907,
+      "late_drift_flag": false,
+      "entropy_limited": false,
+      "largest_dataset_boundary": false,
+      "n_grid": "2048,4096,8192,16384"
+    },
+    {
+      "name": "B88f72_capacity_n8192_s62",
+      "role": "B",
+      "recipe": "quantized_d88_f72",
+      "seed": 62,
+      "params": 117832,
+      "dim": 88,
+      "mlp_dim": 72,
+      "phase": "capacity",
+      "epochs": 1064,
+      "primary_epochs": 864,
+      "n_samples": 8192,
+      "final_bits": 32316.361428762473,
+      "primary_final_bits": 32090.532937551536,
+      "peak_bits": 32702.669656301536,
+      "ratio_to_dataset": 1.0469793184626728,
+      "train_eval_acc": 0.57666015625,
+      "continuation_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/diagnostics/B88f72_capacity_n8192_s62",
+      "late_drift": 0.006443640407917339,
+      "epoch_limit": false,
+      "entropy_fraction": 0.5950605110793706,
+      "late_drift_flag": false,
+      "entropy_limited": false,
+      "largest_dataset_boundary": false,
+      "n_grid": "2048,4096,8192,16384"
+    }
+  ],
+  "aggregates": {
+    "A": {
+      "paper_delay_epochs": {
+        "total": 10,
+        "observed": 9,
+        "missing": 1,
+        "minimum": 0,
+        "median_observed": 0.0,
+        "positive": 0,
+        "zero": 9
+      },
+      "eval_delay_epochs": {
+        "total": 10,
+        "observed": 9,
+        "missing": 1,
+        "minimum": 0,
+        "median_observed": 32.0,
+        "positive": 7,
+        "zero": 2
+      },
+      "val95_updates": {
+        "total": 10,
+        "observed": 10,
+        "missing": 0,
+        "minimum": 3830,
+        "median_observed": 5275.0,
+        "positive": 10,
+        "zero": 0,
+        "median_all_ten": 5275.0,
+        "median_all_ten_lower_bound": 5275.0,
+        "censor_bounds_updates": [],
+        "median_is_identified": true,
+        "right_censored_at_updates": 50000
+      },
+      "val99_updates": {
+        "total": 10,
+        "observed": 9,
+        "missing": 1,
+        "minimum": 4010,
+        "median_observed": 7690.0,
+        "positive": 9,
+        "zero": 0,
+        "median_all_ten": 8310.0,
+        "median_all_ten_lower_bound": 8310.0,
+        "censor_bounds_updates": [
+          50000
+        ],
+        "median_is_identified": true,
+        "right_censored_at_updates": 50000
+      },
+      "ever_held99": 9,
+      "final_held99": 9,
+      "final_joint99": 9,
+      "confirmation_runs": 10
+    },
+    "B": {
+      "paper_delay_epochs": {
+        "total": 10,
+        "observed": 5,
+        "missing": 5,
+        "minimum": 0,
+        "median_observed": 0.0,
+        "positive": 0,
+        "zero": 5
+      },
+      "eval_delay_epochs": {
+        "total": 10,
+        "observed": 5,
+        "missing": 5,
+        "minimum": 0,
+        "median_observed": 0.0,
+        "positive": 0,
+        "zero": 5
+      },
+      "val95_updates": {
+        "total": 10,
+        "observed": 5,
+        "missing": 5,
+        "minimum": 5670,
+        "median_observed": 8700.0,
+        "positive": 5,
+        "zero": 0,
+        "median_all_ten": null,
+        "median_all_ten_lower_bound": 30065.0,
+        "censor_bounds_updates": [
+          50000,
+          50000,
+          50000,
+          50000,
+          50000
+        ],
+        "median_is_identified": false,
+        "right_censored_at_updates": 50000
+      },
+      "val99_updates": {
+        "total": 10,
+        "observed": 5,
+        "missing": 5,
+        "minimum": 6400,
+        "median_observed": 9650.0,
+        "positive": 5,
+        "zero": 0,
+        "median_all_ten": null,
+        "median_all_ten_lower_bound": 30215.0,
+        "censor_bounds_updates": [
+          50000,
+          50000,
+          50000,
+          50000,
+          50000
+        ],
+        "median_is_identified": false,
+        "right_censored_at_updates": 50000
+      },
+      "ever_held99": 5,
+      "final_held99": 5,
+      "final_joint99": 5,
+      "confirmation_runs": 10
+    },
+    "C": {
+      "paper_delay_epochs": {
+        "total": 10,
+        "observed": 10,
+        "missing": 0,
+        "minimum": 0,
+        "median_observed": 0.0,
+        "positive": 3,
+        "zero": 7
+      },
+      "eval_delay_epochs": {
+        "total": 10,
+        "observed": 10,
+        "missing": 0,
+        "minimum": 14,
+        "median_observed": 31.5,
+        "positive": 10,
+        "zero": 0
+      },
+      "val95_updates": {
+        "total": 10,
+        "observed": 10,
+        "missing": 0,
+        "minimum": 1730,
+        "median_observed": 2385.0,
+        "positive": 10,
+        "zero": 0,
+        "median_all_ten": 2385.0,
+        "median_all_ten_lower_bound": 2385.0,
+        "censor_bounds_updates": [],
+        "median_is_identified": true,
+        "right_censored_at_updates": 50000
+      },
+      "val99_updates": {
+        "total": 10,
+        "observed": 10,
+        "missing": 0,
+        "minimum": 2080,
+        "median_observed": 2965.0,
+        "positive": 10,
+        "zero": 0,
+        "median_all_ten": 2965.0,
+        "median_all_ten_lower_bound": 2965.0,
+        "censor_bounds_updates": [],
+        "median_is_identified": true,
+        "right_censored_at_updates": 50000
+      },
+      "ever_held99": 10,
+      "final_held99": 10,
+      "final_joint99": 10,
+      "confirmation_runs": 10
+    }
+  },
+  "pairing": [
+    {
+      "seed": 101,
+      "dataset_sha256": "955f89eda5cb7afe979d6733944dcb2f7c4aa4834639dcf3b494c764fc7c5652",
+      "BC_initial_sha256": "c479d176198ff1ac9bf9c892217294bed15738711f816a7a13184b0bcc884bcf"
+    },
+    {
+      "seed": 102,
+      "dataset_sha256": "914a31b79e8f32f81d5d97a2104177e06cb1ef712d910873d652d5afd67e01fe",
+      "BC_initial_sha256": "91091d61c6c9caf66c87727698f5560aa76878710f842872a87507ba440e963b"
+    },
+    {
+      "seed": 103,
+      "dataset_sha256": "9c0df2f5733a0112f50fcc20ec117ce74522882868230b182b242fdde98d51e7",
+      "BC_initial_sha256": "aa9d2ca76b96a639f74e384205a3160f005cac9edd39b6b5b8e41e5ed74b2de7"
+    },
+    {
+      "seed": 104,
+      "dataset_sha256": "2712e62d93c90ee268350c8c36da61967dd730253e2c63bf74d41c2b67450beb",
+      "BC_initial_sha256": "848e87cf1fcae9bc014c2bd48246cf19695f57cb21efc328bb9628abfb3f548a"
+    },
+    {
+      "seed": 105,
+      "dataset_sha256": "ae478cd1e7e7c804b5af080155a4e3317e3b0239d65724675651b997045b2e8a",
+      "BC_initial_sha256": "ce5d7400f5179dc9c58299e7b0ad620e90e74ee81e3d086ea46f679ea3a0a262"
+    },
+    {
+      "seed": 106,
+      "dataset_sha256": "c582c919eff2a0508f97324e02102f143914bcbc528d538ca05adc006c8bc8f2",
+      "BC_initial_sha256": "287ff0c5065c63d85fe8be817987df83e28dda0c79fb41b941cfd375a38e1f24"
+    },
+    {
+      "seed": 107,
+      "dataset_sha256": "d4ccf02989f9826d6de095d746d3e83bc921effe4846b79ddc8a1afff78a04c2",
+      "BC_initial_sha256": "0e1c5a9bfdef8c8110eedde752b731f40d2706e1f712ade11dd4b498e28a9efb"
+    },
+    {
+      "seed": 108,
+      "dataset_sha256": "e4f3870dffa2b4aa893cd39515c9d7ae2dc636b8151dc1738396c730838997c8",
+      "BC_initial_sha256": "7bbc295d21f629395b6456dbde0438b259e4a83c6edb22cf718694a87ac1ae4f"
+    },
+    {
+      "seed": 109,
+      "dataset_sha256": "aa31a8bf41deb6a36856c1c4ddbb2b7322b14eb18c9791f4be2e27dc43ed6b74",
+      "BC_initial_sha256": "4d732143a92098801a40a0e42ce86c15667b95262b265188343b446fa790230d"
+    },
+    {
+      "seed": 110,
+      "dataset_sha256": "33041b1f7bbb6726981c971326ebe142fb923ba99f8d41bb3097454813e24588",
+      "BC_initial_sha256": "b046f385abb5500c48ba5dacb1dec9e9824d2df8747152cd168656a1e8b18239"
+    }
+  ],
+  "paired_speeds": {
+    "val95_updates": {
+      "A_vs_B": {
+        "left_faster": 4,
+        "right_faster": 1,
+        "tied": 0,
+        "left_only_reached": 5,
+        "right_only_reached": 0,
+        "neither": 0,
+        "missing_runs": 0
+      },
+      "A_vs_C": {
+        "left_faster": 0,
+        "right_faster": 10,
+        "tied": 0,
+        "left_only_reached": 0,
+        "right_only_reached": 0,
+        "neither": 0,
+        "missing_runs": 0
+      },
+      "B_vs_C": {
+        "left_faster": 0,
+        "right_faster": 5,
+        "tied": 0,
+        "left_only_reached": 0,
+        "right_only_reached": 5,
+        "neither": 0,
+        "missing_runs": 0
+      }
+    },
+    "val99_updates": {
+      "A_vs_B": {
+        "left_faster": 3,
+        "right_faster": 2,
+        "tied": 0,
+        "left_only_reached": 4,
+        "right_only_reached": 0,
+        "neither": 1,
+        "missing_runs": 0
+      },
+      "A_vs_C": {
+        "left_faster": 0,
+        "right_faster": 9,
+        "tied": 0,
+        "left_only_reached": 0,
+        "right_only_reached": 1,
+        "neither": 0,
+        "missing_runs": 0
+      },
+      "B_vs_C": {
+        "left_faster": 0,
+        "right_faster": 5,
+        "tied": 0,
+        "left_only_reached": 0,
+        "right_only_reached": 5,
+        "neither": 0,
+        "missing_runs": 0
+      }
+    }
+  },
+  "notes": [
+    "Unobserved validation crossings are right-censored; delays requiring missing crossings remain undefined, never zero-imputed.",
+    "Observed-only medians are conditional on reaching the threshold.",
+    "Paper delay uses dropout-active online train99 and held-out eval98.",
+    "Each epoch is ten optimizer updates; shared GPU wall time is not a model speed metric."
+  ]
+}

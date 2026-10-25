@@ -1,0 +1,3383 @@
+[
+  {
+    "name": "A32f128_capacity_n16384_s61",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "baseline",
+      "dim": 32,
+      "mlp_dim": 128,
+      "seed": 61,
+      "phase": "capacity",
+      "task": "capacity",
+      "role": "A",
+      "n_samples": 16384,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_pilot_s41",
+      "random_gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s61"
+    },
+    "params": 39264,
+    "train_eval": {
+      "loss": 3.3756749257445335,
+      "acc": 0.23602294921875
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "recomputed_bits": 28824.16058457704,
+    "bits_error": 0.0004711927176686004
+  },
+  {
+    "name": "A32f128_capacity_n16384_s62",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "baseline",
+      "dim": 32,
+      "mlp_dim": 128,
+      "seed": 62,
+      "phase": "capacity",
+      "task": "capacity",
+      "role": "A",
+      "n_samples": 16384,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_pilot_s41",
+      "random_gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s62"
+    },
+    "params": 39264,
+    "train_eval": {
+      "loss": 3.386965923011303,
+      "acc": 0.23541259765625
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "recomputed_bits": 28557.27397750852,
+    "bits_error": 0.0018585320503916591
+  },
+  {
+    "name": "A32f128_capacity_n4096_s61",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "baseline",
+      "dim": 32,
+      "mlp_dim": 128,
+      "seed": 61,
+      "phase": "capacity",
+      "task": "capacity",
+      "role": "A",
+      "n_samples": 4096,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_pilot_s41",
+      "random_gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s61"
+    },
+    "params": 39264,
+    "train_eval": {
+      "loss": 0.4446546845138073,
+      "acc": 0.994384765625
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "recomputed_bits": 24526.25617642903,
+    "bits_error": 0.00011414740220061503
+  },
+  {
+    "name": "A32f128_capacity_n4096_s62",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "baseline",
+      "dim": 32,
+      "mlp_dim": 128,
+      "seed": 62,
+      "phase": "capacity",
+      "task": "capacity",
+      "role": "A",
+      "n_samples": 4096,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_pilot_s41",
+      "random_gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s62"
+    },
+    "params": 39264,
+    "train_eval": {
+      "loss": 0.48744307085871696,
+      "acc": 0.98828125
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "recomputed_bits": 24273.407668371663,
+    "bits_error": 0.0002083849576592911
+  },
+  {
+    "name": "A32f128_capacity_n8192_s61",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "baseline",
+      "dim": 32,
+      "mlp_dim": 128,
+      "seed": 61,
+      "phase": "capacity",
+      "task": "capacity",
+      "role": "A",
+      "n_samples": 8192,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_pilot_s41",
+      "random_gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s61"
+    },
+    "params": 39264,
+    "train_eval": {
+      "loss": 1.9477299451828003,
+      "acc": 0.61767578125
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "recomputed_bits": 31288.33054452491,
+    "bits_error": 0.0004878327490587253
+  },
+  {
+    "name": "A32f128_capacity_n8192_s62",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "baseline",
+      "dim": 32,
+      "mlp_dim": 128,
+      "seed": 62,
+      "phase": "capacity",
+      "task": "capacity",
+      "role": "A",
+      "n_samples": 8192,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_pilot_s41",
+      "random_gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s62"
+    },
+    "params": 39264,
+    "train_eval": {
+      "loss": 1.9505886137485504,
+      "acc": 0.62841796875
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "recomputed_bits": 31254.545204921124,
+    "bits_error": 0.00018380228721071035
+  },
+  {
+    "name": "A32f128_pilot_s41",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "baseline",
+      "dim": 32,
+      "mlp_dim": 128,
+      "seed": 41,
+      "phase": "pilot",
+      "task": "arithmetic",
+      "stop_rule": "learning_gate",
+      "role": "A"
+    },
+    "params": 39264,
+    "train_eval": {
+      "loss": 0.4442348517093462,
+      "acc": 0.9976374570446735
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "val_eval": {
+      "loss": 0.49224461272000447,
+      "acc": 0.992053264604811
+    }
+  },
+  {
+    "name": "A32f128_random_n2048_s61",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "baseline",
+      "dim": 32,
+      "mlp_dim": 128,
+      "seed": 61,
+      "phase": "random_gate",
+      "task": "capacity",
+      "role": "A",
+      "n_samples": 2048,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_pilot_s41"
+    },
+    "params": 39264,
+    "train_eval": {
+      "loss": 0.062266409397125244,
+      "acc": 1.0
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "recomputed_bits": 13392.947568698193,
+    "bits_error": 4.373772753751837e-06
+  },
+  {
+    "name": "A32f128_random_n2048_s62",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "baseline",
+      "dim": 32,
+      "mlp_dim": 128,
+      "seed": 62,
+      "phase": "random_gate",
+      "task": "capacity",
+      "role": "A",
+      "n_samples": 2048,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_pilot_s41"
+    },
+    "params": 39264,
+    "train_eval": {
+      "loss": 0.06051463261246681,
+      "acc": 1.0
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "recomputed_bits": 13398.123437482775,
+    "bits_error": 1.4496257790597156e-05
+  },
+  {
+    "name": "A_confirmation_s101",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "baseline",
+      "dim": 32,
+      "mlp_dim": 128,
+      "role": "A",
+      "phase": "confirmation",
+      "task": "arithmetic",
+      "seed": 101,
+      "stop_rule": "joint99",
+      "selection_sha256": "039d48ceab7338ce6ab0c4de18f86f17144542ee9236a0b3951ac90b6c6bee77"
+    },
+    "params": 39264,
+    "train_eval": {
+      "loss": 0.20723912437347203,
+      "acc": 0.9991408934707904
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "val_eval": {
+      "loss": 0.2559769372759816,
+      "acc": 0.9935567010309279
+    }
+  },
+  {
+    "name": "A_confirmation_s102",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "baseline",
+      "dim": 32,
+      "mlp_dim": 128,
+      "role": "A",
+      "phase": "confirmation",
+      "task": "arithmetic",
+      "seed": 102,
+      "stop_rule": "joint99",
+      "selection_sha256": "039d48ceab7338ce6ab0c4de18f86f17144542ee9236a0b3951ac90b6c6bee77"
+    },
+    "params": 39264,
+    "train_eval": {
+      "loss": 0.34683058433925984,
+      "acc": 0.9993556701030928
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "val_eval": {
+      "loss": 0.3872468401885934,
+      "acc": 0.9972079037800687
+    }
+  },
+  {
+    "name": "A_confirmation_s103",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "baseline",
+      "dim": 32,
+      "mlp_dim": 128,
+      "role": "A",
+      "phase": "confirmation",
+      "task": "arithmetic",
+      "seed": 103,
+      "stop_rule": "joint99",
+      "selection_sha256": "039d48ceab7338ce6ab0c4de18f86f17144542ee9236a0b3951ac90b6c6bee77"
+    },
+    "params": 39264,
+    "train_eval": {
+      "loss": 0.4908698489985515,
+      "acc": 0.9954896907216495
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "val_eval": {
+      "loss": 0.5382167617070306,
+      "acc": 0.990979381443299
+    }
+  },
+  {
+    "name": "A_confirmation_s104",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "baseline",
+      "dim": 32,
+      "mlp_dim": 128,
+      "role": "A",
+      "phase": "confirmation",
+      "task": "arithmetic",
+      "seed": 104,
+      "stop_rule": "joint99",
+      "selection_sha256": "039d48ceab7338ce6ab0c4de18f86f17144542ee9236a0b3951ac90b6c6bee77"
+    },
+    "params": 39264,
+    "train_eval": {
+      "loss": 0.39620471697083043,
+      "acc": 0.9991408934707904
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "val_eval": {
+      "loss": 0.44628416017158745,
+      "acc": 0.9946305841924399
+    }
+  },
+  {
+    "name": "A_confirmation_s105",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "baseline",
+      "dim": 32,
+      "mlp_dim": 128,
+      "role": "A",
+      "phase": "confirmation",
+      "task": "arithmetic",
+      "seed": 105,
+      "stop_rule": "joint99",
+      "selection_sha256": "039d48ceab7338ce6ab0c4de18f86f17144542ee9236a0b3951ac90b6c6bee77"
+    },
+    "params": 39264,
+    "train_eval": {
+      "loss": 0.4106663723581845,
+      "acc": 0.9980670103092784
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "val_eval": {
+      "loss": 0.4776154736063325,
+      "acc": 0.9903350515463918
+    }
+  },
+  {
+    "name": "A_confirmation_s106",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "baseline",
+      "dim": 32,
+      "mlp_dim": 128,
+      "role": "A",
+      "phase": "confirmation",
+      "task": "arithmetic",
+      "seed": 106,
+      "stop_rule": "joint99",
+      "selection_sha256": "039d48ceab7338ce6ab0c4de18f86f17144542ee9236a0b3951ac90b6c6bee77"
+    },
+    "params": 39264,
+    "train_eval": {
+      "loss": 0.3248159160319063,
+      "acc": 0.9982817869415808
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "val_eval": {
+      "loss": 0.3791097959701958,
+      "acc": 0.9911941580756014
+    }
+  },
+  {
+    "name": "A_confirmation_s107",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "baseline",
+      "dim": 32,
+      "mlp_dim": 128,
+      "role": "A",
+      "phase": "confirmation",
+      "task": "arithmetic",
+      "seed": 107,
+      "stop_rule": "joint99",
+      "selection_sha256": "039d48ceab7338ce6ab0c4de18f86f17144542ee9236a0b3951ac90b6c6bee77"
+    },
+    "params": 39264,
+    "train_eval": {
+      "loss": 0.4847170040779507,
+      "acc": 0.9984965635738832
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "val_eval": {
+      "loss": 0.5372138756656974,
+      "acc": 0.9916237113402062
+    }
+  },
+  {
+    "name": "A_confirmation_s108",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "baseline",
+      "dim": 32,
+      "mlp_dim": 128,
+      "role": "A",
+      "phase": "confirmation",
+      "task": "arithmetic",
+      "seed": 108,
+      "stop_rule": "joint99",
+      "selection_sha256": "039d48ceab7338ce6ab0c4de18f86f17144542ee9236a0b3951ac90b6c6bee77"
+    },
+    "params": 39264,
+    "train_eval": {
+      "loss": 0.4266942690328224,
+      "acc": 0.9995704467353952
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "val_eval": {
+      "loss": 0.4763370637631498,
+      "acc": 0.9972079037800687
+    }
+  },
+  {
+    "name": "A_confirmation_s109",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "baseline",
+      "dim": 32,
+      "mlp_dim": 128,
+      "role": "A",
+      "phase": "confirmation",
+      "task": "arithmetic",
+      "seed": 109,
+      "stop_rule": "joint99",
+      "selection_sha256": "039d48ceab7338ce6ab0c4de18f86f17144542ee9236a0b3951ac90b6c6bee77"
+    },
+    "params": 39264,
+    "train_eval": {
+      "loss": 0.2193693551410924,
+      "acc": 0.9688573883161512
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "val_eval": {
+      "loss": 0.2536309353264746,
+      "acc": 0.939647766323024
+    }
+  },
+  {
+    "name": "A_confirmation_s110",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "baseline",
+      "dim": 32,
+      "mlp_dim": 128,
+      "role": "A",
+      "phase": "confirmation",
+      "task": "arithmetic",
+      "seed": 110,
+      "stop_rule": "joint99",
+      "selection_sha256": "039d48ceab7338ce6ab0c4de18f86f17144542ee9236a0b3951ac90b6c6bee77"
+    },
+    "params": 39264,
+    "train_eval": {
+      "loss": 0.2403731995431828,
+      "acc": 0.9995704467353952
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "val_eval": {
+      "loss": 0.3084784238199188,
+      "acc": 0.993127147766323
+    }
+  },
+  {
+    "name": "B72f62_pilot_s41",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "dim": 72,
+      "mlp_dim": 62,
+      "levels": 2,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "seed": 41,
+      "phase": "pilot",
+      "task": "arithmetic",
+      "stop_rule": "learning_gate",
+      "role": "B"
+    },
+    "params": 82872,
+    "train_eval": {
+      "loss": 0.24859468142191568,
+      "acc": 0.9375
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_binary",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          72
+        ],
+        [
+          32,
+          4,
+          72
+        ],
+        [
+          32,
+          4,
+          72
+        ],
+        [
+          32,
+          4,
+          72
+        ]
+      ]
+    },
+    "val_eval": {
+      "loss": 0.32592331175132305,
+      "acc": 0.9029209621993127
+    }
+  },
+  {
+    "name": "B80f104_pilot_s41",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "dim": 80,
+      "mlp_dim": 104,
+      "levels": 2,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "seed": 41,
+      "phase": "pilot",
+      "task": "arithmetic",
+      "stop_rule": "learning_gate",
+      "role": "B"
+    },
+    "params": 117360,
+    "train_eval": {
+      "loss": 0.07770452609996206,
+      "acc": 0.9862542955326461
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_binary",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          80
+        ],
+        [
+          32,
+          4,
+          80
+        ],
+        [
+          32,
+          4,
+          80
+        ],
+        [
+          32,
+          4,
+          80
+        ]
+      ]
+    },
+    "val_eval": {
+      "loss": 0.09216245210047849,
+      "acc": 0.9810996563573883
+    }
+  },
+  {
+    "name": "B80f104_pilot_s42",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "dim": 80,
+      "mlp_dim": 104,
+      "levels": 2,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "seed": 42,
+      "phase": "pilot",
+      "task": "arithmetic",
+      "stop_rule": "learning_gate",
+      "role": "B"
+    },
+    "params": 117360,
+    "train_eval": {
+      "loss": 0.04591283442843001,
+      "acc": 0.9948453608247423
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_binary",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          80
+        ],
+        [
+          32,
+          4,
+          80
+        ],
+        [
+          32,
+          4,
+          80
+        ],
+        [
+          32,
+          4,
+          80
+        ]
+      ]
+    },
+    "val_eval": {
+      "loss": 0.05960673498329019,
+      "acc": 0.9918384879725086
+    }
+  },
+  {
+    "name": "B88f128_capacity_n16384_s61",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "dim": 88,
+      "mlp_dim": 128,
+      "levels": 2,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "seed": 61,
+      "phase": "capacity",
+      "task": "capacity",
+      "role": "B",
+      "n_samples": 16384,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/B88f128_pilot_s41",
+      "random_gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/B88f128_random_n2048_s61"
+    },
+    "params": 147400,
+    "train_eval": {
+      "loss": 2.913098707795143,
+      "acc": 0.3211669921875
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_binary",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ]
+      ]
+    },
+    "recomputed_bits": 39758.12809889397,
+    "bits_error": 0.0026534783974057063
+  },
+  {
+    "name": "B88f128_capacity_n4096_s61",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "dim": 88,
+      "mlp_dim": 128,
+      "levels": 2,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "seed": 61,
+      "phase": "capacity",
+      "task": "capacity",
+      "role": "B",
+      "n_samples": 4096,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/B88f128_pilot_s41",
+      "random_gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/B88f128_random_n2048_s61"
+    },
+    "params": 147400,
+    "train_eval": {
+      "loss": 0.14188029523938894,
+      "acc": 0.988525390625
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_binary",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ]
+      ]
+    },
+    "recomputed_bits": 26315.43448263836,
+    "bits_error": 0.00018244169405079447
+  },
+  {
+    "name": "B88f128_capacity_n8192_s61",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "dim": 88,
+      "mlp_dim": 128,
+      "levels": 2,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "seed": 61,
+      "phase": "capacity",
+      "task": "capacity",
+      "role": "B",
+      "n_samples": 8192,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/B88f128_pilot_s41",
+      "random_gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/B88f128_random_n2048_s61"
+    },
+    "params": 147400,
+    "train_eval": {
+      "loss": 1.1588363200426102,
+      "acc": 0.7711181640625
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_binary",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ]
+      ]
+    },
+    "recomputed_bits": 40611.91543154377,
+    "bits_error": 0.00023080864048097283
+  },
+  {
+    "name": "B88f128_pilot_s41",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "dim": 88,
+      "mlp_dim": 128,
+      "levels": 2,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "seed": 41,
+      "phase": "pilot",
+      "task": "arithmetic",
+      "stop_rule": "learning_gate",
+      "role": "B"
+    },
+    "params": 147400,
+    "train_eval": {
+      "loss": 0.28268417459992606,
+      "acc": 0.9980670103092784
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_binary",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ]
+      ]
+    },
+    "val_eval": {
+      "loss": 0.33486301341826974,
+      "acc": 0.9935567010309279
+    }
+  },
+  {
+    "name": "B88f128_random_n2048_s61",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "dim": 88,
+      "mlp_dim": 128,
+      "levels": 2,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "seed": 61,
+      "phase": "random_gate",
+      "task": "capacity",
+      "role": "B",
+      "n_samples": 2048,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/B88f128_pilot_s41"
+    },
+    "params": 147400,
+    "train_eval": {
+      "loss": 0.02304791985079646,
+      "acc": 1.0
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_binary",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ]
+      ]
+    },
+    "recomputed_bits": 13508.824064835706,
+    "bits_error": 1.7383246813551523e-05
+  },
+  {
+    "name": "B88f48_pilot_s41",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "dim": 88,
+      "mlp_dim": 48,
+      "levels": 2,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "seed": 41,
+      "phase": "pilot",
+      "task": "arithmetic",
+      "stop_rule": "learning_gate",
+      "role": "B"
+    },
+    "params": 105160,
+    "train_eval": {
+      "loss": 0.5082276432784563,
+      "acc": 0.8621134020618557
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_binary",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ]
+      ]
+    },
+    "val_eval": {
+      "loss": 0.6082809024660039,
+      "acc": 0.814647766323024
+    }
+  },
+  {
+    "name": "B88f72_capacity_n16384_s61",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "dim": 88,
+      "mlp_dim": 72,
+      "levels": 2,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "seed": 61,
+      "phase": "capacity",
+      "task": "capacity",
+      "role": "B",
+      "n_samples": 16384,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/B88f72_pilot_s41",
+      "random_gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/B88f72_random_n2048_s61"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 3.404762864112854,
+      "acc": 0.21307373046875
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_binary",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ]
+      ]
+    },
+    "recomputed_bits": 28136.605624255957,
+    "bits_error": 0.0005340502393664792
+  },
+  {
+    "name": "B88f72_capacity_n16384_s62",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "dim": 88,
+      "mlp_dim": 72,
+      "levels": 2,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "seed": 62,
+      "phase": "capacity",
+      "task": "capacity",
+      "role": "B",
+      "n_samples": 16384,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/B88f72_pilot_s41",
+      "random_gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/B88f72_random_n2048_s62"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 3.399256967008114,
+      "acc": 0.2120361328125
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_binary",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ]
+      ]
+    },
+    "recomputed_bits": 28266.749150326694,
+    "bits_error": 0.0015392295026686043
+  },
+  {
+    "name": "B88f72_capacity_n4096_s61",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "dim": 88,
+      "mlp_dim": 72,
+      "levels": 2,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "seed": 61,
+      "phase": "capacity",
+      "task": "capacity",
+      "role": "B",
+      "n_samples": 4096,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/B88f72_pilot_s41",
+      "random_gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/B88f72_random_n2048_s61"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 0.613506406545639,
+      "acc": 0.9091796875
+    },
+    "verification_device": "cuda:0",
+    "boundary": {
+      "kind": "full_width_binary",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ]
+      ]
+    },
+    "cpu_bits_error": -0.607434599660337,
+    "cpu_train_eval": {
+      "loss": 0.6136091649532318,
+      "acc": 0.908935546875
+    },
+    "cpu_gpu_discrepancy": true,
+    "recomputed_bits": 23528.46426031148,
+    "bits_error": 0.0002065111621050164
+  },
+  {
+    "name": "B88f72_capacity_n4096_s62",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "dim": 88,
+      "mlp_dim": 72,
+      "levels": 2,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "seed": 62,
+      "phase": "capacity",
+      "task": "capacity",
+      "role": "B",
+      "n_samples": 4096,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/B88f72_pilot_s41",
+      "random_gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/B88f72_random_n2048_s62"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 0.5780245959758759,
+      "acc": 0.914794921875
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_binary",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ]
+      ]
+    },
+    "recomputed_bits": 23738.136174400992,
+    "bits_error": 0.00038189475526451133
+  },
+  {
+    "name": "B88f72_capacity_n8192_s61",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "dim": 88,
+      "mlp_dim": 72,
+      "levels": 2,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "seed": 61,
+      "phase": "capacity",
+      "task": "capacity",
+      "role": "B",
+      "n_samples": 8192,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/B88f72_pilot_s41",
+      "random_gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/B88f72_random_n2048_s61"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 1.7968816384673119,
+      "acc": 0.593994140625
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_binary",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ]
+      ]
+    },
+    "recomputed_bits": 33071.13997269716,
+    "bits_error": 0.00034569249692140147
+  },
+  {
+    "name": "B88f72_capacity_n8192_s62",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "dim": 88,
+      "mlp_dim": 72,
+      "levels": 2,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "seed": 62,
+      "phase": "capacity",
+      "task": "capacity",
+      "role": "B",
+      "n_samples": 8192,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/B88f72_pilot_s41",
+      "random_gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/B88f72_random_n2048_s62"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 1.8798533529043198,
+      "acc": 0.5718994140625
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_binary",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ]
+      ]
+    },
+    "recomputed_bits": 32090.533971935696,
+    "bits_error": 0.0010343841604480986
+  },
+  {
+    "name": "B88f72_capacity_n8192_s62",
+    "kind": "capacity_continuation",
+    "epochs": 1064,
+    "bits_error": 0.0003345422737766057,
+    "final_bits": 32316.361428762473,
+    "boundary": {
+      "kind": "full_width_binary",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ]
+      ]
+    },
+    "primary_trace_prefix_identical": true,
+    "cpu_bits_error": -0.18595472941888147,
+    "cpu_train_eval": {
+      "loss": 1.8607612177729607,
+      "acc": 0.57666015625
+    },
+    "cpu_gpu_discrepancy": true,
+    "verification_device": "cuda:0"
+  },
+  {
+    "name": "B88f72_pilot_s41",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "dim": 88,
+      "mlp_dim": 72,
+      "levels": 2,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "seed": 41,
+      "phase": "pilot",
+      "task": "arithmetic",
+      "stop_rule": "learning_gate",
+      "role": "B"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 0.050170761408265103,
+      "acc": 0.9963487972508591
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_binary",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ]
+      ]
+    },
+    "val_eval": {
+      "loss": 0.07021560399597863,
+      "acc": 0.9907646048109966
+    }
+  },
+  {
+    "name": "B88f72_random_n2048_s61",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "dim": 88,
+      "mlp_dim": 72,
+      "levels": 2,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "seed": 61,
+      "phase": "random_gate",
+      "task": "capacity",
+      "role": "B",
+      "n_samples": 2048,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/B88f72_pilot_s41"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 0.05149057414382696,
+      "acc": 0.998046875
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_binary",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ]
+      ]
+    },
+    "recomputed_bits": 13424.786276576839,
+    "bits_error": 4.612572229234502e-05
+  },
+  {
+    "name": "B88f72_random_n2048_s62",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "dim": 88,
+      "mlp_dim": 72,
+      "levels": 2,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "seed": 62,
+      "phase": "random_gate",
+      "task": "capacity",
+      "role": "B",
+      "n_samples": 2048,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/B88f72_pilot_s41"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 0.05044052470475435,
+      "acc": 0.9990234375
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_binary",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ]
+      ]
+    },
+    "recomputed_bits": 13427.888794067401,
+    "bits_error": 5.125666575622745e-05
+  },
+  {
+    "name": "B_confirmation_s101",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "dim": 88,
+      "mlp_dim": 72,
+      "levels": 2,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "role": "B",
+      "phase": "confirmation",
+      "task": "arithmetic",
+      "seed": 101,
+      "stop_rule": "joint99",
+      "selection_sha256": "039d48ceab7338ce6ab0c4de18f86f17144542ee9236a0b3951ac90b6c6bee77"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 0.036070373178142864,
+      "acc": 0.9969931271477663
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_binary",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ]
+      ]
+    },
+    "val_eval": {
+      "loss": 0.04575099004912622,
+      "acc": 0.9939862542955327
+    }
+  },
+  {
+    "name": "B_confirmation_s102",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "dim": 88,
+      "mlp_dim": 72,
+      "levels": 2,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "role": "B",
+      "phase": "confirmation",
+      "task": "arithmetic",
+      "seed": 102,
+      "stop_rule": "joint99",
+      "selection_sha256": "039d48ceab7338ce6ab0c4de18f86f17144542ee9236a0b3951ac90b6c6bee77"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 0.02510005640205239,
+      "acc": 0.998926116838488
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_binary",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ]
+      ]
+    },
+    "val_eval": {
+      "loss": 0.03160597578561593,
+      "acc": 0.9982817869415808
+    }
+  },
+  {
+    "name": "B_confirmation_s103",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "dim": 88,
+      "mlp_dim": 72,
+      "levels": 2,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "role": "B",
+      "phase": "confirmation",
+      "task": "arithmetic",
+      "seed": 103,
+      "stop_rule": "joint99",
+      "selection_sha256": "039d48ceab7338ce6ab0c4de18f86f17144542ee9236a0b3951ac90b6c6bee77"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 1.4625821211903365,
+      "acc": 0.4104381443298969
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_binary",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ]
+      ]
+    },
+    "val_eval": {
+      "loss": 1.508742430775436,
+      "acc": 0.3790807560137457
+    }
+  },
+  {
+    "name": "B_confirmation_s104",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "dim": 88,
+      "mlp_dim": 72,
+      "levels": 2,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "role": "B",
+      "phase": "confirmation",
+      "task": "arithmetic",
+      "seed": 104,
+      "stop_rule": "joint99",
+      "selection_sha256": "039d48ceab7338ce6ab0c4de18f86f17144542ee9236a0b3951ac90b6c6bee77"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 0.038033623465967344,
+      "acc": 0.9972079037800687
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_binary",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ]
+      ]
+    },
+    "val_eval": {
+      "loss": 0.04634676589486525,
+      "acc": 0.9957044673539519
+    }
+  },
+  {
+    "name": "B_confirmation_s105",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "dim": 88,
+      "mlp_dim": 72,
+      "levels": 2,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "role": "B",
+      "phase": "confirmation",
+      "task": "arithmetic",
+      "seed": 105,
+      "stop_rule": "joint99",
+      "selection_sha256": "039d48ceab7338ce6ab0c4de18f86f17144542ee9236a0b3951ac90b6c6bee77"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 1.5048038230319203,
+      "acc": 0.39669243986254293
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_binary",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ]
+      ]
+    },
+    "val_eval": {
+      "loss": 1.5390475820429956,
+      "acc": 0.3711340206185567
+    }
+  },
+  {
+    "name": "B_confirmation_s106",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "dim": 88,
+      "mlp_dim": 72,
+      "levels": 2,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "role": "B",
+      "phase": "confirmation",
+      "task": "arithmetic",
+      "seed": 106,
+      "stop_rule": "joint99",
+      "selection_sha256": "039d48ceab7338ce6ab0c4de18f86f17144542ee9236a0b3951ac90b6c6bee77"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 0.028510587398743712,
+      "acc": 0.9982817869415808
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_binary",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ]
+      ]
+    },
+    "val_eval": {
+      "loss": 0.04013541007984135,
+      "acc": 0.9954896907216495
+    }
+  },
+  {
+    "name": "B_confirmation_s107",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "dim": 88,
+      "mlp_dim": 72,
+      "levels": 2,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "role": "B",
+      "phase": "confirmation",
+      "task": "arithmetic",
+      "seed": 107,
+      "stop_rule": "joint99",
+      "selection_sha256": "039d48ceab7338ce6ab0c4de18f86f17144542ee9236a0b3951ac90b6c6bee77"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 0.7912512734993217,
+      "acc": 0.5481099656357389
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_binary",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ]
+      ]
+    },
+    "val_eval": {
+      "loss": 0.8743523560029125,
+      "acc": 0.43599656357388317
+    }
+  },
+  {
+    "name": "B_confirmation_s108",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "dim": 88,
+      "mlp_dim": 72,
+      "levels": 2,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "role": "B",
+      "phase": "confirmation",
+      "task": "arithmetic",
+      "seed": 108,
+      "stop_rule": "joint99",
+      "selection_sha256": "039d48ceab7338ce6ab0c4de18f86f17144542ee9236a0b3951ac90b6c6bee77"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 0.041717638879297525,
+      "acc": 0.9974226804123711
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_binary",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ]
+      ]
+    },
+    "val_eval": {
+      "loss": 0.05153455966731527,
+      "acc": 0.9952749140893471
+    }
+  },
+  {
+    "name": "B_confirmation_s109",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "dim": 88,
+      "mlp_dim": 72,
+      "levels": 2,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "role": "B",
+      "phase": "confirmation",
+      "task": "arithmetic",
+      "seed": 109,
+      "stop_rule": "joint99",
+      "selection_sha256": "039d48ceab7338ce6ab0c4de18f86f17144542ee9236a0b3951ac90b6c6bee77"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 0.8956809838612875,
+      "acc": 0.6821305841924399
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_binary",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ]
+      ]
+    },
+    "val_eval": {
+      "loss": 0.9665521731491351,
+      "acc": 0.6316580756013745
+    }
+  },
+  {
+    "name": "B_confirmation_s110",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "dim": 88,
+      "mlp_dim": 72,
+      "levels": 2,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "role": "B",
+      "phase": "confirmation",
+      "task": "arithmetic",
+      "seed": 110,
+      "stop_rule": "joint99",
+      "selection_sha256": "039d48ceab7338ce6ab0c4de18f86f17144542ee9236a0b3951ac90b6c6bee77"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 1.318065569572842,
+      "acc": 0.3651202749140893
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_binary",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ],
+        [
+          32,
+          4,
+          88
+        ]
+      ]
+    },
+    "val_eval": {
+      "loss": 1.3711386234899567,
+      "acc": 0.27405498281786944
+    }
+  },
+  {
+    "name": "C80f104_pilot_s41",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "baseline",
+      "dim": 80,
+      "mlp_dim": 104,
+      "seed": 41,
+      "phase": "pilot",
+      "task": "arithmetic",
+      "stop_rule": "learning_gate",
+      "role": "C"
+    },
+    "params": 117360,
+    "train_eval": {
+      "loss": 0.07019696371866666,
+      "acc": 1.0
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "val_eval": {
+      "loss": 0.11630760025732297,
+      "acc": 0.9961340206185567
+    }
+  },
+  {
+    "name": "C80f104_random_n2048_s61",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "baseline",
+      "dim": 80,
+      "mlp_dim": 104,
+      "seed": 61,
+      "phase": "random_gate",
+      "task": "capacity",
+      "role": "C",
+      "n_samples": 2048,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/C80f104_pilot_s41"
+    },
+    "params": 117360,
+    "train_eval": {
+      "loss": 0.002732439315877855,
+      "acc": 1.0
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "recomputed_bits": 13568.84898494272,
+    "bits_error": 1.4523304344038479e-05
+  },
+  {
+    "name": "C88f72_capacity_n16384_s61",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "baseline",
+      "dim": 88,
+      "mlp_dim": 72,
+      "seed": 61,
+      "phase": "capacity",
+      "task": "capacity",
+      "role": "C",
+      "n_samples": 16384,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/C88f72_pilot_s41",
+      "random_gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/C88f72_random_n2048_s61"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 2.0745526999235153,
+      "acc": 0.56353759765625
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "recomputed_bits": 59578.936980883766,
+    "bits_error": 0.0024534369440516457
+  },
+  {
+    "name": "C88f72_capacity_n16384_s62",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "baseline",
+      "dim": 88,
+      "mlp_dim": 72,
+      "seed": 62,
+      "phase": "capacity",
+      "task": "capacity",
+      "role": "C",
+      "n_samples": 16384,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/C88f72_pilot_s41",
+      "random_gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/C88f72_random_n2048_s62"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 2.0875180512666702,
+      "acc": 0.5545654296875
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "recomputed_bits": 59272.47347304024,
+    "bits_error": 0.0004934449825668707
+  },
+  {
+    "name": "C88f72_capacity_n4096_s61",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "baseline",
+      "dim": 88,
+      "mlp_dim": 72,
+      "seed": 61,
+      "phase": "capacity",
+      "task": "capacity",
+      "role": "C",
+      "n_samples": 4096,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/C88f72_pilot_s41",
+      "random_gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/C88f72_random_n2048_s61"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 0.052354777697473764,
+      "acc": 1.0
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "recomputed_bits": 26844.465733339628,
+    "bits_error": 9.159022738458589e-05
+  },
+  {
+    "name": "C88f72_capacity_n4096_s62",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "baseline",
+      "dim": 88,
+      "mlp_dim": 72,
+      "seed": 62,
+      "phase": "capacity",
+      "task": "capacity",
+      "role": "C",
+      "n_samples": 4096,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/C88f72_pilot_s41",
+      "random_gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/C88f72_random_n2048_s62"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 0.05102585069835186,
+      "acc": 0.999755859375
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "recomputed_bits": 26852.318733598542,
+    "bits_error": 5.687599696102552e-05
+  },
+  {
+    "name": "C88f72_capacity_n8192_s61",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "baseline",
+      "dim": 88,
+      "mlp_dim": 72,
+      "seed": 61,
+      "phase": "capacity",
+      "task": "capacity",
+      "role": "C",
+      "n_samples": 8192,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/C88f72_pilot_s41",
+      "random_gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/C88f72_random_n2048_s61"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 0.6495870798826218,
+      "acc": 0.94482421875
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "recomputed_bits": 46630.50699823029,
+    "bits_error": 0.0009771826589712873
+  },
+  {
+    "name": "C88f72_capacity_n8192_s62",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "baseline",
+      "dim": 88,
+      "mlp_dim": 72,
+      "seed": 62,
+      "phase": "capacity",
+      "task": "capacity",
+      "role": "C",
+      "n_samples": 8192,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/C88f72_pilot_s41",
+      "random_gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/C88f72_random_n2048_s62"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 0.6441950537264347,
+      "acc": 0.942626953125
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "recomputed_bits": 46694.23297088129,
+    "bits_error": 0.0003568160827853717
+  },
+  {
+    "name": "C88f72_pilot_s41",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "baseline",
+      "dim": 88,
+      "mlp_dim": 72,
+      "seed": 41,
+      "phase": "pilot",
+      "task": "arithmetic",
+      "stop_rule": "learning_gate",
+      "role": "C"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 0.0541277798692795,
+      "acc": 0.9993556701030928
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "val_eval": {
+      "loss": 0.09478108272519718,
+      "acc": 0.992053264604811
+    }
+  },
+  {
+    "name": "C88f72_random_n2048_s61",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "baseline",
+      "dim": 88,
+      "mlp_dim": 72,
+      "seed": 61,
+      "phase": "random_gate",
+      "task": "capacity",
+      "role": "C",
+      "n_samples": 2048,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/C88f72_pilot_s41"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 0.003824034472927451,
+      "acc": 1.0
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "recomputed_bits": 13565.623714835105,
+    "bits_error": 1.0991501767421141e-05
+  },
+  {
+    "name": "C88f72_random_n2048_s62",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "baseline",
+      "dim": 88,
+      "mlp_dim": 72,
+      "seed": 62,
+      "phase": "random_gate",
+      "task": "capacity",
+      "role": "C",
+      "n_samples": 2048,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/C88f72_pilot_s41"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 0.004741887445561588,
+      "acc": 1.0
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "recomputed_bits": 13562.911790238606,
+    "bits_error": 1.0232664862996899e-05
+  },
+  {
+    "name": "C_confirmation_s101",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "dim": 88,
+      "mlp_dim": 72,
+      "model": "baseline",
+      "role": "C",
+      "phase": "confirmation",
+      "task": "arithmetic",
+      "seed": 101,
+      "stop_rule": "joint99",
+      "selection_sha256": "039d48ceab7338ce6ab0c4de18f86f17144542ee9236a0b3951ac90b6c6bee77"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 0.08567578798716831,
+      "acc": 0.9995704467353952
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "val_eval": {
+      "loss": 0.12391946528785418,
+      "acc": 0.9933419243986255
+    }
+  },
+  {
+    "name": "C_confirmation_s102",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "dim": 88,
+      "mlp_dim": 72,
+      "model": "baseline",
+      "role": "C",
+      "phase": "confirmation",
+      "task": "arithmetic",
+      "seed": 102,
+      "stop_rule": "joint99",
+      "selection_sha256": "039d48ceab7338ce6ab0c4de18f86f17144542ee9236a0b3951ac90b6c6bee77"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 0.04155177784334753,
+      "acc": 1.0
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "val_eval": {
+      "loss": 0.08460332361078754,
+      "acc": 0.9922680412371134
+    }
+  },
+  {
+    "name": "C_confirmation_s103",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "dim": 88,
+      "mlp_dim": 72,
+      "model": "baseline",
+      "role": "C",
+      "phase": "confirmation",
+      "task": "arithmetic",
+      "seed": 103,
+      "stop_rule": "joint99",
+      "selection_sha256": "039d48ceab7338ce6ab0c4de18f86f17144542ee9236a0b3951ac90b6c6bee77"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 0.04380312369963557,
+      "acc": 0.9993556701030928
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "val_eval": {
+      "loss": 0.0864076120746914,
+      "acc": 0.9905498281786942
+    }
+  },
+  {
+    "name": "C_confirmation_s104",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "dim": 88,
+      "mlp_dim": 72,
+      "model": "baseline",
+      "role": "C",
+      "phase": "confirmation",
+      "task": "arithmetic",
+      "seed": 104,
+      "stop_rule": "joint99",
+      "selection_sha256": "039d48ceab7338ce6ab0c4de18f86f17144542ee9236a0b3951ac90b6c6bee77"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 0.04920471441704793,
+      "acc": 0.9997852233676976
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "val_eval": {
+      "loss": 0.1016373673255501,
+      "acc": 0.9929123711340206
+    }
+  },
+  {
+    "name": "C_confirmation_s105",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "dim": 88,
+      "mlp_dim": 72,
+      "model": "baseline",
+      "role": "C",
+      "phase": "confirmation",
+      "task": "arithmetic",
+      "seed": 105,
+      "stop_rule": "joint99",
+      "selection_sha256": "039d48ceab7338ce6ab0c4de18f86f17144542ee9236a0b3951ac90b6c6bee77"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 0.05602935837306518,
+      "acc": 0.998926116838488
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "val_eval": {
+      "loss": 0.1042176131735143,
+      "acc": 0.992053264604811
+    }
+  },
+  {
+    "name": "C_confirmation_s106",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "dim": 88,
+      "mlp_dim": 72,
+      "model": "baseline",
+      "role": "C",
+      "phase": "confirmation",
+      "task": "arithmetic",
+      "seed": 106,
+      "stop_rule": "joint99",
+      "selection_sha256": "039d48ceab7338ce6ab0c4de18f86f17144542ee9236a0b3951ac90b6c6bee77"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 0.09231199656974819,
+      "acc": 0.9995704467353952
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "val_eval": {
+      "loss": 0.15120378720391656,
+      "acc": 0.9918384879725086
+    }
+  },
+  {
+    "name": "C_confirmation_s107",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "dim": 88,
+      "mlp_dim": 72,
+      "model": "baseline",
+      "role": "C",
+      "phase": "confirmation",
+      "task": "arithmetic",
+      "seed": 107,
+      "stop_rule": "joint99",
+      "selection_sha256": "039d48ceab7338ce6ab0c4de18f86f17144542ee9236a0b3951ac90b6c6bee77"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 0.06469796828387939,
+      "acc": 0.9997852233676976
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "val_eval": {
+      "loss": 0.10836027035188839,
+      "acc": 0.9914089347079038
+    }
+  },
+  {
+    "name": "C_confirmation_s108",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "dim": 88,
+      "mlp_dim": 72,
+      "model": "baseline",
+      "role": "C",
+      "phase": "confirmation",
+      "task": "arithmetic",
+      "seed": 108,
+      "stop_rule": "joint99",
+      "selection_sha256": "039d48ceab7338ce6ab0c4de18f86f17144542ee9236a0b3951ac90b6c6bee77"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 0.05671594504433399,
+      "acc": 1.0
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "val_eval": {
+      "loss": 0.09656547296702657,
+      "acc": 0.9959192439862543
+    }
+  },
+  {
+    "name": "C_confirmation_s109",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "dim": 88,
+      "mlp_dim": 72,
+      "model": "baseline",
+      "role": "C",
+      "phase": "confirmation",
+      "task": "arithmetic",
+      "seed": 109,
+      "stop_rule": "joint99",
+      "selection_sha256": "039d48ceab7338ce6ab0c4de18f86f17144542ee9236a0b3951ac90b6c6bee77"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 0.06904748461090822,
+      "acc": 0.9993556701030928
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "val_eval": {
+      "loss": 0.11008616774967037,
+      "acc": 0.9901202749140894
+    }
+  },
+  {
+    "name": "C_confirmation_s110",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "dim": 88,
+      "mlp_dim": 72,
+      "model": "baseline",
+      "role": "C",
+      "phase": "confirmation",
+      "task": "arithmetic",
+      "seed": 110,
+      "stop_rule": "joint99",
+      "selection_sha256": "039d48ceab7338ce6ab0c4de18f86f17144542ee9236a0b3951ac90b6c6bee77"
+    },
+    "params": 117832,
+    "train_eval": {
+      "loss": 0.062355462116064485,
+      "acc": 0.9997852233676976
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "val_eval": {
+      "loss": 0.11087509149947937,
+      "acc": 0.9935567010309279
+    }
+  }
+]

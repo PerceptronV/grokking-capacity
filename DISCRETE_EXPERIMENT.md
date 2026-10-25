@@ -1,8 +1,23 @@
 # Discrete latent grokking experiment
 
-Branch: `idea/discrete`. Registered 2026-10-24 before new training.
+Branch: `idea/discrete`. Initial registration: 2026-10-24. The p97 dropout rematch was registered 2026-10-25 before its training.
 
-Latest follow-up: the fixed-A dropout rerun and local capacity calibration are
+Latest result: the capacity-matched p97 A/B/C rerun with dropout 0.2 is complete
+across ten fresh seeds per model. A and binary B match the fixed dataset within
+10% on both capacity seeds; B/C have exactly 117,832 parameters. Sustained
+held-out 99% success is A 9/10, B 5/10, C 10/10. C is fastest on every paired
+seed at both 95% and 99%. Median updates to sustained 99% across all ten seeds
+are A 8,310, B >30,215 (a censoring lower bound), C 2,965. The minimum observed
+paper-style delay is zero for all three models, with undefined delays reported
+separately. Using eval-mode training accuracy instead, the minima are
+A 0, B 0, C 140 updates. A still has positive eval-mode delay on 7/9 defined
+runs; a zero minimum is not a claim that every seed has zero delay.
+See the [completed results](#completed-p97-capacity-matched-abc-with-dropout-02),
+[all thirty outcomes](reports/p97_dropout_match/confirmation_runs.csv),
+[speed comparison](reports/p97_dropout_match/speed_comparison.png), and
+[capacity evidence](reports/p97_dropout_match/selection.json).
+
+Earlier fixed-A follow-up: the fixed-A dropout rerun and local capacity calibration are
 complete. Across ten p97 seeds at dropout 0.2, four delays are observed and all
 are zero; six runs never reach online training 99% within 5,000 epochs. Five
 reach held-out 99% at least once, and four finish with both accuracies >=99%.
@@ -2610,8 +2625,8 @@ state against the original GrokkingTrainer for continuous and binary models.
 
 Artifacts will be kept under `results/discrete/p97-dropout-match-v1`, with
 source snapshots, immutable stage configurations, initial/final checkpoints
-and independent final audits. Results are pending; old dropout-free matching
-or the earlier under-capacity A dropout experiment cannot substitute for this run.
+and independent final audits. The completed results are recorded below. Old dropout-free matching
+and the earlier under-capacity A dropout experiment do not substitute for this run.
 
 Matching diagnostic recorded before confirmation: binary width 88/FF72,
 seed 62, N=8,192 stopped at epoch 864 with 32,090.53 bits and 1.339%
@@ -2653,4 +2668,184 @@ is -9.31e-10 on CPU versus +1.86e-9 on GPU. Its independently reloaded GPU
 checkpoint reproduces the saved accuracy and information. The continuation
 checkpoint also has a small CPU information difference (0.186 bits); its GPU
 recheck agrees. No accuracy tolerance is relaxed; these discrepancies are
-recorded in the audit artifacts. Confirmation outcomes are still pending.
+recorded in the audit artifacts. Confirmation outcomes are recorded below.
+
+
+## Completed p97 capacity-matched A/B/C with dropout 0.2
+
+All thirty fresh arithmetic runs (seeds 101–110) are complete. The selection
+was frozen and committed before these seeds ran; no architecture or optimizer
+was changed after confirmation started. Each model used the same original
+AdamW implementation, learning rate 0.001, weight decay 1, betas (0.9, 0.98),
+batch size 512, dropout 0.2, and a 5,000-epoch ceiling. The fixed modular-division
+training set is 4,656 examples per seed: one epoch is exactly ten optimizer
+updates, and the ceiling is 50,000 updates. A/B/C share each seed's training
+and held-out data; B/C also share identical initial weights. Speed below means
+optimizer updates, not wall-clock time on shared GPUs.
+
+A is the ordinary width-32/FF128 transformer (39,264 parameters). B is the
+width-88/FF72 full-width binary transformer (117,832 parameters), with fixed
+±1 activations after both blocks and the RMS-clipped STE. C is the ordinary
+continuous width-88/FF72 transformer, also exactly 117,832 parameters. It has
+no quantizers or compression adapters. Dropout operates inside each block;
+binary boundaries remain exactly ±1 in both train and eval modes.
+
+The target is 30,866.2844 bits. Accepted capacities are A
+31,288.33/31,254.55 and B 33,071.14/32,316.36 bits on seeds 61/62. Both models
+match the dataset and each other within 10% on both seeds. The registered
+convergence extension for B seed 62 is documented above and retained beside
+the primary measurement. C demonstrates at least 59,578.93/59,272.47 bits on
+the same grid. Those are lower bounds because its maximum occurs at the
+largest tested dataset; establishing excess capacity does not require locating
+C's exact upper capacity. These remain empirical, protocol-dependent estimates.
+
+### Learning speed and success
+
+Thresholds require three consecutive held-out evaluations; time is the first
+epoch of that window. The arithmetic stopping rule additionally requires the
+current online training accuracy to reach 99%.
+
+| Model | Sustained 95% | Sustained 99% | Median updates to 95%, all ten seeds | Median updates to 99%, all ten seeds |
+|---|---:|---:|---:|---:|
+| A | 10/10 | 9/10 | 5,275 | 8,310 |
+| B | 5/10 | 5/10 | >30,065 | >30,215 |
+| C | 10/10 | 10/10 | 2,385 | 2,965 |
+
+B's medians are **lower bounds**, not observed crossing times. Five B runs never
+reach even sustained 95% within 50,000 updates. For 99%, B's fifth observed time
+is 10,430 updates and its sixth is unknown but exceeds 50,000, so the ten-seed
+sample median exceeds (10,430 + 50,000)/2 = 30,215. The successful-run-only
+medians are B 8,700 updates to 95% and 9,650 to 99%; these conditional values
+must not replace the all-seed comparison. A's 99% median remains identifiable
+despite one censored run because nine crossings are observed.
+
+C precedes both A and B on every paired seed at both thresholds, including
+seeds where A or B never crosses within budget. A precedes B on 9/10 seeds at
+95%; B precedes A on the other seed (106). At 99%, A precedes B on seven seeds,
+B precedes A on two (101 and 106), and neither reaches the threshold on seed
+109. A uses 2.21× C's median updates to 95% and 2.80× to 99%. B's median lower
+bounds are approximately 5.70× A's median at 95% and 3.64× at 99%; those
+bounds retain all five failures instead of conditioning on successful runs.
+
+| Seed | A: 95% / 99% updates | B: 95% / 99% updates | C: 95% / 99% updates |
+|---:|---:|---:|---:|
+| 101 | 5,370 / 12,080 | 8,920 / 9,960 | 1,730 / 2,640 |
+| 102 | 3,900 / 5,380 | 5,670 / 6,400 | 3,360 / 4,270 |
+| 103 | 3,830 / 4,010 | >50,000 / >50,000 | 2,500 / 3,120 |
+| 104 | 5,180 / 7,690 | 10,130 / 10,430 | 2,700 / 2,890 |
+| 105 | 4,720 / 6,010 | >50,000 / >50,000 | 2,760 / 3,150 |
+| 106 | 11,090 / 13,180 | 8,230 / 8,710 | 1,820 / 2,080 |
+| 107 | 6,100 / 8,930 | >50,000 / >50,000 | 2,270 / 2,560 |
+| 108 | 3,880 / 5,150 | 8,700 / 9,650 | 2,760 / 3,120 |
+| 109 | 22,740 / >50,000 | >50,000 / >50,000 | 2,090 / 3,040 |
+| 110 | 9,260 / 14,840 | >50,000 / >50,000 | 2,150 / 2,520 |
+
+The final unsuccessful runs are A seed 109 (93.96% held-out accuracy), and B
+seeds 103/105/107/109/110 (37.91%, 37.11%, 43.60%, 63.17%, 27.41%). A109 had
+earlier reached sustained 95%. These are learning failures within the stated
+budget, not successful zero-delay generalization.
+
+### Grokking delay and the requested minimum across ten seeds
+
+The primary paper-style delay is
+`max(0, first held-out 98% epoch - first online training 99% epoch)`.
+Online training accuracy includes dropout and parameter changes during the
+epoch. The secondary measure substitutes end-of-epoch eval-mode training
+accuracy, with dropout disabled, and leaves held-out evaluation unchanged.
+Both metrics were registered before the confirmation runs.
+
+| Model | Primary: positive / zero / undefined seeds | Minimum observed primary delay (updates) | Eval-mode: positive / zero / undefined seeds | Minimum observed eval-mode delay (updates) |
+|---|---:|---:|---:|---:|
+| A | 0 / 9 / 1 | 0 | 7 / 2 / 1 | 0 |
+| B | 0 / 5 / 5 | 0 | 0 / 5 / 5 | 0 |
+| C | 3 / 7 / 0 | 0 | 10 / 0 / 0 | 140 |
+
+The requested online/minimum statistic is zero for A, B **and C**. It does not
+separate A/B from C in this experiment. With eval-mode training accuracy, the
+minimum is zero for A/B and 140 updates for C; all ten C runs have a positive
+eval-mode delay. A nevertheless has a positive eval-mode delay in seven of
+nine defined runs, up to 5,200 updates. Thus a zero minimum does not establish
+that A never has delayed generalization. B's five successful runs have zero
+delay under both measurements; the five failures have undefined delays and
+are never imputed as zero.
+
+| Seed | A primary / eval-mode delay, updates | B primary / eval-mode delay, updates | C primary / eval-mode delay, updates |
+|---:|---:|---:|---:|
+| 101 | 0 / 5,200 | 0 / 0 | 0 / 280 |
+| 102 | 0 / 0 | 0 / 0 | 240 / 770 |
+| 103 | 0 / 0 | undefined / undefined | 0 / 480 |
+| 104 | 0 / 430 | 0 / 0 | 30 / 220 |
+| 105 | 0 / 310 | undefined / undefined | 0 / 290 |
+| 106 | 0 / 460 | 0 / 0 | 0 / 140 |
+| 107 | 0 / 320 | undefined / undefined | 0 / 220 |
+| 108 | 0 / 180 | 0 / 0 | 40 / 460 |
+| 109 | undefined / undefined | undefined / undefined | 0 / 360 |
+| 110 | 0 / 1,330 | undefined / undefined | 0 / 340 |
+
+### Development checks and reproducibility
+
+Every capacity recipe first passed its own arithmetic gate at dropout 0.2.
+On 2,048 random labels, selected A and C reached 100% eval-mode accuracy on
+both capacity seeds. Selected B reached 99.8047% and 99.9023%, passing the
+registered 99% criterion on both seeds. Passing a development gate did not
+guarantee confirmation success. All attempted gates are retained:
+
+| Development recipe | Seed | Arithmetic gate | Optimizer updates | Final held-out accuracy |
+|---|---:|---|---:|---:|
+| A32f128 | 41 | passed | 5,120 | 99.21% |
+| B72f62 | 41 | failed within budget | 50,000 | 90.29% |
+| B80f104 | 41 | failed within budget | 50,000 | 98.11% |
+| B80f104 | 42 | passed | 13,520 | 99.18% |
+| B88f128 | 41 | passed | 3,390 | 99.36% |
+| B88f48 | 41 | failed within budget | 50,000 | 81.46% |
+| B88f72 | 41 | passed | 4,970 | 99.08% |
+| C80f104 | 41 | passed | 2,280 | 99.61% |
+| C88f72 | 41 | passed | 3,040 | 99.21% |
+
+The width-88/FF128 binary candidate was over capacity (40,611.92 bits on its
+first sweep). Width-88/FF72 was accepted from learning gates and capacity,
+before seeing any confirmation outcomes. Unselected candidates and all failed
+attempts remain in the report and provenance.
+
+The report preserves initial/final checkpoints, source hashes, frozen stage
+configurations, the selection commit, both calibration seeds, all thirty
+confirmation traces, and the continuation's exact replay proof. The common
+arithmetic loop passed CPU parity tests against the original GrokkingTrainer
+for both continuous and binary models, including identical final weights and
+RNG state. An independent NumPy implementation verifies all thirty first
+crossings, sustained windows, delay counts, censoring bounds and medians.
+Checkpoint audits recreate every dataset and initialization, check hard binary
+boundaries with dropout on/off, and independently recompute final metrics. All
+69 final checkpoints (68 primary runs plus the continuation) and 68 initial
+checkpoints pass their checks; all ten B/C initial-weight and dataset pairings
+are verified. Thirty targeted model/protocol tests passed. The largest capacity
+error after independent verification is 0.002654 bits.
+CPU/GPU numerical discrepancies are retained and checked on GPU rather than
+hidden by relaxed accuracy tolerances; see the audit artifacts for exact cases.
+
+This rerun uses one common protocol across A/B/C. Comparison with the earlier
+zero-dropout experiment is not a dropout-only causal ablation: capacity
+rematching changes architecture sizes, and the earlier experiment also used a
+different optimizer implementation, shuffling and stopping protocol. Neither
+finite-budget failure nor a zero minimum over ten seeds establishes that a
+model can never grok.
+
+Artifacts: [summary](reports/p97_dropout_match/summary.json),
+[capacity cells](reports/p97_dropout_match/capacity_cells.csv),
+[all arithmetic outcomes](reports/p97_dropout_match/arithmetic_runs.csv),
+[confirmation outcomes](reports/p97_dropout_match/confirmation_runs.csv),
+[frozen selection](reports/p97_dropout_match/selection.json),
+[stage provenance](reports/p97_dropout_match/provenance.json),
+[checkpoint audits](reports/p97_dropout_match/checkpoint_audits.json),
+[independent metric checks](reports/p97_dropout_match/independent_metrics_validation.json),
+[learning curves](reports/p97_dropout_match/confirmation_accuracy.png),
+[speed comparison](reports/p97_dropout_match/speed_comparison.png), and
+[capacity curves](reports/p97_dropout_match/capacity_curves.png).
+Each plot also has a PDF export in the same directory.
+
+Recompute the report and audits with:
+
+```bash
+OMP_NUM_THREADS=2 PYTHONPATH=src python scripts/analyze_p97_dropout_match.py --require-complete --audit --plots
+python scripts/verify_p97_dropout_results.py
+```

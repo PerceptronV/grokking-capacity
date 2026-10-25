@@ -1,0 +1,16 @@
+{
+  "checkpoints_audited": 69,
+  "all_passed": true,
+  "max_capacity_bits_error": 0.0026534783974057063,
+  "max_abs_cpu_bits_error": 0.607434599660337,
+  "initial_weights_recreated": true,
+  "datasets_recreated": true,
+  "binary_train_eval_boundaries_verified": true,
+  "BC_pairing_verified": 10,
+  "analysis_sha256": "4b472eeaf0be998a37946ce25abca833bbaf1dbdca328b1c85650841caaa36bb",
+  "cpu_gpu_discrepancies": [
+    "B88f72_capacity_n4096_s61",
+    "B88f72_capacity_n8192_s62"
+  ],
+  "note": "CPU differences, if present, are retained and independently verified again on GPU; no accuracy tolerance is relaxed."
+}

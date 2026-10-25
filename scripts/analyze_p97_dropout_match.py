@@ -136,6 +136,18 @@ def audit_job(path,s):
     return result
 
 
+
+def censor_bound(trace,threshold):
+    # Times name the first epoch of a three-epoch success window. A trailing
+    # unconfirmed streak moves the known censoring boundary back by 1–2 epochs.
+    trailing=0
+    for r in reversed(trace):
+        if r['val_acc']<threshold:break
+        trailing+=1
+    assert trailing<3
+    return 10*(len(trace)-trailing)
+
+
 def distributions(values):
     observed=[v for v in values if v is not None]
     return dict(total=len(values),observed=len(observed),missing=len(values)-len(observed),
@@ -166,9 +178,12 @@ def build(require_complete=False):
                 for artifact in extension.iterdir():
                     if artifact.is_file():files[str(artifact)]=sha(artifact)
         else:
+            trace=rows(p/'trace.jsonl')
             arithmetic.append({**base,**s['metrics'],'final_train_online':s['final']['train_online_acc'],
                 'final_train_eval':s['final']['train_eval_acc'],'final_val':s['final']['val_acc'],
-                'joint_stop_reached':s['epochs']<c['epochs'],'learning_gate_passed':s['learning_gate_passed'],
+                'joint_stop_reached':s['final']['train_online_acc']>=.99 and all(r['val_acc']>=.99 for r in trace[-3:]),'learning_gate_passed':s['learning_gate_passed'],
+                'val95_censor_updates':censor_bound(trace,.95) if s['metrics']['val_95_sustained_epoch'] is None else None,
+                'val99_censor_updates':censor_bound(trace,.99) if s['metrics']['val_99_sustained_epoch'] is None else None,
                 'val95_updates':None if s['metrics']['val_95_sustained_epoch'] is None else 10*s['metrics']['val_95_sustained_epoch'],
                 'val99_updates':None if s['metrics']['val_99_sustained_epoch'] is None else 10*s['metrics']['val_99_sustained_epoch']})
     maxima=[]
@@ -198,6 +213,10 @@ def build(require_complete=False):
             for speed in ('val95_updates','val99_updates'):
                 times=sorted(r[speed] for r in rr if r[speed] is not None)
                 aggregates[role][speed]['median_all_ten']=float(np.mean(times[4:6])) if len(rr)==10 and len(times)>=6 else None
+                bounds=[r[speed.replace('_updates','_censor_updates')] for r in rr if r[speed] is None]
+                aggregates[role][speed]['median_all_ten_lower_bound']=float(np.median(times+bounds)) if len(rr)==10 else None
+                aggregates[role][speed]['censor_bounds_updates']=bounds
+                aggregates[role][speed]['median_is_identified']=len(rr)==10 and len(times)>=6
                 aggregates[role][speed]['right_censored_at_updates']=50000
             aggregates[role]['ever_held99']=sum(r['val_acc_99_epoch'] is not None for r in rr)
             aggregates[role]['final_held99']=sum(r['final_val']>=.99 for r in rr)
@@ -233,11 +252,19 @@ def build(require_complete=False):
     summary=dict(target_bits=float(TARGET),completed_jobs=len(all_jobs),capacity_cells=len(capacity),
                  arithmetic_runs=len(arithmetic),selection=selection,capacity_maxima=maxima,
                  aggregates=aggregates,pairing=pairing,paired_speeds=paired_speeds,
-                 notes=['Missing threshold crossings are censored, never imputed as zero.',
+                 notes=['Unobserved validation crossings are right-censored; delays requiring missing crossings remain undefined, never zero-imputed.',
                         'Observed-only medians are conditional on reaching the threshold.',
                         'Paper delay uses dropout-active online train99 and held-out eval98.',
                         'Each epoch is ten optimizer updates; shared GPU wall time is not a model speed metric.'])
     REPORT.mkdir(parents=True,exist_ok=True)
+    stages={}
+    for stage in sorted((RUN/'stages').iterdir()):
+        state=read(stage/'controller.json')
+        if require_complete:assert state['phase']=='complete' and not state['errors']
+        stages[stage.name]={'jobs':read(stage/'jobs.json'),'phase':state['phase'],
+                            'completed':state['completed'],'errors':state['errors']}
+    atomic_json(REPORT/'provenance.json',dict(source_manifest=frozen,stages=stages,
+        registration_sha256=sha(RUN/'registration.yaml'),selection_sha256=sha(RUN/'selection.json') if selection else None))
     numeric=RUN/'diagnostics/cpu_gpu_quantization_audit.json'
     if numeric.exists():(REPORT/numeric.name).write_bytes(numeric.read_bytes())
     csv_write(REPORT/'capacity_cells.csv',capacity);csv_write(REPORT/'capacity_maxima.csv',maxima)
@@ -260,6 +287,25 @@ def plots(all_jobs,summary):
     axes[0].set_ylabel('Held-out accuracy');axes[-1].legend(title='Seed',fontsize=6,ncol=2)
     fig.suptitle('p=97 modular division · dropout 0.2 · capacity-matched A/B, continuous C')
     fig.tight_layout();fig.savefig(REPORT/'confirmation_accuracy.png',dpi=180);fig.savefig(REPORT/'confirmation_accuracy.pdf');plt.close(fig)
+    if len(summary['pairing'])==10:
+        fig,axes=plt.subplots(1,2,figsize=(9,4),sharey=True)
+        colors=plt.get_cmap('tab10')
+        for ax,threshold in zip(axes,(95,99)):
+            for index,seed in enumerate(range(101,111)):
+                group={s['config']['role']:s for p,s in all_jobs if s['config']['phase']=='confirmation' and s['config']['seed']==seed}
+                times=[group[role]['metrics'][f'val_{threshold}_sustained_epoch'] for role in 'ABC']
+                values=[50000 if value is None else value*10 for value in times]
+                offset=(index-4.5)*.018;x=np.arange(3)+offset
+                ax.plot(x,values,color=colors(index),alpha=.5,lw=.7,label=str(seed))
+                for xx,yy,observed in zip(x,values,times):
+                    ax.scatter(xx,yy,color=colors(index),marker='^' if observed is None else 'o',s=24)
+            ax.set(xticks=[0,1,2],xticklabels=['A','B binary','C continuous'],yscale='log',
+                   title=f'Sustained held-out {threshold}%',ylim=(500,65000))
+            ax.axhline(50000,color='k',ls=':',lw=.7)
+        axes[0].set_ylabel('Optimizer updates (log scale)')
+        axes[1].legend(title='Seed',fontsize=6,ncol=2)
+        fig.suptitle('Matched p=97 comparison · triangles denote no crossing by 50,000 updates')
+        fig.tight_layout();fig.savefig(REPORT/'speed_comparison.png',dpi=180);fig.savefig(REPORT/'speed_comparison.pdf');plt.close(fig)
     if summary['selection']:
         fig,ax=plt.subplots(figsize=(7,4))
         for role,color in zip('ABC',('tab:blue','tab:orange','tab:green')):
