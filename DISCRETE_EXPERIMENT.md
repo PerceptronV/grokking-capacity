@@ -12,6 +12,9 @@ Thus empirical capacity matching did not force A's measured delay to zero.
 See the [p97 results](reports/p97_quantized_v9/confirmation.csv),
 [learning curves](reports/p97_quantized_v9/learning_curves.png), and
 [capacity match](reports/p97_development/accepted_capacity_match.json).
+A later [check of the original paper](reports/paper_p97/provenance.json) confirms
+that these delays are not directly comparable to its baseline: dropout, the
+training-accuracy measurement, seed aggregation, and capacity calibration differ.
 
 Previous follow-up: pre-softmax logit LayerNorm is implemented and tested. Both
 normalized seed-42 pilots completed 120k updates without passing arithmetic
@@ -2306,3 +2309,65 @@ The earlier 48 focused checks passed; the six reporting tests also passed after
 the capacity-axis generalization. Both exported figures were visually checked.
 Report and development artifacts have SHA256 manifests; raw checkpoints remain
 in the ignored results tree. No p97 categorical comparison is claimed here.
+
+
+## Verification against the original p97 paper baseline (2026-10-25)
+
+The published paper reports immediate generalization near its estimated capacity
+threshold and delayed generalization at larger sizes. This is an empirical trend,
+not a theorem that every capacity-matched run must have zero delay. Section 4.3
+reports the minimum delay across ten seeds; a plotted zero alone does not imply
+that every individual seed has zero delay. Reference:
+https://arxiv.org/html/2605.09724v2#S4.SS3 and section 5.3.
+
+`scripts/check_p97_paper.py` independently recomputes crossings from 680 original
+saved traces (68 registered widths, ten seeds each, original host and central
+hyperparameters). The registry is opened read-only. Every trace's modulus,
+training-set size, parameter count, dimension, and first 99% validation epoch
+are checked against the registry; SHA256 hashes are recorded. Missing threshold
+crossings remain null. The [per-width counts](reports/paper_p97/sizes.csv) include:
+
+| Original width | Parameters | Published capacity / dataset (2.16P/K) | Zero delays | Positive delays | Incomplete delays |
+|---|---:|---:|---:|---:|---:|
+| 20 | 16,860 | 1.180 | 0 | 0 | 10 |
+| 22 | 19,954 | 1.396 | 5 | 0 | 5 |
+| 26 | 26,910 | 1.883 | 3 | 0 | 7 |
+| 34 | 43,894 | 3.072 | 9 | 1 | 0 |
+| 54 | 104,274 | 7.297 | 0 | 10 | 0 |
+
+The smallest checked width (20), closest to the published capacity threshold,
+never reaches training 99% on any seed; no successful-generalization inference
+should be drawn from its absence of measured delays. At width 26, exactly the
+same parameter count as our A, the three fully observed delays are all zero.
+The other seven lack a training 99% crossing; five of the ten runs do reach
+held-out 99%. Width 54 is the first size after which all ten seeds at every
+checked larger central-grid width through 250 have positive delays. Its delays
+are 2–25 epochs. This verifies the small-model no-observed-delay trend, without
+turning censored runs into successful examples or a guarantee across settings.
+
+There are material differences from our binary comparison:
+
+- The original modular baseline uses dropout 0.2. Source at its recorded commit
+  `f6b0754`, `src/torch_grokking/experiments/groks.py`, accumulates training accuracy
+  from training-mode minibatch predictions during the epoch; held-out accuracy
+  is measured with dropout off after the epoch. Our discrete experiment uses
+  dropout 0 and evaluates both entire sets at a fixed checkpoint. The numerical
+  99/98 thresholds coincide, but the training-accuracy observables do not.
+- Original evaluations are every epoch, with a 5,000-epoch limit and ten seeds.
+  Ours are every ten epochs, with a 12,000-epoch limit and three fresh seeds.
+- The published capacity convention is 2.16 bits per parameter. Applying that
+  convention to A gives 58,125.6 bits, or 1.883 times the 30,866.284423-bit target,
+  rather than our directly measured 31.6k-bit estimate under the new protocol.
+  This arithmetic is not a validation or transfer of the published constant.
+  The existing internal audit at
+  `docs/papers/2026 Grokking Capacity/submissions/logs/p01a_capacity_provenance.md`
+  records that the historical 2.16 fit could not be recovered from its available
+  records. This verification checks the delay traces, not that missing fit.
+
+The new A's positive first-passage delays remain correct for its three runs.
+Describing them as a direct contradiction of the original paper, or describing
+our protocol as an exact replication of its no-grokking regime, would be too
+strong. Differences in training accuracy measurement and calibration must be
+controlled before such a claim. The present evidence does not identify which
+protocol difference causes the discrepancy, and no new training was run for
+this verification.
