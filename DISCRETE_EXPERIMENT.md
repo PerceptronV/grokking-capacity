@@ -3004,3 +3004,16 @@ duplicate submission, with all training processes left running. The interim
 report explicitly has `complete: false`, no A/B selection and zero
 confirmation runs. Continuous C remains unconstructed until the full
 registered calibration passes.
+
+Selection publication recovery: the Q8 full grid passed every matching and
+convergence check, but the controller failed while writing the selection
+because a NumPy boolean was not JSON serializable. No C had been constructed
+and no confirmation had started. Preserve the partial JSON, exception, old
+controller log/launch and exact planner sources under
+`diagnostics/selection_publication_recovery/`. All training jobs continued
+unchanged. The planner now casts diagnostic values to native JSON types and
+publishes selections, C construction and confirmation bindings atomically.
+A regression test reproduces and protects publication; all40 targeted tests
+pass. No scientific worker, optimizer, architecture or data source changed.
+The validated Q8 A/B selection was then republished from the same immutable
+capacity artifacts, before construction of C.

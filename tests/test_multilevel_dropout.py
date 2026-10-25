@@ -99,3 +99,17 @@ def test_independent_metrics_keep_censoring_and_missing_delays():
     assert agg['val99_updates']['median_all_ten_lower_bound']==27500
     assert agg['paper_delay_updates']['min_observed'] is None
     assert agg['paper_delay_updates']['undefined']==10
+
+
+def test_capacity_diagnostics_can_be_atomically_published(tmp_path):
+    import sys,json
+    from pathlib import Path
+    sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
+    from manage_p97_multilevel import diagnostics,atomic_json
+    np.savez(tmp_path/'trace.npz',bits_trace=np.ones(200),train_loss_trace=np.ones(200),train_acc_trace=np.ones(200))
+    result=dict(epochs=200,final_bits=8192.,config=dict(epochs=5000,n_samples=8192))
+    d=diagnostics(tmp_path,result)
+    assert type(d['entropy_limited']) is bool
+    atomic_json(tmp_path/'selection.json',{'diagnostics':d})
+    assert json.loads((tmp_path/'selection.json').read_text())['diagnostics']==d
+    assert not (tmp_path/'selection.tmp').exists()

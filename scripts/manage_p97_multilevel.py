@@ -80,8 +80,8 @@ def diagnostics(path,s):
             np.testing.assert_array_equal(trace[key][:s['primary_epochs']],primary[key])
     return dict(late_drift=drift,epoch_limit=s['epochs']>=s['config']['epochs'],
                 late_drift_flag=drift is None or drift>.01,
-                entropy_fraction=s['final_bits']/(s['config']['n_samples']*np.log2(99)),
-                entropy_limited=s['final_bits']>=.95*s['config']['n_samples']*np.log2(99))
+                entropy_fraction=float(s['final_bits']/(s['config']['n_samples']*np.log2(99))),
+                entropy_limited=bool(s['final_bits']>=.95*s['config']['n_samples']*np.log2(99)))
 
 
 def capacity_evidence(model,family,strict=True):
@@ -125,7 +125,7 @@ def freeze_ab(family,gate_name):
         evidence={'A':a['evidence'],'B':evidence},evidence_sha256={**a['files_sha256'],**files},
         registration_sha256=sha(RUN/'registration.yaml'),arithmetic_gate=str(gate),
         rule='Fixed dataset first, A/B selected from gates and capacity only; no C constructed yet.')
-    with out.open('x') as f:json.dump(value,f,indent=2);f.write('\n')
+    atomic_json(out,value)
     return value
 
 
@@ -139,7 +139,8 @@ def construct_c(family):
     record=dict(family=family,constructed_at=time.time(),AB_selection_sha256=sha(RUN/f'{family}_AB_selection.json'),
                 model=c,param_count=cp,B_param_count=bp,parameter_relative_difference=cp/bp-1,
                 rule=reg()['C']['scalar' if family=='q8' else 'categorical'])
-    with (RUN/f'{family}_C_construction.json').open('x') as f:json.dump(record,f,indent=2);f.write('\n')
+    assert not (RUN/f'{family}_C_construction.json').exists()
+    atomic_json(RUN/f'{family}_C_construction.json',record)
     stem=f"{family}_C_d{c['dim']}_f{c['mlp_dim']}"
     conf={**reg()['common'],**c,'family':family,'role':'C','phase':'development','task':'arithmetic',
           'seed':41,'stop_rule':'learning_gate','AB_selection_sha256':record['AB_selection_sha256']}
@@ -158,7 +159,8 @@ def confirmation_jobs():
                      C_construction_sha256=sha(RUN/f'{family}_C_construction.json'),C_evidence=evidence,
                      C_exceeds_target={seed:e['final_bits']>1.1*TARGET for seed,e in evidence.items()},
                      C_evidence_sha256=files,frozen_at=time.time())
-        with (RUN/f'{family}_confirmation_binding.json').open('x') as f:json.dump(binding,f,indent=2);f.write('\n')
+        assert not (RUN/f'{family}_confirmation_binding.json').exists()
+        atomic_json(RUN/f'{family}_confirmation_binding.json',binding)
         models[family]={'B':selection['models']['B'],'C':c['model']};bindings[family]=sha(RUN/f'{family}_confirmation_binding.json')
     result=[]
     for seed in reg()['confirmation']['seeds']:
