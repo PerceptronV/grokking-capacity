@@ -1,5 +1,126 @@
 [
   {
+    "name": "categorical_C_d42_f240_capacity_n2048_s61",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "dim": 42,
+      "mlp_dim": 240,
+      "model": "baseline",
+      "family": "categorical",
+      "role": "C",
+      "phase": "capacity",
+      "task": "capacity",
+      "seed": 61,
+      "AB_selection_sha256": "03a161e49ddcb8b00a25fb13b94239366c3768787f84baccffc471359974fd76",
+      "n_samples": 2048,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_C_d42_f240_learning_s41"
+    },
+    "params": 83118,
+    "train_eval": {
+      "loss": 0.0063053027261048555,
+      "acc": 1.0
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "recomputed_bits": 13558.292461783765,
+    "bits_error": 2.359520294703543e-06,
+    "cache_key": "20bc2877c3838059e3eccb894e79da43e372eece0215253a6657750bcc8d0b32eeee9c9602af0266b9b2b45586e278249881dfa913a34dd9f92725936dbb0154fd71a60b33b496acc031290ff1e9f8ded9852ec604a12c9c13d76d2cb888c63b77dc698c40f221b288e6621ee6a044efb31874809142cb00d96d1aff9683d215"
+  },
+  {
+    "name": "categorical_C_d42_f240_capacity_n2048_s62",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "dim": 42,
+      "mlp_dim": 240,
+      "model": "baseline",
+      "family": "categorical",
+      "role": "C",
+      "phase": "capacity",
+      "task": "capacity",
+      "seed": 62,
+      "AB_selection_sha256": "03a161e49ddcb8b00a25fb13b94239366c3768787f84baccffc471359974fd76",
+      "n_samples": 2048,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_C_d42_f240_learning_s41"
+    },
+    "params": 83118,
+    "train_eval": {
+      "loss": 0.005489199422299862,
+      "acc": 1.0
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "recomputed_bits": 13560.703752795354,
+    "bits_error": 9.927398423315026e-06,
+    "cache_key": "53f08e1269a2933e9a96d9f2bc8262f133beea53182b2f7719fac115db0ceee2c76b16a1bf3e428b01109f6d0cfda033ca57074f54c5f2e0837e49d1657f3d49673424abe27d77a1fe49c26e8c09e3b3f0d692e9f9031785a73d7db0d19aa9b877dc698c40f221b288e6621ee6a044efb31874809142cb00d96d1aff9683d215"
+  },
+  {
+    "name": "categorical_C_d42_f240_learning_s41",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "dim": 42,
+      "mlp_dim": 240,
+      "model": "baseline",
+      "family": "categorical",
+      "role": "C",
+      "phase": "development",
+      "task": "arithmetic",
+      "seed": 41,
+      "stop_rule": "learning_gate",
+      "AB_selection_sha256": "03a161e49ddcb8b00a25fb13b94239366c3768787f84baccffc471359974fd76"
+    },
+    "params": 83118,
+    "train_eval": {
+      "loss": 0.34279776848468585,
+      "acc": 0.9995704467353952
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "val_eval": {
+      "loss": 0.43521818795155004,
+      "acc": 0.9939862542955327
+    },
+    "cache_key": "b63df79cf7273903c29094d238e37954bc7a777735601cd5a95cbf6180e626a5f0aac3ccb17f29459e5b140afb8cc80bb871e673747592fa8f6c57e131860774355a3488cce90c71e208062803a2888c0f958db650ee5acecb8ff961e2f0f76777dc698c40f221b288e6621ee6a044efb31874809142cb00d96d1aff9683d215"
+  },
+  {
     "name": "categorical_d36_f144_learning_s41",
     "config": {
       "p": 97,
@@ -69,6 +190,219 @@
       "acc": 0.7862972508591065
     },
     "cache_key": "c6f97b0656f5b5db41968d1c2cf9d3b1fb398d9d4f78f24e6591d4c3e1f631c3d38ae947d7ada2d41ff9a5892d005662398ec52b933688c02f86eb96c67fc36fb1726fbdc4a4497f1c211e28675fb8e4e85468911a259b176d664b0518285c8177dc698c40f221b288e6621ee6a044efb31874809142cb00d96d1aff9683d215"
+  },
+  {
+    "name": "categorical_d36_f144_learning_s42",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "categorical",
+      "alphabet": 8,
+      "categorical_temperature": 1.0,
+      "categorical_normalization": "slot_layernorm",
+      "categorical_training_sampling": false,
+      "dim": 36,
+      "mlp_dim": 144,
+      "family": "categorical",
+      "role": "B",
+      "phase": "development",
+      "task": "arithmetic",
+      "seed": 42,
+      "stop_rule": "learning_gate"
+    },
+    "params": 90252,
+    "train_eval": {
+      "loss": 0.9654058107395762,
+      "acc": 0.663659793814433
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_categorical",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          36,
+          8
+        ],
+        [
+          32,
+          4,
+          36,
+          8
+        ],
+        [
+          32,
+          4,
+          36,
+          8
+        ],
+        [
+          32,
+          4,
+          36,
+          8
+        ]
+      ]
+    },
+    "val_eval": {
+      "loss": 1.0314083320578349,
+      "acc": 0.6247852233676976
+    },
+    "cache_key": "ed08811a7baa30658eaf5ad700d8e6b87fe0f7885d5c2d93542c492e955be60ee0af884120422766907a3fc90ced1d8e194d9d5ece0edbef4efe70881eda27875b6626a9dc673f4e29d8eaa98b23cd89641c9c8fccd076a4ff05f79c886c111177dc698c40f221b288e6621ee6a044efb31874809142cb00d96d1aff9683d215"
+  },
+  {
+    "name": "categorical_d42_f16_capacity_n16384_s61",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "categorical",
+      "alphabet": 8,
+      "categorical_temperature": 1.0,
+      "categorical_normalization": "slot_layernorm",
+      "categorical_training_sampling": false,
+      "dim": 42,
+      "mlp_dim": 16,
+      "family": "categorical",
+      "role": "B",
+      "phase": "capacity",
+      "task": "capacity",
+      "seed": 61,
+      "n_samples": 16384,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_learning_s41",
+      "random_gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n2048_s61"
+    },
+    "params": 83118,
+    "train_eval": {
+      "loss": 3.270092912018299,
+      "acc": 0.22625732421875
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_categorical",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          42,
+          8
+        ],
+        [
+          32,
+          4,
+          42,
+          8
+        ],
+        [
+          32,
+          4,
+          42,
+          8
+        ],
+        [
+          32,
+          4,
+          42,
+          8
+        ]
+      ]
+    },
+    "recomputed_bits": 31319.814843017783,
+    "bits_error": 0.000543804038898088,
+    "cache_key": "9f28275daa4132c164585ecf3e9f6c97c89f213345c4ecb79154066dcd72cbacc1ecd6e32911a5840845d941d2b08cc2fb6334a620a653da29a0b54960d7460e2f4a528f7ac308fe5377550a30f22665bdb5b00dc901e0b6078991d59a4301f377dc698c40f221b288e6621ee6a044efb31874809142cb00d96d1aff9683d215"
+  },
+  {
+    "name": "categorical_d42_f16_capacity_n16384_s62",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "categorical",
+      "alphabet": 8,
+      "categorical_temperature": 1.0,
+      "categorical_normalization": "slot_layernorm",
+      "categorical_training_sampling": false,
+      "dim": 42,
+      "mlp_dim": 16,
+      "family": "categorical",
+      "role": "B",
+      "phase": "capacity",
+      "task": "capacity",
+      "seed": 62,
+      "n_samples": 16384,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_learning_s41",
+      "random_gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n2048_s62"
+    },
+    "params": 83118,
+    "train_eval": {
+      "loss": 3.2887546196579933,
+      "acc": 0.2188720703125
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_categorical",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          42,
+          8
+        ],
+        [
+          32,
+          4,
+          42,
+          8
+        ],
+        [
+          32,
+          4,
+          42,
+          8
+        ],
+        [
+          32,
+          4,
+          42,
+          8
+        ]
+      ]
+    },
+    "recomputed_bits": 30878.70590317942,
+    "bits_error": 0.00035278302675578743,
+    "cache_key": "77ba13a85c62d097ebd2347c7cf555527c0c9d4c1e429b7d997c7e79b71c0c0150d352fa5201cc37a2c241183676ea5fff380f2b1b449d2b3f29bb064020c63ff959600ebe851f35e302bbb2fd249014d663a3d83de7f5d55a825fa6498393d977dc698c40f221b288e6621ee6a044efb31874809142cb00d96d1aff9683d215"
   },
   {
     "name": "categorical_d42_f16_capacity_n2048_s61",
@@ -282,6 +616,77 @@
     "cache_key": "c1ffd04784b8034341439ec36876d087305c791e8632ae424d0111a67690f9064ab8491cdbe5b37d8284ceb2faed987c4a539795f76bc21a0e62cd0308a8c215fd4c736992e7f68d05d2e23d1541b634175b4363967b9b2843fb7af85f46c27977dc698c40f221b288e6621ee6a044efb31874809142cb00d96d1aff9683d215"
   },
   {
+    "name": "categorical_d42_f16_capacity_n4096_s62",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "categorical",
+      "alphabet": 8,
+      "categorical_temperature": 1.0,
+      "categorical_normalization": "slot_layernorm",
+      "categorical_training_sampling": false,
+      "dim": 42,
+      "mlp_dim": 16,
+      "family": "categorical",
+      "role": "B",
+      "phase": "capacity",
+      "task": "capacity",
+      "seed": 62,
+      "n_samples": 4096,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_learning_s41",
+      "random_gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n2048_s62"
+    },
+    "params": 83118,
+    "train_eval": {
+      "loss": 0.3507117033004761,
+      "acc": 0.9453125
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_categorical",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          42,
+          8
+        ],
+        [
+          32,
+          4,
+          42,
+          8
+        ],
+        [
+          32,
+          4,
+          42,
+          8
+        ],
+        [
+          32,
+          4,
+          42,
+          8
+        ]
+      ]
+    },
+    "recomputed_bits": 25081.39145194001,
+    "bits_error": 0.00010523455421207473,
+    "cache_key": "f84ed4f42f2dabfcbb626f758eaf06f5b0603c079e51f5dfd42ceb085b2102d1e209949fc4ada31b6597c0b58d523e12ba53e91f6980564646c4e1a51e0be31f8ba37d278ab90c6d6b6eee3f564434ed42697e2ea9521d337959b99a48d1bc2c77dc698c40f221b288e6621ee6a044efb31874809142cb00d96d1aff9683d215"
+  },
+  {
     "name": "categorical_d42_f16_capacity_n8192_s61",
     "config": {
       "p": 97,
@@ -351,6 +756,77 @@
     "recomputed_bits": 33582.24286856959,
     "bits_error": 9.215086902258918e-05,
     "cache_key": "5205fdc7c4df5fe64ac723294751efa0b0b14dcf59167378ff90ab9b8a101992b7adbfdba900efdb7a23eba988aadc4ba5ee11cb9625645185bd95d29909e2aa7fc4b51105e49cc5cbce57c841ab19dda3ebb3b569f30a87de7717f92e56381977dc698c40f221b288e6621ee6a044efb31874809142cb00d96d1aff9683d215"
+  },
+  {
+    "name": "categorical_d42_f16_capacity_n8192_s62",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "categorical",
+      "alphabet": 8,
+      "categorical_temperature": 1.0,
+      "categorical_normalization": "slot_layernorm",
+      "categorical_training_sampling": false,
+      "dim": 42,
+      "mlp_dim": 16,
+      "family": "categorical",
+      "role": "B",
+      "phase": "capacity",
+      "task": "capacity",
+      "seed": 62,
+      "n_samples": 8192,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_learning_s41",
+      "random_gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n2048_s62"
+    },
+    "params": 83118,
+    "train_eval": {
+      "loss": 1.780502662062645,
+      "acc": 0.572265625
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_categorical",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          42,
+          8
+        ],
+        [
+          32,
+          4,
+          42,
+          8
+        ],
+        [
+          32,
+          4,
+          42,
+          8
+        ],
+        [
+          32,
+          4,
+          42,
+          8
+        ]
+      ]
+    },
+    "recomputed_bits": 33264.71585163046,
+    "bits_error": 0.00019138982315780595,
+    "cache_key": "6d09e5fb0916efe20bc0f119cedc9ce1af84ba3d8468fc002a1a7ca666c01b03464e8b36ee22c6fa35a10d20f4684bdf14a8b50301c8b5ceb66773cd65538bf4008a2b1915bfe54932696a9745b401799e3417057d40c56d3567c3e1967ce35777dc698c40f221b288e6621ee6a044efb31874809142cb00d96d1aff9683d215"
   },
   {
     "name": "categorical_d42_f16_learning_s41",
@@ -1060,6 +1536,291 @@
     "cache_key": "939d6d92f37aadf4565304d8ab7dcfbb4a66b12976b6a7f66fb994d0d4928efe4a7ba238f968b973f5ce44f242111e9a95b2257e1d8317f168bac5b0c7d330827558bd7816464d0e5814a9bf24305ef7ac47a120faaf977fdf27b7871fbc334177dc698c40f221b288e6621ee6a044efb31874809142cb00d96d1aff9683d215"
   },
   {
+    "name": "q8_C_d56_f48_capacity_n2048_s61",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "dim": 56,
+      "mlp_dim": 48,
+      "model": "baseline",
+      "family": "q8",
+      "role": "C",
+      "phase": "capacity",
+      "task": "capacity",
+      "seed": 61,
+      "AB_selection_sha256": "aa96deaf5b9e0a7611b291917af0fa8cea24258309c29ff82f04063abe028a79",
+      "n_samples": 2048,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_C_d56_f48_learning_s41"
+    },
+    "params": 52584,
+    "train_eval": {
+      "loss": 0.02298987563699484,
+      "acc": 1.0
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "recomputed_bits": 13508.995564559284,
+    "bits_error": 2.3576551029691473e-05,
+    "cache_key": "6688ea313d72d1cf11573c7790f01f6f4dbcc7c9229958f1f3b661a9f0091a82bdc5a2605270e2f7fc8f322f18deda6602f49e7a6366b6fc65149f508de203ecc8cf0dfe5e80f38413397c9bfae8d4455c4f4bbbd0294a144561a12933569a5777dc698c40f221b288e6621ee6a044efb31874809142cb00d96d1aff9683d215"
+  },
+  {
+    "name": "q8_C_d56_f48_capacity_n2048_s62",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "dim": 56,
+      "mlp_dim": 48,
+      "model": "baseline",
+      "family": "q8",
+      "role": "C",
+      "phase": "capacity",
+      "task": "capacity",
+      "seed": 62,
+      "AB_selection_sha256": "aa96deaf5b9e0a7611b291917af0fa8cea24258309c29ff82f04063abe028a79",
+      "n_samples": 2048,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_C_d56_f48_learning_s41"
+    },
+    "params": 52584,
+    "train_eval": {
+      "loss": 0.024539394304156303,
+      "acc": 1.0
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "recomputed_bits": 13504.417295586476,
+    "bits_error": 3.219163409085013e-05,
+    "cache_key": "64ebde4d344e8c5d622fe60c1f65ca0eeef590a16664a5073d83bd7f7962288b7cf175954b4602c49b695235db8f139e16b8a0d9ad84a3c057571cac984723f24e3b04950fd321ca58e02fccf44f17de1a59e2e8c437a9bbe764ce9f2e6f88e077dc698c40f221b288e6621ee6a044efb31874809142cb00d96d1aff9683d215"
+  },
+  {
+    "name": "q8_C_d56_f48_capacity_n4096_s61",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "dim": 56,
+      "mlp_dim": 48,
+      "model": "baseline",
+      "family": "q8",
+      "role": "C",
+      "phase": "capacity",
+      "task": "capacity",
+      "seed": 61,
+      "AB_selection_sha256": "aa96deaf5b9e0a7611b291917af0fa8cea24258309c29ff82f04063abe028a79",
+      "n_samples": 4096,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_C_d56_f48_learning_s41",
+      "random_gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_C_d56_f48_capacity_n2048_s61"
+    },
+    "params": 52584,
+    "train_eval": {
+      "loss": 0.40253568813204765,
+      "acc": 0.989501953125
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "recomputed_bits": 24775.149072509656,
+    "bits_error": 0.0004015854501631111,
+    "cache_key": "6fcb8b28426945807e8ea53fd28a81f0acfaec2700f2dbdd8d4549e6c936407ad80f13bb8c6a6ef734675c9de0935141d8320c5263a9766c117c51d168a36beca07c17c89fc084fbc7280956ab66d7861df12b6f7ac55249d7c8bed46829a42c77dc698c40f221b288e6621ee6a044efb31874809142cb00d96d1aff9683d215"
+  },
+  {
+    "name": "q8_C_d56_f48_capacity_n4096_s62",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "dim": 56,
+      "mlp_dim": 48,
+      "model": "baseline",
+      "family": "q8",
+      "role": "C",
+      "phase": "capacity",
+      "task": "capacity",
+      "seed": 62,
+      "AB_selection_sha256": "aa96deaf5b9e0a7611b291917af0fa8cea24258309c29ff82f04063abe028a79",
+      "n_samples": 4096,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_C_d56_f48_learning_s41",
+      "random_gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_C_d56_f48_capacity_n2048_s62"
+    },
+    "params": 52584,
+    "train_eval": {
+      "loss": 0.3313916511833668,
+      "acc": 0.9951171875
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "recomputed_bits": 25195.559028020678,
+    "bits_error": 0.0003534343632054515,
+    "cache_key": "62c58cf30aad8ef1e329725c9234f13132dd71f4566100a7ad39232037f3723b01c70e96780d1c1ef8c5dce91e293767ad8596a7b8213fa9f427da63374260866f1d2db714e5b859975b3fde89d9965b48976171b1e08b4729be3633b4dde3b777dc698c40f221b288e6621ee6a044efb31874809142cb00d96d1aff9683d215"
+  },
+  {
+    "name": "q8_C_d56_f48_capacity_n8192_s61",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "dim": 56,
+      "mlp_dim": 48,
+      "model": "baseline",
+      "family": "q8",
+      "role": "C",
+      "phase": "capacity",
+      "task": "capacity",
+      "seed": 61,
+      "AB_selection_sha256": "aa96deaf5b9e0a7611b291917af0fa8cea24258309c29ff82f04063abe028a79",
+      "n_samples": 8192,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_C_d56_f48_learning_s41",
+      "random_gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_C_d56_f48_capacity_n2048_s61"
+    },
+    "params": 52584,
+    "train_eval": {
+      "loss": 1.6486824974417686,
+      "acc": 0.6993408203125
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "recomputed_bits": 34822.64008310734,
+    "bits_error": 0.0005781729923910461,
+    "cache_key": "2589c30a18496fb0acd272c6d2dadd7bba673333ab958f1a355a3d290ff2d0d320294c3821e62ceb31307a58df3b8fac1d4e26ed27b8830964da4390d8d0ba44bfd70d8d80870c42ca35de74cb9fced3777e3bb23d87495990c73ffd368963ee77dc698c40f221b288e6621ee6a044efb31874809142cb00d96d1aff9683d215"
+  },
+  {
+    "name": "q8_C_d56_f48_capacity_n8192_s62",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "dim": 56,
+      "mlp_dim": 48,
+      "model": "baseline",
+      "family": "q8",
+      "role": "C",
+      "phase": "capacity",
+      "task": "capacity",
+      "seed": 62,
+      "AB_selection_sha256": "aa96deaf5b9e0a7611b291917af0fa8cea24258309c29ff82f04063abe028a79",
+      "n_samples": 8192,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_C_d56_f48_learning_s41",
+      "random_gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_C_d56_f48_capacity_n2048_s62"
+    },
+    "params": 52584,
+    "train_eval": {
+      "loss": 1.706402525305748,
+      "acc": 0.6768798828125
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "recomputed_bits": 34140.47259902446,
+    "bits_error": 8.627761417301372e-05,
+    "cache_key": "4ba1e46e0971533c0664e1b5c309aedff059898b860aff2d7dc5783ef897c381686b42dac8e470954357eb82ccbd8af6da2a445b5cf85ef3ebb34a84033770d9aa6596badd56e6058944978aa520448797239bc7d05f4a1a99fb56471306322f77dc698c40f221b288e6621ee6a044efb31874809142cb00d96d1aff9683d215"
+  },
+  {
+    "name": "q8_C_d56_f48_learning_s41",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "dim": 56,
+      "mlp_dim": 48,
+      "model": "baseline",
+      "family": "q8",
+      "role": "C",
+      "phase": "development",
+      "task": "arithmetic",
+      "seed": 41,
+      "stop_rule": "learning_gate",
+      "AB_selection_sha256": "aa96deaf5b9e0a7611b291917af0fa8cea24258309c29ff82f04063abe028a79"
+    },
+    "params": 52584,
+    "train_eval": {
+      "loss": 0.2228566684673742,
+      "acc": 0.9974226804123711
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "unrestricted_continuous"
+    },
+    "val_eval": {
+      "loss": 0.26984509774499743,
+      "acc": 0.9903350515463918
+    },
+    "cache_key": "adf73da65a09ac0d0c67331303e685c2a9aee7ebd76550425a0913db71243f7fc47435f5f05cf0e34e0e22e91e6acd84c7e7b4dce56d6bbf042df5b9a5dd115c1a4111a4ea128f217490b5b0c17ee569ba573564810ba6cb643a74888843868477dc698c40f221b288e6621ee6a044efb31874809142cb00d96d1aff9683d215"
+  },
+  {
     "name": "q8_d36_f144_learning_s41",
     "config": {
       "p": 97,
@@ -1124,6 +1885,72 @@
       "acc": 0.4372852233676976
     },
     "cache_key": "922732f7f5e5ea947de4ee825dff5abd75b72bbdb713be9fad9af2726ed7cb1c2b9a4cd7bd62d29ee7b8d680e4e3ccaa9de9516c4007be917d60ac0bc7e2e0e9b37b1ef66696483dd9657fe3327f773809bc357aed0875c5b09a2b99432c40fc77dc698c40f221b288e6621ee6a044efb31874809142cb00d96d1aff9683d215"
+  },
+  {
+    "name": "q8_d36_f144_learning_s42",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "levels": 8,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "dim": 36,
+      "mlp_dim": 144,
+      "family": "q8",
+      "role": "B",
+      "phase": "development",
+      "task": "arithmetic",
+      "seed": 42,
+      "stop_rule": "learning_gate"
+    },
+    "params": 48780,
+    "train_eval": {
+      "loss": 0.30254188538416965,
+      "acc": 0.9321305841924399
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_quantized",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          36
+        ],
+        [
+          32,
+          4,
+          36
+        ],
+        [
+          32,
+          4,
+          36
+        ],
+        [
+          32,
+          4,
+          36
+        ]
+      ]
+    },
+    "val_eval": {
+      "loss": 0.3754408420975675,
+      "acc": 0.886168384879725
+    },
+    "cache_key": "fad00262949f08ffe6f9218f7cf88a97377ca41e1b6fc78403c9618293d6c47bcf508428a89b36548c16b210bac9f84262182cb32d09868315d7402419de56ed87bf634f4f112d1d7e86503a9f596e22f424da48f38f998778ea1fb5b784c3ff77dc698c40f221b288e6621ee6a044efb31874809142cb00d96d1aff9683d215"
   },
   {
     "name": "q8_d44_f176_capacity_n2048_s61",
@@ -1323,6 +2150,72 @@
     "cache_key": "bbe41968cf565baba34b8ca32b6a05c4473990c291290c04062fce3e34bca35520daad2c1ece7b6b1ce971b12d5a2804d145be157a5da4b146b447c17bc8c6d50c39ccb8063fd6bab3a8e49cc483cd881d6da85397994f24f11694a5a5c78b7777dc698c40f221b288e6621ee6a044efb31874809142cb00d96d1aff9683d215"
   },
   {
+    "name": "q8_d56_f32_capacity_n16384_s61",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "levels": 8,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "dim": 56,
+      "mlp_dim": 32,
+      "family": "q8",
+      "role": "B",
+      "phase": "capacity",
+      "task": "capacity",
+      "seed": 61,
+      "n_samples": 16384,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f32_learning_s41",
+      "random_gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f32_capacity_n2048_s61"
+    },
+    "params": 47208,
+    "train_eval": {
+      "loss": 3.498058743774891,
+      "acc": 0.21136474609375
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_quantized",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          56
+        ],
+        [
+          32,
+          4,
+          56
+        ],
+        [
+          32,
+          4,
+          56
+        ],
+        [
+          32,
+          4,
+          56
+        ]
+      ]
+    },
+    "recomputed_bits": 25931.36013635251,
+    "bits_error": 0.0009047661878867075,
+    "cache_key": "f2c50358e742065be5ff55c8ec44089400de4681b72a0e08e28291163c6bb018a61563380928520bb7dce264b3dd55e550af27279c16280bab5a323404386e1adef64843ad471b0e79b554f4c63b0f510c6bb3c5d7e0664c10f9114444e505fe77dc698c40f221b288e6621ee6a044efb31874809142cb00d96d1aff9683d215"
+  },
+  {
     "name": "q8_d56_f32_capacity_n2048_s61",
     "config": {
       "p": 97,
@@ -1453,6 +2346,138 @@
     "cache_key": "b8f2766c8eaf2deaef954b7b4a8ede7d256011789a1aa07fe3308886c8c2d786183cd04f5942117248260bdf9df3f0ab8128ac2abbf927ec4f884944c1ea53c0b67f7da53dddb9805799b8ceb01006a0158bb1efa0cf921a387571fcab34c5c277dc698c40f221b288e6621ee6a044efb31874809142cb00d96d1aff9683d215"
   },
   {
+    "name": "q8_d56_f32_capacity_n4096_s61",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "levels": 8,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "dim": 56,
+      "mlp_dim": 32,
+      "family": "q8",
+      "role": "B",
+      "phase": "capacity",
+      "task": "capacity",
+      "seed": 61,
+      "n_samples": 4096,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f32_learning_s41",
+      "random_gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f32_capacity_n2048_s61"
+    },
+    "params": 47208,
+    "train_eval": {
+      "loss": 0.44366835057735443,
+      "acc": 0.990478515625
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_quantized",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          56
+        ],
+        [
+          32,
+          4,
+          56
+        ],
+        [
+          32,
+          4,
+          56
+        ],
+        [
+          32,
+          4,
+          56
+        ]
+      ]
+    },
+    "recomputed_bits": 24532.084698735714,
+    "bits_error": 0.0002367958841205109,
+    "cache_key": "426c7759e64e22fe2dc41dbd8b79876f6afce685b1dccd94ba9086b7a8a27f0d0030f77af13e43bea3b0ad61854df3d43d53cddd435c7622eb2ba6c5266a62025f0fbe60bdee594421df26d987321fae0a2cd7dcc92a1aa196c9d8b4f5eec67d77dc698c40f221b288e6621ee6a044efb31874809142cb00d96d1aff9683d215"
+  },
+  {
+    "name": "q8_d56_f32_capacity_n4096_s62",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "levels": 8,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "dim": 56,
+      "mlp_dim": 32,
+      "family": "q8",
+      "role": "B",
+      "phase": "capacity",
+      "task": "capacity",
+      "seed": 62,
+      "n_samples": 4096,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f32_learning_s41",
+      "random_gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f32_capacity_n2048_s62"
+    },
+    "params": 47208,
+    "train_eval": {
+      "loss": 0.4215674065053463,
+      "acc": 0.9912109375
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_quantized",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          56
+        ],
+        [
+          32,
+          4,
+          56
+        ],
+        [
+          32,
+          4,
+          56
+        ],
+        [
+          32,
+          4,
+          56
+        ]
+      ]
+    },
+    "recomputed_bits": 24662.685340933836,
+    "bits_error": 1.8398302927380428e-05,
+    "cache_key": "e0e5d4767aac0dfd1debdbda6fa8657b1559198b5a5259fe8f1adc6b6f7b7ca98bd165b10337e94e5359da29cb7bd5cba2f8e7a881fbf008e4cb4fab1e4c85afa3d8a9c7941892b44c0a649e6acd399ef42d56d4752636cc59a77ce0321d24dc77dc698c40f221b288e6621ee6a044efb31874809142cb00d96d1aff9683d215"
+  },
+  {
     "name": "q8_d56_f32_capacity_n8192_s61",
     "config": {
       "p": 97,
@@ -1519,6 +2544,78 @@
     "cache_key": "4dc7db499d8a74a6ea01154fee75d58bfbbf3ffe2d0d2bc9febc0b5cbdd1b1f5f157b616c8ecd32d7b37d68a6c2a58c333ac4fdd824b7454200e36cb17b42d4afb61225539921f69dc87e3c83a0cf0dacd8f7717dd65ef65b335dc96f7ac940477dc698c40f221b288e6621ee6a044efb31874809142cb00d96d1aff9683d215"
   },
   {
+    "name": "q8_d56_f32_capacity_n8192_s62",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "levels": 8,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "dim": 56,
+      "mlp_dim": 32,
+      "family": "q8",
+      "role": "B",
+      "phase": "capacity",
+      "task": "capacity",
+      "seed": 62,
+      "n_samples": 8192,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f32_learning_s41",
+      "random_gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f32_capacity_n2048_s62"
+    },
+    "params": 47208,
+    "train_eval": {
+      "loss": 2.060511440038681,
+      "acc": 0.572509765625
+    },
+    "verification_device": "cuda:1",
+    "boundary": {
+      "kind": "full_width_quantized",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          56
+        ],
+        [
+          32,
+          4,
+          56
+        ],
+        [
+          32,
+          4,
+          56
+        ],
+        [
+          32,
+          4,
+          56
+        ]
+      ]
+    },
+    "cpu_bits_error": 0.11381875747611048,
+    "cpu_train_eval": {
+      "loss": 2.0605017319321632,
+      "acc": 0.572509765625
+    },
+    "cpu_gpu_discrepancy": true,
+    "recomputed_bits": 29955.41593162406,
+    "bits_error": 0.0009170602897938807,
+    "cache_key": "a98660e553575d3935b19d336be10a419940099eccf8236115d8c6324f43deb4510856a2afdf9920cd64ef8e77bbabd976dc8e68b8dcaafb78e4a578a48710a378048cb27d1615a73b8a5588555095e202e4211df397e434af177ace11add26477dc698c40f221b288e6621ee6a044efb31874809142cb00d96d1aff9683d215"
+  },
+  {
     "name": "q8_d56_f32_learning_s41",
     "config": {
       "p": 97,
@@ -1583,6 +2680,270 @@
       "acc": 0.9907646048109966
     },
     "cache_key": "e9d4fe242b72ecb8d930d2837b4a90bff6f95733caa2a116cf735ea7f3449824f66ec707cd5ad108a002b87fd16ad25955d9331438ad1c70a237b55c4c81be7903a0f6a64d2081fd26bb7672a4038a79156bf4aada254529a1bf0a33d734f4f077dc698c40f221b288e6621ee6a044efb31874809142cb00d96d1aff9683d215"
+  },
+  {
+    "name": "q8_d56_f40_learning_s41",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "levels": 8,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "dim": 56,
+      "mlp_dim": 40,
+      "family": "q8",
+      "role": "B",
+      "phase": "development",
+      "task": "arithmetic",
+      "seed": 41,
+      "stop_rule": "learning_gate"
+    },
+    "params": 49896,
+    "train_eval": {
+      "loss": 1.677716992565037,
+      "acc": 0.4074312714776632
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_quantized",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          56
+        ],
+        [
+          32,
+          4,
+          56
+        ],
+        [
+          32,
+          4,
+          56
+        ],
+        [
+          32,
+          4,
+          56
+        ]
+      ]
+    },
+    "val_eval": {
+      "loss": 1.7837555990186345,
+      "acc": 0.29016323024054985
+    },
+    "cache_key": "e4ef01b3fbf7c1d84cd9f1b47e8237cce08f99427accadc155e0349804095976328ff3b9010df2e5100057ff34dd9818f49d71caefbb9d1cb2165d6bd2e1d569926faaed1110cb686baa81d4b033efa98c8d185366c2ea26f447c4cba972409977dc698c40f221b288e6621ee6a044efb31874809142cb00d96d1aff9683d215"
+  },
+  {
+    "name": "q8_d56_f40_learning_s42",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "levels": 8,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "dim": 56,
+      "mlp_dim": 40,
+      "family": "q8",
+      "role": "B",
+      "phase": "development",
+      "task": "arithmetic",
+      "seed": 42,
+      "stop_rule": "learning_gate"
+    },
+    "params": 49896,
+    "train_eval": {
+      "loss": 0.0636676879170834,
+      "acc": 0.998926116838488
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_quantized",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          56
+        ],
+        [
+          32,
+          4,
+          56
+        ],
+        [
+          32,
+          4,
+          56
+        ],
+        [
+          32,
+          4,
+          56
+        ]
+      ]
+    },
+    "val_eval": {
+      "loss": 0.09958489910024139,
+      "acc": 0.9903350515463918
+    },
+    "cache_key": "16aaf9e027fa692375127b6f17774f060d84bc858927324670c58f82df4d8de01b3f2fd9e88790d79b0a026f6d424924edd531ecca353bc5dcacb7091c6d6f132dd796d4b2893f1b6bbbc2f653d4ae1bcaafd50d1f53d434c3f5b0454193148777dc698c40f221b288e6621ee6a044efb31874809142cb00d96d1aff9683d215"
+  },
+  {
+    "name": "q8_d56_f48_capacity_n16384_s61",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "levels": 8,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "dim": 56,
+      "mlp_dim": 48,
+      "family": "q8",
+      "role": "B",
+      "phase": "capacity",
+      "task": "capacity",
+      "seed": 61,
+      "n_samples": 16384,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_learning_s41",
+      "random_gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n2048_s61"
+    },
+    "params": 52584,
+    "train_eval": {
+      "loss": 3.312488414347172,
+      "acc": 0.255615234375
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_quantized",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          56
+        ],
+        [
+          32,
+          4,
+          56
+        ],
+        [
+          32,
+          4,
+          56
+        ],
+        [
+          32,
+          4,
+          56
+        ]
+      ]
+    },
+    "recomputed_bits": 30317.707455673124,
+    "bits_error": 0.03562353880261071,
+    "cache_key": "b49e21a2c5f9ecc64f5a86c3528e2053e1a0ae48c1eef58fc5cbc55a1cfce104999223ab5cea83326f77dee98605fa46c84b80d5c7bbb18df2b1ad9c8785c9cedb194d94be0a955a027e9079823025c98938e490d4d887faa825f50d9b1dd4d477dc698c40f221b288e6621ee6a044efb31874809142cb00d96d1aff9683d215"
+  },
+  {
+    "name": "q8_d56_f48_capacity_n16384_s62",
+    "config": {
+      "p": 97,
+      "depth": 2,
+      "heads": 1,
+      "dropout": 0.2,
+      "lr": 0.001,
+      "weight_decay": 1.0,
+      "beta1": 0.9,
+      "beta2": 0.98,
+      "batch_size": 512,
+      "epochs": 5000,
+      "patience": 100,
+      "min_delta": 0.0001,
+      "model": "quantized",
+      "levels": 8,
+      "quantizer_clip": 1.0,
+      "quantizer_surrogate": "rms_clipped",
+      "dim": 56,
+      "mlp_dim": 48,
+      "family": "q8",
+      "role": "B",
+      "phase": "capacity",
+      "task": "capacity",
+      "seed": 62,
+      "n_samples": 16384,
+      "gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_learning_s41",
+      "random_gate_path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n2048_s62"
+    },
+    "params": 52584,
+    "train_eval": {
+      "loss": 3.317598022520542,
+      "acc": 0.249755859375
+    },
+    "verification_device": "cpu",
+    "boundary": {
+      "kind": "full_width_quantized",
+      "train_and_eval_verified": true,
+      "shapes": [
+        [
+          32,
+          4,
+          56
+        ],
+        [
+          32,
+          4,
+          56
+        ],
+        [
+          32,
+          4,
+          56
+        ],
+        [
+          32,
+          4,
+          56
+        ]
+      ]
+    },
+    "recomputed_bits": 30196.931056864327,
+    "bits_error": 5.261374462861568e-05,
+    "cache_key": "7ff4abcd0ba331986ec0dc615b28b75dc6704e09e0f543d665d40019883ccb79f49e052eb0f87abae1da0b307ed1d549ae87013a175bcfa3855584b5cf08e923a2d921883c576e0bb689db9661fa81b7201d7621993ffd2b48f1c59f5380924877dc698c40f221b288e6621ee6a044efb31874809142cb00d96d1aff9683d215"
   },
   {
     "name": "q8_d56_f48_capacity_n2048_s61",

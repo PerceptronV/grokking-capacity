@@ -5,9 +5,10 @@ Branch: `idea/discrete`. Initial registration: 2026-10-24. The p97 dropout remat
 New experiments are running: eight-level scalar quantization and normalized
 categorical one-hot latents, both at p97/dropout0.2. The fixed dataset is
 selected first; A/B must pass learning and capacity gates before C is
-constructed. Candidate calibration is in progress and no confirmation result
-exists yet. See `configs/discrete_p97_multilevel_dropout.yaml`, the prospective
-section at the end of this record, and `reports/p97_multilevel_dropout/`.
+constructed. A/B selections for both families are frozen. Their continuous
+controls are undergoing validation/calibration; no confirmation result exists
+yet. See `configs/discrete_p97_multilevel_dropout.yaml`, the prospective section
+at the end of this record, and `reports/p97_multilevel_dropout/`.
 
 Latest result: the capacity-matched p97 A/B/C rerun with dropout 0.2 is complete
 across ten fresh seeds per model. A and binary B match the fixed dataset within
@@ -3026,3 +3027,45 @@ focused tests pass. Restart only the idle queue controller to load the tested
 planner; preserve its previous launch/log and leave every training process
 running. This is a proactive bookkeeping repair, not a training restart or
 change in selection criteria.
+
+## Frozen eight-level and categorical A/B selections
+
+Both full N2048/4096/8192/16384 sweeps at seeds61/62 passed the registered
+capacity criteria. Every selected maximum is at N8192, with <1% late drift,
+no epoch-cap flag and no entropy-boundary flag. Every selected B passed
+arithmetic and N2048 random-label learning first. The fixed p97 dataset still
+contains4,656 training examples and30,866.284423 label-information bits.
+A is the shared ordinary width32/FF128 transformer (39,264 parameters), with
+measured capacity31,288.330057 and31,254.545389 bits.
+
+| Family | B residual/FF width | B parameters | B capacity seed61 / seed62 (bits) | Constructed ordinary C residual/FF width | C parameters |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Eight-level scalar | 56 / 48 | 52,584 | 33,909.836404 / 32,825.219095 | 56 / 48 | 52,584 |
+| Eight-symbol categorical | 42 / 16 | 83,118 | 33,582.242776 / 33,264.716043 | 42 / 240 | 83,118 |
+
+Each C was constructed strictly after its own A/B selection was frozen.
+Q8 C removes B's parameter-free quantizers and exactly matches its parameter
+shapes and paired initial weights. Categorical B retains **42 categorical
+slots**, each with8 symbols, at each token/block boundary; FF16 is only the
+within-block feedforward hidden width, not a16-coordinate interlayer latent.
+Categorical C remains an ordinary full-width42 continuous transformer. Its
+FF240 accounts for the parameters in B's two learned interface projections.
+Thus that comparison changes parameter allocation as well as discreteness;
+complete categorical B/C initial tensors cannot be identical.
+
+The selected categorical forward is deterministic hard argmax with normalized
+softmax STE, temperature1, per-slot nonaffine LayerNorm and learned one-hot
+re-embedding. The scalar grid is exactly8 evenly spaced values in[-1,1] with
+RMS-clipped STE. No continuous bypass is present in either B. All models use
+dropout0.2 and the same original optimizer protocol. The C models now undergo
+their arithmetic, random-learning and full capacity checks; any lack of
+measured excess C capacity will be reported explicitly and will not resize B.
+The subsequent ten-seed runs201–210 remain unseen at this selection point.
+The same ten new A trajectories will serve both comparisons.
+
+Immutable selection/construction evidence has been copied into
+`reports/p97_multilevel_dropout/{q8,categorical}_{AB_selection,C_construction}.json`.
+`fill_p97_control_slots.py` can fill available worker slots with only the
+already-authorized C calibration cells, after their own arithmetic/random
+gates. It never constructs or resizes a model, reserves slots for pending
+stages, and stops adding calibration jobs once confirmation is submitted.

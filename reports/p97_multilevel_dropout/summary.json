@@ -1,10 +1,234 @@
 {
   "target_bits": 30866.284423090663,
-  "completed_jobs": 33,
+  "completed_jobs": 57,
   "families": {
     "q8": {
-      "AB_selection": null,
-      "C_construction": null,
+      "AB_selection": {
+        "frozen_at": 1792961063.634099,
+        "family": "q8",
+        "target_bits": 30866.284423090663,
+        "models": {
+          "A": {
+            "model": "baseline",
+            "dim": 32,
+            "mlp_dim": 128
+          },
+          "B": {
+            "model": "quantized",
+            "dim": 56,
+            "mlp_dim": 48,
+            "levels": 8,
+            "quantizer_clip": 1.0,
+            "quantizer_surrogate": "rms_clipped"
+          }
+        },
+        "param_counts": {
+          "A": 39264,
+          "B": 52584
+        },
+        "evidence": {
+          "A": {
+            "61": {
+              "final_bits": 31288.33005669216,
+              "param_count": 39264,
+              "winner": "A32f128_capacity_n8192_s61",
+              "grid": [
+                "A32f128_capacity_n16384_s61",
+                "A32f128_capacity_n4096_s61",
+                "A32f128_capacity_n8192_s61",
+                "A32f128_random_n2048_s61"
+              ],
+              "diagnostics": {
+                "late_drift": 0.004487896647539236,
+                "epoch_limit": false,
+                "entropy_fraction": 0.5761307539339601,
+                "late_drift_flag": false,
+                "entropy_limited": false,
+                "largest_dataset_boundary": false
+              },
+              "primary_final_bits": 31288.33005669216
+            },
+            "62": {
+              "final_bits": 31254.54538872341,
+              "param_count": 39264,
+              "winner": "A32f128_capacity_n8192_s62",
+              "grid": [
+                "A32f128_capacity_n16384_s62",
+                "A32f128_capacity_n4096_s62",
+                "A32f128_capacity_n8192_s62",
+                "A32f128_random_n2048_s62"
+              ],
+              "diagnostics": {
+                "late_drift": 0.0037790117378966315,
+                "epoch_limit": false,
+                "entropy_fraction": 0.5755086566154718,
+                "late_drift_flag": false,
+                "entropy_limited": false,
+                "largest_dataset_boundary": false
+              },
+              "primary_final_bits": 31254.54538872341
+            }
+          },
+          "B": {
+            "61": {
+              "final_bits": 33909.83640434841,
+              "param_count": 52584,
+              "winner": "q8_d56_f48_capacity_n8192_s61",
+              "grid": [
+                "q8_d56_f48_capacity_n16384_s61",
+                "q8_d56_f48_capacity_n2048_s61",
+                "q8_d56_f48_capacity_n4096_s61",
+                "q8_d56_f48_capacity_n8192_s61"
+              ],
+              "diagnostics": {
+                "late_drift": 0.0024985405169648534,
+                "epoch_limit": false,
+                "late_drift_flag": false,
+                "entropy_fraction": 0.6244021198324037,
+                "entropy_limited": false,
+                "largest_dataset_boundary": false
+              },
+              "lower_bound_only": false
+            },
+            "62": {
+              "final_bits": 32825.2190947781,
+              "param_count": 52584,
+              "winner": "q8_d56_f48_capacity_n8192_s62",
+              "grid": [
+                "q8_d56_f48_capacity_n16384_s62",
+                "q8_d56_f48_capacity_n2048_s62",
+                "q8_d56_f48_capacity_n4096_s62",
+                "q8_d56_f48_capacity_n8192_s62"
+              ],
+              "diagnostics": {
+                "late_drift": 0.00700190351585972,
+                "epoch_limit": false,
+                "late_drift_flag": false,
+                "entropy_fraction": 0.6044304119413041,
+                "entropy_limited": false,
+                "largest_dataset_boundary": false
+              },
+              "lower_bound_only": false
+            }
+          }
+        },
+        "evidence_sha256": {
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/selection.json": "039d48ceab7338ce6ab0c4de18f86f17144542ee9236a0b3951ac90b6c6bee77",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n16384_s61/summary.json": "bb5adae86bf4cc4e7cc9f9c8ea86c26c47c069323c70cbcd89de0d98053178cf",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n16384_s61/manifest.json": "321141dbd776565842f1b7917d0cd54d101e5a63a9bc3854f55f87ab77de9385",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n16384_s61/model.pt": "32e5c1add6ae21c149e32382589a8cb25c3edb585ec580f7a38fbbc5c90e0ef8",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n16384_s61/model_init.pt": "6c78b0c4f224b7ca7868ea84f365d526d88611f95a403d24a908a635d9d0e2a4",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n16384_s61/trace.npz": "be937a96d111c044b3b53a6087c69c0023af0fae474ac40bbb6ecff837d36cc0",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_pilot_s41/summary.json": "0a4090d62e358772ffad032c2584ef6cc6812572851719b62ddee703bf59576e",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_pilot_s41/manifest.json": "8d339d06b27c8cc8ae4df8e14db1b19748b22bf056b463b896ad4e1bd1dbf9db",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_pilot_s41/model.pt": "af8a47f380ccc9261265a9cd19b9366f92517ba4c1c79547a94217795a1fa1ae",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_pilot_s41/trace.jsonl": "dc099c1227e983423ba67146326b1ff402a9090952f2b25dcc1616eb66031556",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n4096_s61/summary.json": "af150ff7e93cc82774acd21b6bd59d22f78ea0a583b42467efb6d40200c6952b",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n4096_s61/manifest.json": "6459a3ae3620265710bc249c7ea23ff560a50fe0a6f5a4c507030aeebdd24cd5",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n4096_s61/model.pt": "01216c1e603384f7fd24036fb9c88a2ee3d8d3e51aca0a2b71d27b88de590338",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n4096_s61/model_init.pt": "09293a32332df53de7edcde0d994ee2bdcb18122780ce0d002a619b6b998354c",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n4096_s61/trace.npz": "040d21ed8d649bf34d91c726bdb395d6cc363b3f4be4a17a47b4d1ca51efc98a",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s61/summary.json": "8dd34cf4c52260eee9052df886f0fb3a1bd05189b60c0cba9367a3bdaf1091a6",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s61/manifest.json": "cec0649273b9252bbf2e8be9ad681aefcd55e795f47b8fd4cae5a1c6a9277cb0",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s61/model.pt": "a78f3a10d39a2c41deb10ddd8cfad0d82f78c1736b0555fe7c5cd6cf3ce1c330",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s61/model_init.pt": "8a9f5b8761270fd9d57d4cb2b5a35946f269f7b54266f6c64ac8397e9d3c5190",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s61/trace.npz": "d8e14fd7dee80541963b8ebfec512dfd972c90c75b117796786a06d5193f7c4f",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s61/summary.json": "8a1d2cc98ebb47e51fe757b04dcb8df4a2fcf95ddc35586286c6f648682aaa58",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s61/manifest.json": "42eae20c4185d2f607c0b0d8de1fb795eb8bf789ecbe586f96cda0ce50b695a1",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s61/model.pt": "7c6455945cb09baf48caa991b15bb04bf3bf7d5eff699aba741839b877f79c5b",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s61/model_init.pt": "ddf890139d71e66c018f448f468aa0df1dc656ea4d5e4dc4663573e3f8d607b4",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s61/trace.npz": "ced3b97f960fc8becfbfa3d47ec7e5a43aa9134cadbf7e312fe12b0b0cede50a",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n16384_s62/summary.json": "d58ec72410460df6e282ccdda8dd06663866d8855474ec3083bb30f4be77eb64",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n16384_s62/manifest.json": "64b6f8e89c5d2a7a332b394547c912715e8236989a58df08087d8be761a175e5",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n16384_s62/model.pt": "bbdfd1dc00c2f2999bdbe97acdfb91e2a504b466e575aac4dcb46a11be506401",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n16384_s62/model_init.pt": "ca9d634a8c395916e595628e2414b7d3de9fdc48a029d6945f0ad75e3e250e49",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n16384_s62/trace.npz": "e17867e05a2c4d34530906281cdbc065341c43efdd516d5a79c67275aede6a20",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n4096_s62/summary.json": "ea11c1087b3c07cb489b47e551f1875030c15720d127a8dd79c99f9624c61fbe",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n4096_s62/manifest.json": "2912d68e43623c48ad0544658b9556e8e401d81240994eeb1bb9c0151c509ca0",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n4096_s62/model.pt": "f6b74b4ed16581d33a28533ea832c9ae2e44585b8a1991a48da8bc27700e9c47",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n4096_s62/model_init.pt": "99d6e9d074bd5baa6d1b62806f49e11886e606c5085e1c573c29bc1c34398f1c",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n4096_s62/trace.npz": "a1270abb7f52e71c36ea0ff759536404c97c3043ccfef3724c0c999c60d52f95",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s62/summary.json": "1da8c83229b39db06f599c209bcf4b847e822c17f00ce42698f6edc9cbcc7f63",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s62/manifest.json": "fe02bf0205ebd09bae7f91dbb363942ef47455b1a7c48e371a491dfc59c789d6",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s62/model.pt": "701b11610e33059a74a2354b641c1f6b1b0460d9f9270d9f05e5f4e4e8e0627f",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s62/model_init.pt": "798af172e26def0321260c75a1bfdba2d0c7b40b685d09209c773d3f02ef86d9",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s62/trace.npz": "13b73bef1bab661d8308bcd0fad94c857df94db4fa358e4efc369e0fea3d6e79",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s62/summary.json": "87a6f0d2176bc00fdf6049a717e58f0f09377abfd32cab841d723ef168ac6c0c",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s62/manifest.json": "e89597ca2c50ec3b085f6df7310520ea6a6d4c480b2d8e40f30bd51de533f55f",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s62/model.pt": "2c7996d5ce58250c8a9094a0b62dda7de7c11eec838fc7e959f274e556ed5b06",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s62/model_init.pt": "1cb61bf848c462f73f193b49b293720723472f0469dc7d003063e6591a53d4e5",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s62/trace.npz": "a352ac13a54cf9c1a6bf324624598fdad362ceeea4cb9102cdb9f25a35db42de",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n16384_s61/summary.json": "b49e21a2c5f9ecc64f5a86c3528e2053e1a0ae48c1eef58fc5cbc55a1cfce104",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n16384_s61/manifest.json": "1bb7d8b17f807bf19541780096851289e74ecc3af8406e29a351bd2b9fc6d789",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n16384_s61/model.pt": "999223ab5cea83326f77dee98605fa46c84b80d5c7bbb18df2b1ad9c8785c9ce",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n16384_s61/model_init.pt": "db194d94be0a955a027e9079823025c98938e490d4d887faa825f50d9b1dd4d4",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n16384_s61/trace.npz": "1c701adb5d39868ce7767607828ab3cd0b9e808cefeffb2e127a7c06c0d63e67",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n16384_s61/primary_trace.npz": "1c701adb5d39868ce7767607828ab3cd0b9e808cefeffb2e127a7c06c0d63e67",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_learning_s41/summary.json": "2a08b7382031d4e634d1080304a26defc266b5897a59492cc39f9c24ba2b6a98",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_learning_s41/manifest.json": "6dcfdf16fe8f9d52057961f252e7b369204516bfee2a4fe8fc0616a77f793e2b",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_learning_s41/model.pt": "77e34c2e643ca897092962fd6f51ee0733e38eeefbd995ecee547c996dcd2996",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_learning_s41/trace.jsonl": "a4a5c7dd0fad28510471558896e5d28c1ca4fabf534a16b36d880e4f6030c54a",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n2048_s61/summary.json": "d1d5e53d58edfea2c981a145c27c14236d90c0af541e27e961a3359e84d94d9b",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n2048_s61/manifest.json": "dae8b2ebe32ed15a8f07b390a3661dc283cf1d7d0ec6ae09c68e2b646b1c30ee",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n2048_s61/model.pt": "7391e7f025a269fbd800438911a709f5fdd1df2573da6bb5294aa7d4e17b108c",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n2048_s61/model_init.pt": "958d9f00f3dad3963bb33825699a5e56a31832ee86820e641077e8f1811ebc6d",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n2048_s61/trace.npz": "cd464aa38043917094bc3230cea5fe1c9d4bfdc052b53f81ff18a32ef3f1f8f9",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n2048_s61/primary_trace.npz": "cd464aa38043917094bc3230cea5fe1c9d4bfdc052b53f81ff18a32ef3f1f8f9",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n4096_s61/summary.json": "3e18384a75fc32b817869f8615355cef444e44d3ed8e850d646ef0eb9ac89f38",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n4096_s61/manifest.json": "0cc03696d9e3727ba5e88a80be3996cba71d129066c4c7b6758a99d3bd014cbc",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n4096_s61/model.pt": "04bcd08e251c889c8ab90a238454fc164c1a50b8bf89a24716963797bcea5943",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n4096_s61/model_init.pt": "45098cbfd788bb7d47207693cb41cbc615ae59de287b7289e2e99269af0c1116",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n4096_s61/trace.npz": "f481723aec9720854380cace70bb2fe1601df31268d7c03b9fd90728e51b9ca8",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n4096_s61/primary_trace.npz": "f481723aec9720854380cace70bb2fe1601df31268d7c03b9fd90728e51b9ca8",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n8192_s61/summary.json": "fbc054da8d29e9eb093e4230aeabc06d709a9844d44555d89bff49edd298ae00",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n8192_s61/manifest.json": "03f556b9ca5d4a247aa6ca23cf3e7bf60a554e1f84439e9e0b3e3fe4471af330",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n8192_s61/model.pt": "c2667900994d6774366275834c9f5955325bbe296c2b1b06c311ce4c0878e1b1",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n8192_s61/model_init.pt": "df8fd4e8fd2bc910ea1c8a10a6a727e4b26a59dad25eb8f09c4ef975ca160f67",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n8192_s61/trace.npz": "7f7f724326a74ab361a7357d31f3cac124dae5e3ede10afdffd78cba96655d02",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n8192_s61/primary_trace.npz": "7f7f724326a74ab361a7357d31f3cac124dae5e3ede10afdffd78cba96655d02",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n16384_s62/summary.json": "7ff4abcd0ba331986ec0dc615b28b75dc6704e09e0f543d665d40019883ccb79",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n16384_s62/manifest.json": "03376e41133d1408e65318bc8b5ab99664b2abe4c7a74e280b4c0a4d81a14677",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n16384_s62/model.pt": "f49e052eb0f87abae1da0b307ed1d549ae87013a175bcfa3855584b5cf08e923",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n16384_s62/model_init.pt": "a2d921883c576e0bb689db9661fa81b7201d7621993ffd2b48f1c59f53809248",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n16384_s62/trace.npz": "3d1843503dc2cfb078972a1993e086d456192ce4436b03b3582fbdd7f061c3c7",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n16384_s62/primary_trace.npz": "3d1843503dc2cfb078972a1993e086d456192ce4436b03b3582fbdd7f061c3c7",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n2048_s62/summary.json": "df96c5e496471c5d4ea91fa63c1a3e1077b8eaa8868ddd25019a1063dc333c89",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n2048_s62/manifest.json": "bed65246223aa90d0a1418a1522012c2738dbb5bf17abad974489d7d342ff472",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n2048_s62/model.pt": "8be4e41814aa7c0ef51d2653429b45ca2918f78c487490dd737264cacd98639b",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n2048_s62/model_init.pt": "ef458f35f0d394dcf5930b7d1db00ecc9059521855ebf961558f4c02d8c868ff",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n2048_s62/trace.npz": "8b49ed6549517306c542087877ff5f61dc4edbc43323d9ead0b3c4cbb3aa4a81",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n2048_s62/primary_trace.npz": "8b49ed6549517306c542087877ff5f61dc4edbc43323d9ead0b3c4cbb3aa4a81",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n4096_s62/summary.json": "34ba70492ad854b834e50b23d311240fbdb86ba09367c047058196e106944d6d",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n4096_s62/manifest.json": "13ceb288b86e8dcd140846029b0255f5d3fdbabfdb096c1e5b07145592dced44",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n4096_s62/model.pt": "f079e52dbcb5f889ede61385668c6c569ef42edfd84ad2cd7ae5a790d1ecf8cd",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n4096_s62/model_init.pt": "3cd8ffc9cbff9564447f4bbeb067acad9eaf5cfe451f1ec67e2208903e815218",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n4096_s62/trace.npz": "b5cdd3d5afa1ff4ac93b4279441f6397b9102edc2954aed9ae673bcc26f42525",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n4096_s62/primary_trace.npz": "b5cdd3d5afa1ff4ac93b4279441f6397b9102edc2954aed9ae673bcc26f42525",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n8192_s62/summary.json": "6016560b2ae63365c6716dae1296bf1aea8d3245fa616539536ab2912426dc11",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n8192_s62/manifest.json": "7234858e48054a00be07e9385c26e2f403f417b2312bfdd84ff80f91348ca828",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n8192_s62/model.pt": "03627dbf87e7081152a658b13ed5b47a9bcd21a8df2256f4548ffb954edb64d4",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n8192_s62/model_init.pt": "21a4606d4ce0cd47d27d630c6be6d725b0cb32560a05563335284e1f9e14825f",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n8192_s62/trace.npz": "2c5bd7375a432e74e477edcf41677685f2d96a440b5059163de3090dd3c54eed",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_capacity_n8192_s62/primary_trace.npz": "2c5bd7375a432e74e477edcf41677685f2d96a440b5059163de3090dd3c54eed"
+        },
+        "registration_sha256": "7cd000649f58d551c387af13121c057c316a37c4782e181a5a27c8186867e506",
+        "arithmetic_gate": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/q8_d56_f48_learning_s41",
+        "rule": "Fixed dataset first, A/B selected from gates and capacity only; no C constructed yet."
+      },
+      "C_construction": {
+        "family": "q8",
+        "constructed_at": 1792961074.5600467,
+        "AB_selection_sha256": "aa96deaf5b9e0a7611b291917af0fa8cea24258309c29ff82f04063abe028a79",
+        "model": {
+          "dim": 56,
+          "mlp_dim": 48,
+          "model": "baseline"
+        },
+        "param_count": 52584,
+        "B_param_count": 52584,
+        "parameter_relative_difference": 0.0,
+        "rule": "Remove parameter-free quantizers; identical remaining shapes and initial tensors."
+      },
       "confirmation_binding": null,
       "aggregates": {
         "A": {
@@ -166,8 +390,233 @@
       }
     },
     "categorical": {
-      "AB_selection": null,
-      "C_construction": null,
+      "AB_selection": {
+        "frozen_at": 1792961185.1601322,
+        "family": "categorical",
+        "target_bits": 30866.284423090663,
+        "models": {
+          "A": {
+            "model": "baseline",
+            "dim": 32,
+            "mlp_dim": 128
+          },
+          "B": {
+            "model": "categorical",
+            "dim": 42,
+            "mlp_dim": 16,
+            "alphabet": 8,
+            "categorical_temperature": 1.0,
+            "categorical_normalization": "slot_layernorm",
+            "categorical_training_sampling": false
+          }
+        },
+        "param_counts": {
+          "A": 39264,
+          "B": 83118
+        },
+        "evidence": {
+          "A": {
+            "61": {
+              "final_bits": 31288.33005669216,
+              "param_count": 39264,
+              "winner": "A32f128_capacity_n8192_s61",
+              "grid": [
+                "A32f128_capacity_n16384_s61",
+                "A32f128_capacity_n4096_s61",
+                "A32f128_capacity_n8192_s61",
+                "A32f128_random_n2048_s61"
+              ],
+              "diagnostics": {
+                "late_drift": 0.004487896647539236,
+                "epoch_limit": false,
+                "entropy_fraction": 0.5761307539339601,
+                "late_drift_flag": false,
+                "entropy_limited": false,
+                "largest_dataset_boundary": false
+              },
+              "primary_final_bits": 31288.33005669216
+            },
+            "62": {
+              "final_bits": 31254.54538872341,
+              "param_count": 39264,
+              "winner": "A32f128_capacity_n8192_s62",
+              "grid": [
+                "A32f128_capacity_n16384_s62",
+                "A32f128_capacity_n4096_s62",
+                "A32f128_capacity_n8192_s62",
+                "A32f128_random_n2048_s62"
+              ],
+              "diagnostics": {
+                "late_drift": 0.0037790117378966315,
+                "epoch_limit": false,
+                "entropy_fraction": 0.5755086566154718,
+                "late_drift_flag": false,
+                "entropy_limited": false,
+                "largest_dataset_boundary": false
+              },
+              "primary_final_bits": 31254.54538872341
+            }
+          },
+          "B": {
+            "61": {
+              "final_bits": 33582.24277641872,
+              "param_count": 83118,
+              "winner": "categorical_d42_f16_capacity_n8192_s61",
+              "grid": [
+                "categorical_d42_f16_capacity_n16384_s61",
+                "categorical_d42_f16_capacity_n2048_s61",
+                "categorical_d42_f16_capacity_n4096_s61",
+                "categorical_d42_f16_capacity_n8192_s61"
+              ],
+              "diagnostics": {
+                "late_drift": 0.005795504922911476,
+                "epoch_limit": false,
+                "late_drift_flag": false,
+                "entropy_fraction": 0.6183699422281302,
+                "entropy_limited": false,
+                "largest_dataset_boundary": false
+              },
+              "lower_bound_only": false
+            },
+            "62": {
+              "final_bits": 33264.716043020286,
+              "param_count": 83118,
+              "winner": "categorical_d42_f16_capacity_n8192_s62",
+              "grid": [
+                "categorical_d42_f16_capacity_n16384_s62",
+                "categorical_d42_f16_capacity_n2048_s62",
+                "categorical_d42_f16_capacity_n4096_s62",
+                "categorical_d42_f16_capacity_n8192_s62"
+              ],
+              "diagnostics": {
+                "late_drift": 0.007811524444121032,
+                "epoch_limit": false,
+                "late_drift_flag": false,
+                "entropy_fraction": 0.6125231323799997,
+                "entropy_limited": false,
+                "largest_dataset_boundary": false
+              },
+              "lower_bound_only": false
+            }
+          }
+        },
+        "evidence_sha256": {
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/selection.json": "039d48ceab7338ce6ab0c4de18f86f17144542ee9236a0b3951ac90b6c6bee77",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n16384_s61/summary.json": "bb5adae86bf4cc4e7cc9f9c8ea86c26c47c069323c70cbcd89de0d98053178cf",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n16384_s61/manifest.json": "321141dbd776565842f1b7917d0cd54d101e5a63a9bc3854f55f87ab77de9385",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n16384_s61/model.pt": "32e5c1add6ae21c149e32382589a8cb25c3edb585ec580f7a38fbbc5c90e0ef8",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n16384_s61/model_init.pt": "6c78b0c4f224b7ca7868ea84f365d526d88611f95a403d24a908a635d9d0e2a4",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n16384_s61/trace.npz": "be937a96d111c044b3b53a6087c69c0023af0fae474ac40bbb6ecff837d36cc0",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_pilot_s41/summary.json": "0a4090d62e358772ffad032c2584ef6cc6812572851719b62ddee703bf59576e",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_pilot_s41/manifest.json": "8d339d06b27c8cc8ae4df8e14db1b19748b22bf056b463b896ad4e1bd1dbf9db",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_pilot_s41/model.pt": "af8a47f380ccc9261265a9cd19b9366f92517ba4c1c79547a94217795a1fa1ae",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_pilot_s41/trace.jsonl": "dc099c1227e983423ba67146326b1ff402a9090952f2b25dcc1616eb66031556",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n4096_s61/summary.json": "af150ff7e93cc82774acd21b6bd59d22f78ea0a583b42467efb6d40200c6952b",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n4096_s61/manifest.json": "6459a3ae3620265710bc249c7ea23ff560a50fe0a6f5a4c507030aeebdd24cd5",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n4096_s61/model.pt": "01216c1e603384f7fd24036fb9c88a2ee3d8d3e51aca0a2b71d27b88de590338",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n4096_s61/model_init.pt": "09293a32332df53de7edcde0d994ee2bdcb18122780ce0d002a619b6b998354c",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n4096_s61/trace.npz": "040d21ed8d649bf34d91c726bdb395d6cc363b3f4be4a17a47b4d1ca51efc98a",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s61/summary.json": "8dd34cf4c52260eee9052df886f0fb3a1bd05189b60c0cba9367a3bdaf1091a6",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s61/manifest.json": "cec0649273b9252bbf2e8be9ad681aefcd55e795f47b8fd4cae5a1c6a9277cb0",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s61/model.pt": "a78f3a10d39a2c41deb10ddd8cfad0d82f78c1736b0555fe7c5cd6cf3ce1c330",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s61/model_init.pt": "8a9f5b8761270fd9d57d4cb2b5a35946f269f7b54266f6c64ac8397e9d3c5190",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s61/trace.npz": "d8e14fd7dee80541963b8ebfec512dfd972c90c75b117796786a06d5193f7c4f",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s61/summary.json": "8a1d2cc98ebb47e51fe757b04dcb8df4a2fcf95ddc35586286c6f648682aaa58",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s61/manifest.json": "42eae20c4185d2f607c0b0d8de1fb795eb8bf789ecbe586f96cda0ce50b695a1",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s61/model.pt": "7c6455945cb09baf48caa991b15bb04bf3bf7d5eff699aba741839b877f79c5b",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s61/model_init.pt": "ddf890139d71e66c018f448f468aa0df1dc656ea4d5e4dc4663573e3f8d607b4",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s61/trace.npz": "ced3b97f960fc8becfbfa3d47ec7e5a43aa9134cadbf7e312fe12b0b0cede50a",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n16384_s62/summary.json": "d58ec72410460df6e282ccdda8dd06663866d8855474ec3083bb30f4be77eb64",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n16384_s62/manifest.json": "64b6f8e89c5d2a7a332b394547c912715e8236989a58df08087d8be761a175e5",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n16384_s62/model.pt": "bbdfd1dc00c2f2999bdbe97acdfb91e2a504b466e575aac4dcb46a11be506401",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n16384_s62/model_init.pt": "ca9d634a8c395916e595628e2414b7d3de9fdc48a029d6945f0ad75e3e250e49",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n16384_s62/trace.npz": "e17867e05a2c4d34530906281cdbc065341c43efdd516d5a79c67275aede6a20",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n4096_s62/summary.json": "ea11c1087b3c07cb489b47e551f1875030c15720d127a8dd79c99f9624c61fbe",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n4096_s62/manifest.json": "2912d68e43623c48ad0544658b9556e8e401d81240994eeb1bb9c0151c509ca0",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n4096_s62/model.pt": "f6b74b4ed16581d33a28533ea832c9ae2e44585b8a1991a48da8bc27700e9c47",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n4096_s62/model_init.pt": "99d6e9d074bd5baa6d1b62806f49e11886e606c5085e1c573c29bc1c34398f1c",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n4096_s62/trace.npz": "a1270abb7f52e71c36ea0ff759536404c97c3043ccfef3724c0c999c60d52f95",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s62/summary.json": "1da8c83229b39db06f599c209bcf4b847e822c17f00ce42698f6edc9cbcc7f63",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s62/manifest.json": "fe02bf0205ebd09bae7f91dbb363942ef47455b1a7c48e371a491dfc59c789d6",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s62/model.pt": "701b11610e33059a74a2354b641c1f6b1b0460d9f9270d9f05e5f4e4e8e0627f",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s62/model_init.pt": "798af172e26def0321260c75a1bfdba2d0c7b40b685d09209c773d3f02ef86d9",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s62/trace.npz": "13b73bef1bab661d8308bcd0fad94c857df94db4fa358e4efc369e0fea3d6e79",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s62/summary.json": "87a6f0d2176bc00fdf6049a717e58f0f09377abfd32cab841d723ef168ac6c0c",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s62/manifest.json": "e89597ca2c50ec3b085f6df7310520ea6a6d4c480b2d8e40f30bd51de533f55f",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s62/model.pt": "2c7996d5ce58250c8a9094a0b62dda7de7c11eec838fc7e959f274e556ed5b06",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s62/model_init.pt": "1cb61bf848c462f73f193b49b293720723472f0469dc7d003063e6591a53d4e5",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_random_n2048_s62/trace.npz": "a352ac13a54cf9c1a6bf324624598fdad362ceeea4cb9102cdb9f25a35db42de",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n16384_s61/summary.json": "9f28275daa4132c164585ecf3e9f6c97c89f213345c4ecb79154066dcd72cbac",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n16384_s61/manifest.json": "bcbaa79bf8db3821597480c5e6dc57c29145d155382429231b5e1cdd43a651b0",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n16384_s61/model.pt": "c1ecd6e32911a5840845d941d2b08cc2fb6334a620a653da29a0b54960d7460e",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n16384_s61/model_init.pt": "2f4a528f7ac308fe5377550a30f22665bdb5b00dc901e0b6078991d59a4301f3",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n16384_s61/trace.npz": "9782e0e0d7dd1ecd268aca08129daf8b1432852c8220a01158696f36dbe43154",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n16384_s61/primary_trace.npz": "9782e0e0d7dd1ecd268aca08129daf8b1432852c8220a01158696f36dbe43154",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_learning_s41/summary.json": "7b2e1b5449de04bc2ff7e1f7e885ee145ac33505debf87efb5bdf99018dffe89",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_learning_s41/manifest.json": "f79d25b5998b7e161219a3475da634e7ed3e4f6b074926011991a7dd835c18ff",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_learning_s41/model.pt": "9b069e1c47faacba4776754d19ab916c5889e1f3ebaecace18fbdda29972706f",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_learning_s41/trace.jsonl": "fb8fd5755920da9703340238c978b3ef5dcb7c7ad7101138ae911006d05ce764",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n2048_s61/summary.json": "6e70336d63f53af7b4038f78fe0495841f09aa360200525e264ea1cbfa70713d",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n2048_s61/manifest.json": "570ae725ee491dbe33bf4b4e51bbd6e7c8ba22157a7b7fba2b3f5873521aa6ce",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n2048_s61/model.pt": "cb87993a6b4cd567be6b4bca3caaf46df53d06076c0921b7c4945b040f8fce0d",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n2048_s61/model_init.pt": "3286e291aecf29d5d67367fbe9d108a7f59af8589ae7cdb94ceda33ebcd0f3a1",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n2048_s61/trace.npz": "95e02a56b2a21dbda757a103a6bf68db368a1811040ab3fcfe3aadbe78342235",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n2048_s61/primary_trace.npz": "95e02a56b2a21dbda757a103a6bf68db368a1811040ab3fcfe3aadbe78342235",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n4096_s61/summary.json": "c1ffd04784b8034341439ec36876d087305c791e8632ae424d0111a67690f906",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n4096_s61/manifest.json": "58e6e85fbd3a9c12e2d2c27da99a2a8441b1c39745be138bc36cf4a6b2d58da6",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n4096_s61/model.pt": "4ab8491cdbe5b37d8284ceb2faed987c4a539795f76bc21a0e62cd0308a8c215",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n4096_s61/model_init.pt": "fd4c736992e7f68d05d2e23d1541b634175b4363967b9b2843fb7af85f46c279",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n4096_s61/trace.npz": "9b473a2339bdc35fab52b36c4ae4d25e0d8da6d414ccdc962b754c15d7d717a3",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n4096_s61/primary_trace.npz": "9b473a2339bdc35fab52b36c4ae4d25e0d8da6d414ccdc962b754c15d7d717a3",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n8192_s61/summary.json": "5205fdc7c4df5fe64ac723294751efa0b0b14dcf59167378ff90ab9b8a101992",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n8192_s61/manifest.json": "fa325acfd5aea6fa6e1981236ba8412f2b37eef18e610f98f09a562abdda6447",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n8192_s61/model.pt": "b7adbfdba900efdb7a23eba988aadc4ba5ee11cb9625645185bd95d29909e2aa",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n8192_s61/model_init.pt": "7fc4b51105e49cc5cbce57c841ab19dda3ebb3b569f30a87de7717f92e563819",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n8192_s61/trace.npz": "106e18903c6874daa8d59c7f6ac922835eb873b1171a9ccda686f3ab5d1ea31b",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n8192_s61/primary_trace.npz": "106e18903c6874daa8d59c7f6ac922835eb873b1171a9ccda686f3ab5d1ea31b",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n16384_s62/summary.json": "77ba13a85c62d097ebd2347c7cf555527c0c9d4c1e429b7d997c7e79b71c0c01",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n16384_s62/manifest.json": "995679a8d23e4f6039cd6ec12c3145ee13f39e94c6cdd9b99e23db0b0300dcdb",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n16384_s62/model.pt": "50d352fa5201cc37a2c241183676ea5fff380f2b1b449d2b3f29bb064020c63f",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n16384_s62/model_init.pt": "f959600ebe851f35e302bbb2fd249014d663a3d83de7f5d55a825fa6498393d9",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n16384_s62/trace.npz": "b74323f4680cef35caf58063d7f4aa72771857b4a8822c25e80e8728bb6479d6",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n16384_s62/primary_trace.npz": "b74323f4680cef35caf58063d7f4aa72771857b4a8822c25e80e8728bb6479d6",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n2048_s62/summary.json": "1628ce553b5e8a8ad133a979accdee724ca359091f7864d7d8d39da16d0d8069",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n2048_s62/manifest.json": "9ce86a4b021d47c9ccbc6b5f574a62261f04f7131f18eb43cd3a6f5cdc66a4ce",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n2048_s62/model.pt": "7015cefa58f4b8862c10115b36d338672026db0bab1300bdfa39e10400c51b5e",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n2048_s62/model_init.pt": "aff18e2cfaef7a6158be7ad75e9c6ee185854962f26e3085c053cae29eb82734",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n2048_s62/trace.npz": "6095d87c2e606896504b365e4119b2aa3fa480714e821d8e13420b22e12a4c61",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n2048_s62/primary_trace.npz": "6095d87c2e606896504b365e4119b2aa3fa480714e821d8e13420b22e12a4c61",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n4096_s62/summary.json": "f84ed4f42f2dabfcbb626f758eaf06f5b0603c079e51f5dfd42ceb085b2102d1",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n4096_s62/manifest.json": "15e9a5a06bf7b9509f95d2bd89178ba10f240b07f41596df352546685a3f9fc6",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n4096_s62/model.pt": "e209949fc4ada31b6597c0b58d523e12ba53e91f6980564646c4e1a51e0be31f",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n4096_s62/model_init.pt": "8ba37d278ab90c6d6b6eee3f564434ed42697e2ea9521d337959b99a48d1bc2c",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n4096_s62/trace.npz": "774637dd53969642ebcb1a3f14109a596ea23f8bd9ff8ea48f53d7d120712f54",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n4096_s62/primary_trace.npz": "774637dd53969642ebcb1a3f14109a596ea23f8bd9ff8ea48f53d7d120712f54",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n8192_s62/summary.json": "6d09e5fb0916efe20bc0f119cedc9ce1af84ba3d8468fc002a1a7ca666c01b03",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n8192_s62/manifest.json": "c7343989b0b70f5f4aa5053b68cebf0e8d361fb058821eecd757d8c3533fee27",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n8192_s62/model.pt": "464e8b36ee22c6fa35a10d20f4684bdf14a8b50301c8b5ceb66773cd65538bf4",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n8192_s62/model_init.pt": "008a2b1915bfe54932696a9745b401799e3417057d40c56d3567c3e1967ce357",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n8192_s62/trace.npz": "aeebb6937c5965f7917720694e6cea551f8ec09b801b39379d0e9ad47475e54e",
+          "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_capacity_n8192_s62/primary_trace.npz": "aeebb6937c5965f7917720694e6cea551f8ec09b801b39379d0e9ad47475e54e"
+        },
+        "registration_sha256": "7cd000649f58d551c387af13121c057c316a37c4782e181a5a27c8186867e506",
+        "arithmetic_gate": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-multilevel-dropout-v1/jobs/categorical_d42_f16_learning_s41",
+        "rule": "Fixed dataset first, A/B selected from gates and capacity only; no C constructed yet."
+      },
+      "C_construction": {
+        "family": "categorical",
+        "constructed_at": 1792961185.3417532,
+        "AB_selection_sha256": "03a161e49ddcb8b00a25fb13b94239366c3768787f84baccffc471359974fd76",
+        "model": {
+          "dim": 42,
+          "mlp_dim": 240,
+          "model": "baseline"
+        },
+        "param_count": 83118,
+        "B_param_count": 83118,
+        "parameter_relative_difference": 0.0,
+        "rule": "Ordinary transformer at B's width/depth. Increase feedforward width by round(2*alphabet*dim/3) to account for the two categorical projection matrices per block. Require parameter difference <=0.1%; do not pass softmax probabilities or retain a narrow adapter. Same seed/data, but differing FF shapes prevent identical full initialization."
+      },
       "confirmation_binding": null,
       "aggregates": {
         "A": {
@@ -330,8 +779,8 @@
     }
   },
   "confirmation_runs": 0,
-  "arithmetic_runs": 10,
-  "capacity_cells": 23,
+  "arithmetic_runs": 16,
+  "capacity_cells": 41,
   "pairing": [],
   "inherited_A": {
     "source_selection": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/selection.json",

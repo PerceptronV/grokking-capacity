@@ -1,0 +1,12 @@
+{
+  "all_passed": true,
+  "manifests_checked": 62,
+  "capacity_gates_verified": 46,
+  "C_jobs_after_AB_freeze": 15,
+  "confirmation_started": 0,
+  "complete": false,
+  "fixed_target_bits": 30866.284423090663,
+  "selection_before_C": true,
+  "all_confirmation_after_both_selections": true,
+  "verifier_sha256": "3d75c6f8df4bdd9a01b419b42d4e8d623136f9ba6b64abe84ed703ccccab0ddd"
+}

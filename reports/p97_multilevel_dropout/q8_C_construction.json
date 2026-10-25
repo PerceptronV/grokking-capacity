@@ -1,0 +1,14 @@
+{
+  "family": "q8",
+  "constructed_at": 1792961074.5600467,
+  "AB_selection_sha256": "aa96deaf5b9e0a7611b291917af0fa8cea24258309c29ff82f04063abe028a79",
+  "model": {
+    "dim": 56,
+    "mlp_dim": 48,
+    "model": "baseline"
+  },
+  "param_count": 52584,
+  "B_param_count": 52584,
+  "parameter_relative_difference": 0.0,
+  "rule": "Remove parameter-free quantizers; identical remaining shapes and initial tensors."
+}
