@@ -2913,3 +2913,20 @@ nonzero categorical gradients, deterministic hard evaluation, embedding-sum
 identity, and unrestricted parameter-matched C construction. GPU1 is shared
 with unrelated jobs; start with four small workers and monitor resources.
 No scientific result from these new experiments exists at registration.
+
+Development update (before capacity selection): categorical d48/FF192 passed
+its arithmetic gate after356 epochs/3,560 updates, with100% eval-mode training
+and99.6349% held-out accuracy; independent checkpoint reload verified both.
+Its seed61 N2048 random-learning gate is running. The d36 categorical and
+initial d36/d44 scalar pilots remain active, with substantially lower current
+accuracy; none is declared a completed failure or a capacity result.
+
+Register two additional shape probes using those development trajectories:
+Q8 d64/FF64 and categorical d42/FF96, all channel/optimizer settings unchanged.
+They test whether a wider residual stream with a smaller FF learns more
+reliably at a similar parameter budget. Their seeds are41 and maximum budgets
+remain5,000 epochs; retain the original pilots to their registered endpoints.
+GPU0 has about22GiB allocated and8% sampled utilization from an unrelated job;
+run only these two small additional workers there, preserving that process.
+The gate/selection planner and report now have independent NumPy metric
+recomputation and explicitly censored all-seed medians;39 targeted tests pass.

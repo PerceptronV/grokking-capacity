@@ -74,3 +74,28 @@ def test_late_drift_requires_sufficient_positive_history():
     assert late_drift([1.]*199) is None
     assert late_drift([0.]*200) is None
     assert late_drift([1.]*100+[1.02]*100)==pytest.approx(.02)
+
+
+def test_independent_metrics_keep_censoring_and_missing_delays():
+    import sys
+    from pathlib import Path
+    sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
+    from report_p97_multilevel import independent_metrics,aggregate,bound
+    from grokking_capacity.experiments.multilevel_dropout import metrics
+    trace=[dict(epoch=i+1,train_online_acc=.8,train_eval_acc=1.,val_acc=v)
+           for i,v in enumerate([.7,.99,.7,.99,.99])]
+    a=independent_metrics(trace)
+    assert a==metrics(trace) and a['val_99_sustained_epoch'] is None
+    assert a['paper_delay_epochs'] is None and a['eval_delay_epochs']==1
+    assert bound(trace,99)==30
+    rows=[]
+    for i in range(10):
+        value=1000*(i+1) if i<5 else None
+        rows.append(dict(paper_delay_updates=None,eval_delay_updates=0,
+            val95_updates=value,val99_updates=value,val95_censor_updates=50000,
+            val99_censor_updates=50000,final_val=.8))
+    agg=aggregate(rows)
+    assert agg['val99_updates']['median_all_ten'] is None
+    assert agg['val99_updates']['median_all_ten_lower_bound']==27500
+    assert agg['paper_delay_updates']['min_observed'] is None
+    assert agg['paper_delay_updates']['undefined']==10
