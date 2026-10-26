@@ -3398,3 +3398,71 @@ Figures are exported as PNG and PDF:
 [first-crossing times](reports/p97_categorical_groks/learning_times.png),
 [per-seed delays](reports/p97_categorical_groks/grokking_delays.png), and
 [random-label learning curves](reports/p97_categorical_groks/random_learning.png).
+
+## Registered capacity-constant matched scaling sweep (2026-10-26)
+
+The user requested ten model pairs to explore how generalisation-time scaling
+differs between continuous C and categorical B, then specified empirical
+memorisation-capacity matching via parameter count and a capacity constant.
+This is a new scaling question. Use one separately calibrated constant per
+family, estimated capacity K_hat = kappa times parameter count, rather than
+equal parameter counts or a fresh capacity search at every sweep point.
+
+Keep p=97 division, 50% training split, depth two, one head, dropout 0.2,
+batch 512, AdamW lr 0.001 / weight decay 1 / betas 0.9 and 0.98. Both families
+have FF width 4d throughout, avoiding the earlier comparisons' varying FF
+proportions. C is ordinary and fully continuous. B retains full-width,
+eight-symbol categorical states with nonaffine per-slot pre-softmax LayerNorm,
+deterministic argmax/normalized-softmax STE, and learned embedding sums.
+
+Calibrate C at widths 32 and 48, and B at widths 48 and 60, using random-data
+seeds 61/62. Reuse only compatible audited C32 and B48 cells after rechecking
+frozen sources, configurations, data, initial tensors and checkpoint hashes.
+C32 is the earlier ordinary A32 model, explicitly reused under role C for this
+new comparison. Each recipe must pass arithmetic before random-label training;
+each model/seed must learn N=2,048 before larger random datasets. The new grid
+is N=2,048/8,192/16,384/32,768; the existing C32 grid additionally has N=4,096
+and already has an interior maximum at N=8,192. Extend a largest-N maximum by
+doubling N, at most to 131,072. A capacity point must be an interior maximum,
+below 95% label entropy, below the 5,000-epoch ceiling, with late drift <=1%.
+Use the original online-loss patience and live optimizer/RNG continuation.
+
+Fit each family's constant through the origin to its four architecture/seed
+maxima: kappa = sum(P*K)/sum(P^2). Keep both seeds; do not select the better
+seed. Report affine-fit diagnostics, residuals, per-seed constant sensitivity,
+and the calibrated parameter range. This replaces extrapolating the earlier
+mostly p=113/small-model continuous calibration and supplies the missing
+categorical constant for the fixed FF4d architecture family.
+
+C widths are fixed at 32, 36, 40, 44, 48, 52, 56, 60, 64 and 68. Choose each
+B width from even integers 24–160 by nearest estimated capacity; require ten
+distinct increasing B widths and <=5% predicted mismatch. Freeze constants,
+all ten pairs and their calibration evidence before confirmation. These are
+estimated empirical-capacity matches under a constant approximation. They do
+not establish directly measured capacity equality at all ten points. Report
+fit errors and extrapolation, including residuals over 10%; do not hide them.
+
+Run fresh seeds 401–410 for both roles at all ten sizes: 200 arithmetic runs.
+Every role/size shares the same seed's data split. Different model shapes mean
+full initial tensors and subsequent shuffle/dropout RNG are not identical.
+No selection on grokking or generalisation outcomes is allowed. Use the
+original joint stopping rule: three held-out 99% epochs plus current online
+training 99%, otherwise 5,000 epochs / 50,000 optimizer updates.
+
+Primary t_gen is the first held-out 99% crossing, in optimizer updates. Retain
+all censored outcomes; means are complete only when all ten crossings are
+observed, otherwise report lower bounds. Also export medians, sustained 99%,
+success counts, online/eval-training delays and all individual traces. Plot
+against both estimated capacity and actual parameter count. Fit descriptive
+per-seed log-log slopes only on common size points with all ten C and B times
+observed (minimum three points); use paired seed bootstrap for slope intervals
+and their difference. Explicitly label this complete-range conditioning. A
+separate all-size capped-time analysis uses min(t_gen, 50,000) and must not be
+labelled an uncensored power law.
+
+Registration: `configs/discrete_p97_capacity_scaling.yaml`; worker:
+`src/grokking_capacity/experiments/capacity_scaling.py`; durable controller:
+`scripts/run_p97_capacity_scaling.py`. The 19 focused tests passed before
+launch. GPU0 runs unrelated PID1637741 and is left alone; use up to eight
+small workers on the idle GPU1. Prior scientific sources and results remain
+unchanged. Run root: `results/discrete/p97-capacity-scaling-v1`.
