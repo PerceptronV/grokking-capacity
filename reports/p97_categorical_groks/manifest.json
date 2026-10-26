@@ -1,0 +1,23 @@
+{
+  "source_hashes": {
+    "src/grokking_capacity/experiments/matched_dropout.py": "bf3ac44bda270b9a5a49e41582d6f4a9dbac1b9c78d5f7f61f33cee90367b9fa",
+    "src/grokking_capacity/experiments/capacity.py": "0f90cdca09de4ece2e06a42a2bfac993bd76e596c6a126008b2868338d68a1f7",
+    "src/grokking_capacity/experiments/groks.py": "7ec991a4f059a796e82e53cca81c441cb188b1b00cd910cf6d003a5c47100af0",
+    "src/grokking_capacity/models/discrete.py": "5ec7a68fbd27fa923b933bcbecb4652ef9b76a47146db1c399938a31dfc024d3",
+    "src/grokking_capacity/models/fullwidth_discrete.py": "da11dd2d747f9731eed96b6cc2ef9ec072ac8689e1768626a405080639822f9c",
+    "src/grokking_capacity/models/transformer.py": "691dd08dc7febb2449ae200051d5a323068d8bfe40e554928923450dd84a926c",
+    "src/grokking_capacity/data/modular.py": "8d5dfe63984b75cb931cbc91c98d0925e422e9cae2ace3e32752d3ee05361f65",
+    "src/grokking_capacity/utils/optim.py": "c55eb9766e2e9c9d354da62f846bf6a24fe1a2a1aa596878119aae295f13cbe4",
+    "scripts/run_p97_dropout_match.py": "e357686477e992897e794440e6d064fe224c0ee235c6d426e85e42850d50a02e",
+    "src/grokking_capacity/experiments/multilevel_dropout.py": "957ccf345ceb74851316d2e9a152b68f2a72074785b31824aaa7de271618d995",
+    "scripts/run_p97_multilevel_stage.py": "5e19923eb25ae8687413f08cd881ec0cd25e1714522cfb65712f398d41636cd3",
+    "configs/discrete_p97_multilevel_dropout.yaml": "7cd000649f58d551c387af13121c057c316a37c4782e181a5a27c8186867e506",
+    "src/grokking_capacity/experiments/categorical_groks.py": "b76a295dd2303a4722d4b094a5255805d903ec2dab7221092edc3154728b216c",
+    "scripts/run_p97_categorical_groks.py": "3590b7962c47de185aee0af8a57014ff88f74f2ede8f0a4de6bb1295aa9539c6",
+    "configs/discrete_p97_categorical_groks.yaml": "b755837e2301ed4eb458887e4a7bd017f9d121acba8e34879077c39eb95414d1"
+  },
+  "registration_sha256": "b755837e2301ed4eb458887e4a7bd017f9d121acba8e34879077c39eb95414d1",
+  "source_commit": "5d0b71f6d4db1c1e620c396b2777e5b2aa8fda11",
+  "started_at": 1792977282.3991246,
+  "pid": 1590636
+}

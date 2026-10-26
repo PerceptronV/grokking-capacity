@@ -1,0 +1,32 @@
+{
+  "passed": false,
+  "seeds": [
+    321,
+    322,
+    323,
+    324,
+    325,
+    326,
+    327,
+    328,
+    329,
+    330
+  ],
+  "delays_epochs": [
+    163,
+    10,
+    62,
+    0,
+    8,
+    0,
+    119,
+    57,
+    28,
+    12
+  ],
+  "min_observed_delay_epochs": 0,
+  "positive": 8,
+  "zero": 2,
+  "undefined": 0,
+  "learning_successes": 10
+}

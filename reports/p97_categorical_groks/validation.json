@@ -1,0 +1,42 @@
+{
+  "all_passed": true,
+  "complete": true,
+  "checkpoints": 50,
+  "arithmetic_metrics_recomputed": 30,
+  "memorisation_crossings_recomputed": 20,
+  "paired_seeds": 10,
+  "stages": {
+    "B_validation": {
+      "jobs": 10,
+      "controller_sha256": "7a5f1867c4b2165930eb6371be67e07a71ae59cade3cb3b362cb5ef3b0202991",
+      "started_at": 1792977552.796345,
+      "finished_at": 1792977748.3218472
+    },
+    "C_d60_search": {
+      "jobs": 10,
+      "controller_sha256": "36fc22790c01aa4fa8890edc6c89ffca37e85c73d22e797a5e636891f7673b15",
+      "started_at": 1792977282.4658186,
+      "finished_at": 1792977372.8431242
+    },
+    "C_d60_validation": {
+      "jobs": 10,
+      "controller_sha256": "b7a6bfa5b93b30c9f82b8887826f90cc09a339c343d45aa90bfbcba896822c3e",
+      "started_at": 1792977412.4482813,
+      "finished_at": 1792977512.858354
+    },
+    "matched_memorisation": {
+      "jobs": 20,
+      "controller_sha256": "7b4a5a1d45a7b5a5b09c1bab77227d2e4a46a0dba1279587ea6832cb021909c9",
+      "started_at": 1792977794.5417557,
+      "finished_at": 1792979703.277684
+    }
+  },
+  "stage_order": [
+    "C_d60_search",
+    "C_d60_validation",
+    "B_validation",
+    "matched_memorisation"
+  ],
+  "ordering_verified": true,
+  "analysis_sha256": "bea6940257b0562940bdebbc02b2ee35cf38233cf55d2bb7e8e53a18b4595775"
+}

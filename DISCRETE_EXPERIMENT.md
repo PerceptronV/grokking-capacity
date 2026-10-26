@@ -2,7 +2,22 @@
 
 Branch: `idea/discrete`. Initial registration: 2026-10-24. The p97 dropout rematch was registered 2026-10-25 before its training.
 
-Latest result: both new p97/dropout-0.2 experiments are complete across ten
+Latest result: the C-first categorical follow-up is complete. Ordinary continuous
+C60/FF560 and categorical B60/FF240 have exactly 242,580 parameters each.
+C passed the paper-style positive-delay criterion on ten search seeds and ten
+fresh validation seeds. On the paired validation seeds, C's minimum delay is
+150 updates; B's is zero, with eight positive and two zero delays. Both learn
+arithmetic on all ten seeds. Mean first held-out 99% times are C 2,559 and
+B 4,559 updates. Mean matched-size random memorisation time is C 1,230 updates;
+all ten B times are censored beyond 50,000 under the online/dropout-active 99%
+criterion, despite final dropout-free random-label accuracy of 98.26–99.38%.
+All 50 new checkpoints passed audits. This is a C-first comparison, with no new
+A or claim that B matches dataset capacity. See the
+[completed follow-up](#completed-c-first-categorical-grokking-test),
+[paired outcomes](reports/p97_categorical_groks/paired_outcomes.csv), and
+[validated summary](reports/p97_categorical_groks/summary.json).
+
+Previous result: both new p97/dropout-0.2 experiments are complete across ten
 fresh seeds. The fixed dataset was chosen first, A/B were validated and matched
 to its 30,866-bit target, and ordinary continuous C was constructed only after
 A/B were frozen. Eight-level B reaches sustained held-out 99% on 5/10 seeds
@@ -3263,3 +3278,123 @@ but their individual effects have not been experimentally isolated.
 Registration: `configs/discrete_p97_categorical_groks.yaml`; worker:
 `src/grokking_capacity/experiments/categorical_groks.py`; durable campaign:
 `scripts/run_p97_categorical_groks.py`. Earlier scientific sources remain frozen.
+
+
+## Completed C-first categorical grokking test
+
+The registered C-first follow-up is complete on `idea/discrete`. The first
+candidate, ordinary continuous C60/FF560, passed all ten search seeds 301–310
+and all ten fresh validation seeds 321–330. No wider candidate was needed.
+C and its B equivalent were frozen before any B training. Both use depth two,
+one attention head, dropout 0.2, batch 512, and the registered AdamW settings
+(lr 0.001, weight decay 1, betas 0.9/0.98). The task remains p=97 modular
+division with a 50% split: 4,656 training examples and 4,656 held-out examples.
+All times below are optimizer updates; one epoch is ten updates.
+
+| Model | Residual / FF width | Parameters | Boundary representation |
+| --- | ---: | ---: | --- |
+| C | 60 / 560 | 242,580 | Ordinary fully continuous transformer |
+| B | 60 / 240 | 242,580 | 60 categorical slots, each with eight symbols |
+
+B uses learned logits, per-slot nonaffine LayerNorm before softmax, hard argmax
+one-hots in the forward pass, and normalized-softmax STE in the backward pass.
+The flattened 60-by-8 one-hot state is mapped back to width 60 by a learned sum
+of slot-specific symbol embeddings. No continuous state bypasses this boundary.
+This uses deterministic argmax, not sampled categories. C has no categorical
+interface or bottleneck. Exact parameter matching reallocates the interface
+parameters into C's feedforward layers; the full initial tensor shapes differ.
+This is not an identical-backbone intervention. Initialization is identical
+across arithmetic/random tasks within each role/seed; C/B use paired datasets
+within each task. There is no A or new dataset-capacity match claim.
+
+The primary delay follows the previously verified paper convention:
+max(0, first held-out 98% update minus first dropout-active online training 99%
+update). The criterion here is successful arithmetic learning and a strictly
+positive, defined delay on all ten seeds, so the minimum across ten is positive.
+The [paper, sections 4.2–4.3](https://arxiv.org/html/2605.09724v2) distinguishes
+these first crossings from sustained-accuracy measurements.
+
+| Validation metric, seeds 321–330 | C | B |
+| --- | ---: | ---: |
+| Successful arithmetic learning | 10/10 | 10/10 |
+| Mean first held-out 99% update | 2,559 | 4,559 |
+| Median first held-out 99% update | 2,365 | 3,625 |
+| Mean sustained held-out 99% update | 2,578 | 5,002 |
+| Median sustained held-out 99% update | 2,365 | 3,645 |
+| Paper-style minimum delay | 150 | 0 |
+| Paper-style positive / zero / undefined | 10 / 0 / 0 | 8 / 2 / 0 |
+| Paper-style mean delay | 319 | 459 |
+| Paper-style median delay | 270 | 200 |
+| Secondary eval-training minimum delay | 200 | 150 |
+| Secondary positive / zero / undefined | 10 / 0 / 0 | 10 / 0 / 0 |
+
+The selected C therefore meets the requested paper-style criterion. Its search
+group also has ten positive delays, minimum 190 updates. B fails the minimum
+criterion because seeds 324 and 326 have zero delay, but B still has positive
+paper-style delay on eight seeds. Its mean delay is larger than C's. Using
+end-of-epoch dropout-free training accuracy instead, both models have positive
+delay on all ten seeds. The categorical interface does not universally remove
+grokking, and the zero minimum should not conceal the other eight outcomes or
+the dependence on the training-accuracy measurement. These are small positive
+threshold delays, not evidence of a long post-memorisation plateau. C was
+selected for this behavior; the experiment does not estimate grokking frequency
+for arbitrary, unselected continuous models.
+
+Only after all arithmetic validation finished were the matched random-label
+experiments run. Each has exactly 4,656 original uniform-random input/label
+examples over 99 symbols, the same label-information target of 30,866.284423
+bits. Both roles use the same ten seeds 321–330 and fresh optimization from
+initial weights. The stop is first dropout-active online training accuracy
+>=99%, otherwise 5,000 epochs / 50,000 updates. There is no loss-patience stop.
+
+| Random-label measurement | C | B |
+| --- | ---: | ---: |
+| Online 99% crossings | 10/10 | 0/10 |
+| Mean updates to online 99% | 1,230 | >50,000, all ten censored |
+| Observed crossing range | 1,190–1,290 | None |
+| Final online accuracy range | 99.01–99.21% | 91.62–94.65% |
+| Final dropout-free accuracy range | 99.85–100% | 98.26–99.38% |
+| Final dropout-free accuracy >=99% | 10/10 | 6/10 |
+
+C memorises the matched random task before its mean arithmetic generalisation
+crossing. For B, the required online threshold is unobserved, so neither a
+finite mean of 50,000 nor an infinite time is claimed. B has learned most
+random labels and six checkpoints exceed 99% without dropout. These results
+measure online memorisation under dropout; they do not prove that B cannot
+memorise or establish an intrinsic capacity bound. No claim that B's empirical
+capacity equals the dataset size follows from this test.
+
+Why the earlier categorical model outperformed eight-level scalar quantisation
+remains unresolved. Categorical B had 83,118 parameters versus scalar B's
+52,584, and the residual widths, feedforward allocations, boundary encoders,
+and gradient estimators differed. The corresponding categorical C was also
+faster, showing that the surrounding architecture matters. At a linear
+consumer, one scalar slot contributes q[k] times a single learned vector;
+one categorical slot can select an independently learned vector e[k]. The
+latter avoids imposing the scalar grid's ordering and collinearity on the
+symbols. The normalized-softmax STE also differs from the scalar RMS-clipped
+STE. These are plausible explanations, not experimentally isolated causes.
+The new C/B pair tests a selected continuous control against its categorical
+equivalent, not categorical versus scalar causality.
+
+All 50 final checkpoints passed independent reload/evaluation audits, including
+initial-weight and dataset reconstruction and train/eval boundary checks.
+All 30 arithmetic traces and 20 memorisation crossing times were recomputed;
+all 250 input artifact hashes and the frozen scientific sources were verified.
+The stage order is C search, fresh C validation, frozen selection, B validation,
+then matched memorisation. All 43 focused tests passed before training, including
+exact optimizer/RNG/trajectory equivalence of the one-epoch memorisation loop.
+No training source, hyperparameter, seed, or stopping rule changed during the
+campaign. The analysis independently checks stage ordering, paired datasets,
+parameter counts, initial weights, and every retained seed.
+
+Artifacts: [all arithmetic runs](reports/p97_categorical_groks/arithmetic_runs.csv),
+[paired validation outcomes](reports/p97_categorical_groks/paired_outcomes.csv),
+[random-label outcomes](reports/p97_categorical_groks/memorisation_runs.csv),
+[summary](reports/p97_categorical_groks/summary.json), and
+[validation](reports/p97_categorical_groks/validation.json).
+Figures are exported as PNG and PDF:
+[arithmetic learning curves](reports/p97_categorical_groks/train_test.png),
+[first-crossing times](reports/p97_categorical_groks/learning_times.png),
+[per-seed delays](reports/p97_categorical_groks/grokking_delays.png), and
+[random-label learning curves](reports/p97_categorical_groks/random_learning.png).

@@ -1,0 +1,72 @@
+{
+  "all_passed": true,
+  "arithmetic_traces_recomputed": 30,
+  "memorisation_traces_recomputed": 20,
+  "input_artifact_hashes_verified": 250,
+  "independent_csv_aggregation_agrees": true,
+  "stage_order_verified": [
+    "C_d60_search",
+    "C_d60_validation",
+    "B_validation",
+    "matched_memorisation"
+  ],
+  "selection_frozen_before_B": true,
+  "all_scientific_sources_unchanged": true,
+  "csv_line_endings": "LF",
+  "aggregates": {
+    "C": {
+      "paper_delays": [
+        270,
+        150,
+        170,
+        210,
+        270,
+        330,
+        190,
+        330,
+        480,
+        790
+      ],
+      "mean_generalisation_updates": 2559,
+      "memorisation_updates": [
+        1250,
+        1230,
+        1190,
+        1220,
+        1210,
+        1250,
+        1210,
+        1290,
+        1230,
+        1220
+      ]
+    },
+    "B": {
+      "paper_delays": [
+        1630,
+        100,
+        620,
+        0,
+        80,
+        0,
+        1190,
+        570,
+        280,
+        120
+      ],
+      "mean_generalisation_updates": 4559,
+      "memorisation_updates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    }
+  }
+}
