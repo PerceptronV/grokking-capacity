@@ -3216,3 +3216,50 @@ Figures are exported as both PNG and PDF:
 [categorical capacity](reports/p97_multilevel_dropout/categorical_capacity.png),
 [eight-level train/test](reports/p97_multilevel_dropout/q8_train_test.png), and
 [categorical train/test](reports/p97_multilevel_dropout/categorical_train_test.png).
+
+
+## Registered C-first categorical grokking test (2026-10-26)
+
+The user now requests a continuous C that groks by the paper's minimum-across-
+ten-seeds criterion, followed by its categorical B equivalent. This is a new
+C-first selection question; the previous capacity-matched ABC results remain
+complete and unchanged. Keep p=97 modular division, the 50% split, dropout 0.2,
+and the original optimizer/batch/epoch protocol. There is no new A or claim that
+the selected B matches the dataset's empirical capacity.
+
+Prospectively search C widths 60, 72, 96, 120, sequentially. For width d, C is
+an ordinary continuous transformer with FF=28d/3. Its eventual categorical B
+has the same width/depth and FF=4d, plus the existing eight-symbol normalized
+hard-argmax/softmax-STE interfaces. These configurations have exactly equal
+parameter counts (242,580; 346,392; 609,312; 945,960 respectively). The parameter
+allocation and full initial tensor shapes differ; this remains an ordinary C
+comparison rather than an identical-backbone intervention.
+
+Each C must first pass all ten search seeds 301–310, then all ten fresh
+validation seeds 321–330: successful arithmetic learning plus a strictly
+positive, defined online-train99 to held-out98 delay on every seed. Retain all
+attempts and choose the first candidate passing both groups. Freeze C and the
+corresponding B architecture before any B training; B results cannot resize C.
+This conditional search is not an unbiased estimate of how often arbitrary
+continuous controls grok. The B comparison uses the same validation seeds,
+paired arithmetic splits and unchanged settings.
+
+After arithmetic validation, measure both models' memorisation time on exactly
+4,656 uniform-random input/label examples at seeds 321–330. Stop at the first
+dropout-active online training accuracy >=99%, or 5,000 epochs; do not apply
+capacity-loss patience. The new loop reuses original CapacityTrainer updates,
+shuffling and optimizer state, with a regression test requiring exact agreement
+of parameters, accuracy traces and RNG with the original multi-epoch loop.
+A B recipe that fails every arithmetic gate gets no random-label jobs; failure
+to learn cannot establish successful avoidance of grokking. All missing
+thresholds remain censored/undefined.
+
+The preceding categorical-versus-eight-level comparison does not isolate why
+categorical B was faster: its parameter count was 83,118 versus 52,584, its
+parameter allocation differed, and its continuous C was also faster. Learned
+symbol embeddings and the normalized-softmax gradient are plausible mechanisms,
+but their individual effects have not been experimentally isolated.
+
+Registration: `configs/discrete_p97_categorical_groks.yaml`; worker:
+`src/grokking_capacity/experiments/categorical_groks.py`; durable campaign:
+`scripts/run_p97_categorical_groks.py`. Earlier scientific sources remain frozen.
