@@ -2,7 +2,12 @@
 
 Branch: `idea/discrete`. Initial registration: 2026-10-24. The p97 dropout rematch was registered 2026-10-25 before its training.
 
-Latest result: the capacity-constant matched scaling sweep is complete: ten
+Active follow-up: a logarithmic dataset-size sweep will resize both C and B
+from the calibrated capacity constants to match each dataset's complexity.
+The previous fixed-pair proposal was not launched. See the
+[dataset-matched sweep registration](#dataset-matched-logarithmic-sweep-registration).
+
+Latest completed result: the capacity-constant matched scaling sweep is complete: ten
 C/B size pairs and ten fresh seeds per pair, 200 arithmetic runs. Capacity is
 estimated from parameter count using separately calibrated constants,
 kappa_C = 0.729117 and kappa_B = 0.310917 bits/parameter.
@@ -3657,3 +3662,83 @@ Figures are available as PNG and PDF:
 [capacity calibration](reports/p97_capacity_scaling/calibration.png),
 [crossings and paired speeds](reports/p97_capacity_scaling/success_and_pairs.png),
 and [all seed trajectories](reports/p97_capacity_scaling/individual_times.png).
+
+## Dataset-matched logarithmic sweep registration
+
+Registered on 2026-10-26 before training. The user requested checking whether
+continuous C and categorical B generalisation-time curves cross with
+logarithmically sampled dataset sizes, then explicitly requested resizing both
+models to each dataset via the existing capacity constants. The fixed-pair
+proposal was never launched. This experiment grows the training dataset and
+predicted model capacity together on p=97 modular division.
+
+For each N, target D=N*log2(99) bits, then select the even model width closest
+to kappa_role*P_role=D. The independently calibrated constants remain
+kappa_C=0.7291169353321082 and kappa_B=0.31091702370607593 bits/parameter.
+The unchanged depth-two, one-head, FF=4d model families have
+P_C=32d^2+203d and P_B=64d^2+203d. C is ordinary and fully continuous;
+B has d categorical slots per token at every block boundary, eight symbols,
+per-slot pre-softmax LayerNorm, hard argmax forward, softmax STE backward,
+and learned embedding sums with no bypass.
+
+The endpoints 928 and 7,449 permit ten rounded logarithmic dataset sizes
+while keeping both role-to-dataset and B-to-C prediction errors below 10%
+without altering FF ratios. Endpoints and model widths were chosen from
+parameter arithmetic only, before observing any outcomes. The unlaunched
+512-example endpoint could not meet that tolerance for C with even widths.
+
+| Train N | Dataset bits | C width | B width | C prediction error | B prediction error |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 928 | 6,152 | 14 | 16 | +8.02% | -0.78% |
+| 1,170 | 7,756 | 16 | 18 | +7.54% | -2.23% |
+| 1,474 | 9,772 | 18 | 20 | +4.63% | -5.63% |
+| 1,858 | 12,317 | 20 | 24 | -0.20% | +5.35% |
+| 2,342 | 15,526 | 22 | 26 | -6.29% | -2.79% |
+| 2,952 | 19,570 | 26 | 30 | +0.26% | +1.19% |
+| 3,720 | 24,661 | 30 | 34 | +3.15% | +1.98% |
+| 4,689 | 31,085 | 34 | 38 | +2.96% | +0.15% |
+| 5,910 | 39,179 | 38 | 42 | +0.35% | -3.64% |
+| 7,449 | 49,382 | 42 | 48 | -4.07% | -1.02% |
+
+The maximum model-to-dataset prediction error is 8.02%; the maximum B-to-C
+prediction mismatch is 9.80%. These are capacity predictions, not direct
+empirical measurements at every width. All C widths below 32 and B widths
+below 48 extrapolate below the calibration ranges. The calibration residuals
+remain 9.29% for C and 5.09% for B; rounding error does not include this model
+uncertainty. No model is selected based on arithmetic success, and no new
+random-label training is needed to apply the existing constants.
+
+Seeds 501-510 each define one permutation of all 9,312 modular input pairs.
+The first N examples form nested training subsets; the last 1,863 examples
+form one fixed held-out set shared by every role and size within that seed.
+Unused training-pool entries are excluded from evaluation. Every size/role
+gets all ten fresh seeds, giving 200 runs. Dropout remains 0.2, batch size
+512, original AdamW lr0.001/wd1/betas(0.9,0.98), with reshuffling each epoch
+and partial final batches retained.
+
+Evaluate every ten actual optimizer updates, independently of epoch
+boundaries. Online training metrics cover the preceding ten updates weighted
+by examples. Stop at the first evaluation with three consecutive held-out99
+checks and current online training99, otherwise exactly 50,000 updates.
+Primary t_gen is first held-out99; also retain sustained99, final learning,
+all-seed/minimum paper-style positive-delay results, examples processed and
+epoch equivalents. Fresh test splits and evaluation windows mean these times
+must not be pooled with the previous 50%-split campaign.
+
+An observed mean-curve crossing requires opposite signs of mean(B)-mean(C)
+at adjacent sizes with all twenty first crossings observed. Any log-N
+interpolation is descriptive and stays inside that bracket. Missing crossings
+remain right-censored; capped times min(t_gen,50000) are a separate sensitivity
+analysis, never substituted for uncensored means. Ten-seed paired bootstrap
+(10,000 resamples, seed9002) retains cross-size pairing, produces pointwise95%
+intervals and simultaneous95% centered maximum-deviation bands across all ten
+capped contrasts. A resolved crossing requires opposite signs of simultaneous
+bands at fully observed sizes. Failure to observe a crossing is limited to
+this range, these capacity predictions and the update budget.
+
+Scientific code, selection, registry and calibration evidence will be hashed
+before launch. Every final checkpoint is independently reloaded, data and
+initialization reproduced, representation boundaries audited, and update,
+example and stopping counts checked. The scheduler uses four workers on GPU1
+and leaves other workloads untouched. Configuration:
+[discrete_p97_dataset_scaling.yaml](configs/discrete_p97_dataset_scaling.yaml).
