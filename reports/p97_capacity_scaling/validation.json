@@ -1,0 +1,43 @@
+{
+  "all_passed": true,
+  "checkpoints": 235,
+  "confirmation_runs": 200,
+  "paired_datasets": 10,
+  "calibration_cells": 32,
+  "arithmetic_traces_recomputed": 203,
+  "input_artifact_hashes": 1223,
+  "stages": {
+    "C48_learning_s41": {
+      "jobs": 1,
+      "started_at": 1792983634.1926258,
+      "finished_at": 1792983664.2569802,
+      "sha256": "85150a4f60a90ab9f9edb23465b51ebab3a2e04fea7b1322756569f375d794cb"
+    },
+    "capacity_grid": {
+      "jobs": 17,
+      "started_at": 1792983719.4031303,
+      "finished_at": 1792986655.3582335,
+      "sha256": "07f03b86610469ffc9c4e138aa6cba8df4a8c9b4792a5ad0a5022f30f925793f"
+    },
+    "confirmation": {
+      "jobs": 200,
+      "started_at": 1792986903.5244792,
+      "finished_at": 1792995690.1639287,
+      "sha256": "52976386283b50c3415f37b8cc4e6db528621b97235023a9ec55a6e5ba4cc49f"
+    },
+    "random_learning": {
+      "jobs": 5,
+      "started_at": 1792983665.5882905,
+      "finished_at": 1792983715.7815247,
+      "sha256": "e81951eb9c379eb743d681ff96bf5bce0584af21168657b287ccea0bbaa81424"
+    }
+  },
+  "stage_order": [
+    "C48_learning_s41",
+    "random_learning",
+    "capacity_grid",
+    "confirmation"
+  ],
+  "selection_frozen_before_confirmation": true,
+  "analysis_sha256": "afdf3671121747c29502b1c524126c5bed6be96ee7b6ad52e204fb7d27976deb"
+}

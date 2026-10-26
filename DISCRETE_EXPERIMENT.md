@@ -2,7 +2,23 @@
 
 Branch: `idea/discrete`. Initial registration: 2026-10-24. The p97 dropout rematch was registered 2026-10-25 before its training.
 
-Latest result: the C-first categorical follow-up is complete. Ordinary continuous
+Latest result: the capacity-constant matched scaling sweep is complete: ten
+C/B size pairs and ten fresh seeds per pair, 200 arithmetic runs. Capacity is
+estimated from parameter count using separately calibrated constants,
+kappa_C = 0.729117 and kappa_B = 0.310917 bits/parameter.
+C is faster in 86/100 paired comparisons, B in 13, and 1 pair is censored
+for both. First held-out 99% crossings are C 99/100 and B 84/100;
+final learning checks are C 99/100 and B 81/100. On the six common
+sizes with every crossing observed, mean-time log-log slopes are C -0.509 and
+B -1.043; the paired 95% interval for B minus C is [-1.300, 0.256], so a
+slope difference is not resolved. The all-size capped-time curve is steeper
+for B, which has more low-capacity failures. All 235 checkpoint audits passed.
+See the [completed scaling sweep](#completed-capacity-constant-matched-scaling-sweep),
+[scaling plot](reports/p97_capacity_scaling/scaling.png),
+[all 200 runs](reports/p97_capacity_scaling/confirmation_runs.csv), and
+[validated summary](reports/p97_capacity_scaling/summary.json).
+
+Previous result: the C-first categorical follow-up is complete. Ordinary continuous
 C60/FF560 and categorical B60/FF240 have exactly 242,580 parameters each.
 C passed the paper-style positive-delay criterion on ten search seeds and ten
 fresh validation seeds. On the paired validation seeds, C's minimum delay is
@@ -3468,3 +3484,176 @@ before source freezing or any training. Its empty run root and log are preserved
 in `results/discrete/p97-capacity-scaling-v1-registration-parse-failure`. GPU0 runs unrelated PID1637741 and is left alone; use up to eight
 small workers on the idle GPU1. Prior scientific sources and results remain
 unchanged. Run root: `results/discrete/p97-capacity-scaling-v1`.
+
+
+Before pair selection or confirmation, the analysis was extended to also fit
+log of the arithmetic-mean t_gen at each size, with paired seed bootstrap
+before averaging. The registered per-seed log-slope analysis describes the
+geometric-mean trend and remains unchanged; both are needed when tail behavior
+varies with size. The timestamped addition is saved in the run root as
+`analysis_plan_extension.json`. Four focused analysis tests passed, including
+a case where arithmetic-mean and geometric-mean scaling differ.
+
+
+Calibration finished with all 32 cells and eight acceptable interior maxima.
+During checkpoint auditing, a CPU recomputation for B48/N32768/seed61 differed
+by 0.207 bit from the recorded 30,846.312 bits; on the original GPU the
+difference was 0.000874 bit and the full audit passed. The controller stopped
+before selection. A separate recovery script audited the remaining calibration
+checkpoints on GPU1 and executed the original frozen controller's remaining
+statements. No training was restarted or changed. The original error and
+recovery hashes are retained in the run's `audit_recovery` directory.
+Constants and all ten pairs were then frozen before confirmation began.
+
+## Completed capacity-constant matched scaling sweep
+
+The ten C/B pairs were frozen from calibration before seeds 401-410 were
+trained. All 200 confirmation runs finished on p=97 modular division with a
+50% split (4,656 training examples, 30,866.284 bits under the registered
+log2(99) convention), dropout 0.2, depth two, one head, FF width 4d and the
+registered AdamW settings. C is an ordinary fully continuous transformer.
+B uses a full-width eight-symbol categorical representation, per-slot
+pre-softmax LayerNorm, hard one-hot forward values, normalized-softmax STE
+backward gradients and learned embedding sums.
+
+Capacity matching uses K_hat = kappa * P, with one constant per family fitted
+through the origin to four architecture/seed maxima. Every calibration recipe
+passed arithmetic before random-label training; all 32 calibration cells
+finished, and each of the eight selected maxima was interior, below the
+registered entropy/epoch limits and stable to <=1% late drift. The constants
+are empirical under this optimizer/dropout protocol, not intrinsic capacity
+bounds. The ten sweep points are predicted matches, not direct capacity
+measurements at every size.
+
+| Family | Bits per parameter | Calibrated parameter range | Maximum relative fit residual |
+| --- | ---: | ---: | ---: |
+| C | 0.729116935 | 39,264-83,472 | 9.29% |
+| B | 0.310917024 | 157,200-242,580 | 5.09% |
+
+B requires approximately 2.345 times C's parameter count for an equal prediction.
+All ten pooled-constant matches are within 4.06%; using the two
+seed-specific constant estimates gives a worst mismatch of 5.00%.
+These rounding/sensitivity figures do not include model misspecification.
+Only C44/B50 and C48/B54 lie inside both calibration ranges; the other pairs
+use extrapolation for at least one member. Affine diagnostics, individual
+maxima and seed-specific constants are retained in the report.
+
+| C/B widths | C parameters | B parameters | C estimated bits | B estimated bits | B relative mismatch |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 32/36 | 39,264 | 90,252 | 28,628 | 28,061 | -1.98% |
+| 36/40 | 48,780 | 110,520 | 35,566 | 34,363 | -3.38% |
+| 40/46 | 59,320 | 144,762 | 43,251 | 45,009 | +4.06% |
+| 44/50 | 70,884 | 170,150 | 51,683 | 52,903 | +2.36% |
+| 48/54 | 83,472 | 197,586 | 60,861 | 61,433 | +0.94% |
+| 52/58 | 97,084 | 227,070 | 70,786 | 70,600 | -0.26% |
+| 56/62 | 111,720 | 258,602 | 81,457 | 80,404 | -1.29% |
+| 60/66 | 127,380 | 292,182 | 92,875 | 90,844 | -2.19% |
+| 64/72 | 144,064 | 346,392 | 105,040 | 107,699 | +2.53% |
+| 68/76 | 161,772 | 385,092 | 117,951 | 119,732 | +1.51% |
+
+Primary t_gen is the first held-out 99% crossing, measured in actual optimizer
+updates: ten updates per epoch. The training stop additionally requires three
+consecutive held-out 99% epochs and current dropout-active online training
+99%; the ceiling is 5,000 epochs / 50,000 updates. Missing crossings are
+right-censored. A > sign denotes a lower bound on the all-seed mean or median;
+no successful-seed-only average is substituted for an all-seed mean.
+
+| C/B widths | Mean t_gen C | Mean t_gen B | Median C | Median B | First 99% C/B (of 10 each) | Final learning C/B |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 32/36 | >20,553 | >43,703 | 15,030 | >50,000 | 9/2 | 9/1 |
+| 36/40 | 5,762 | >26,496 | 4,485 | 23,430 | 10/7 | 10/5 |
+| 40/46 | 5,224 | >14,874 | 3,220 | 6,340 | 10/8 | 10/8 |
+| 44/50 | 3,395 | >18,938 | 3,190 | 6,915 | 10/7 | 10/7 |
+| 48/54 | 3,304 | 7,551 | 3,065 | 4,950 | 10/10 | 10/10 |
+| 52/58 | 3,022 | 3,715 | 2,810 | 3,750 | 10/10 | 10/10 |
+| 56/62 | 2,688 | 4,430 | 2,705 | 3,935 | 10/10 | 10/10 |
+| 60/66 | 2,557 | 3,616 | 2,530 | 3,440 | 10/10 | 10/10 |
+| 64/72 | 2,440 | 3,281 | 2,460 | 2,910 | 10/10 | 10/10 |
+| 68/76 | 2,379 | 3,168 | 2,335 | 3,030 | 10/10 | 10/10 |
+
+C has 99/100 first crossings and 99/100 final learning checks passed;
+B has 84/100 first crossings and 81/100 final learning checks passed.
+The stricter joint stopping rule was met by C 99/100 and B 81/100.
+C is faster in 86 paired comparisons, B in 13; 1 pair is censored for
+both and cannot be ordered. The true means at the smallest pair cannot be
+ordered from their lower bounds alone. At the largest pair, mean times are
+C 2,379 and B 3,168, with C faster on nine of ten paired seeds.
+
+Three B runs crossed 99% but did not pass the final learning check. Their
+observed t_gen remains in the primary analysis, and their final failures are
+reported separately:
+
+| Model / seed | First 99% updates | Final held-out accuracy | Final dropout-free training accuracy |
+| --- | ---: | ---: | ---: |
+| B36 / 405 | 29,550 | 96.18% | 97.79% |
+| B40 / 407 | 35,310 | 95.25% | 96.80% |
+| B40 / 410 | 48,240 | 97.21% | 98.17% |
+
+The scaling fit t_gen proportional to K_hat^beta includes an intercept in log
+space. The six common fully observed points are pairs 4-9, with C capacity
+targets 60,861-117,951 bits. All ten seeds are retained at each point. The
+additional arithmetic-mean analysis was recorded before pair selection and
+confirmation; the originally registered per-seed log-slope analysis is also
+reported. Intervals use 10,000 paired seed bootstrap draws, seed 9001.
+
+| Analysis | C beta [95% interval] | B beta [95% interval] | B minus C [95% interval] |
+| --- | ---: | ---: | ---: |
+| Mean t_gen, six fully observed sizes | -0.509 [-0.707, -0.302] | -1.043 [-1.714, -0.374] | -0.534 [-1.300, 0.256] |
+| Per-seed log t_gen, same six sizes | -0.483 [-0.673, -0.293] | -0.781 [-1.314, -0.361] | -0.298 [-0.916, 0.242] |
+| Mean capped time, all ten sizes | -1.216 [-1.411, -0.970] | -1.955 [-2.180, -1.644] | -0.739 [-1.056, -0.367] |
+| Per-seed log capped time, all ten sizes | -1.085 [-1.269, -0.920] | -1.661 [-1.960, -1.391] | -0.576 [-0.900, -0.236] |
+
+Both families become faster across the six fully observed sizes. B's fitted
+mean-time decline is steeper, but the paired interval for the slope difference
+includes zero; these ten seeds do not resolve different uncensored exponents.
+The registered per-seed log analysis gives the same uncertainty conclusion.
+B remains slower in mean at every one of these six matched-capacity points.
+Its mean is more affected by slow runs, including B54/seed404 at 30,180 updates;
+the mean and geometric-mean trends therefore differ.
+
+Across all ten sizes, the capped-time curve is clearly steeper for B. This is
+a descriptive result for min(t_gen, 50,000), reflecting more failures and long
+runs at small sizes. It is not an uncensored power law for the missing times.
+Neither categorical mean times nor medians decrease at every adjacent size.
+Bootstrap intervals condition on the fitted constants and frozen architectures;
+calibration error and extrapolation limit the accuracy of the matching.
+Since each family uses a single constant, its slope versus estimated capacity
+is identical to its slope versus parameter count.
+
+The same seed's data split is shared across every role and size. Different
+model shapes consume initialization RNG differently, so full initial weights
+and subsequent shuffle/dropout RNG streams are not identical. Selection used
+capacity predictions before confirmation, with no generalisation-based choice
+of C or post-result resizing. t_gen is not the paper-style grokking delay:
+online-train99-to-held-out98 and dropout-free counterparts, including zero and
+undefined delays, are exported for every run. An observed minimum with missing
+seeds must not be described as a ten-seed minimum-delay result.
+
+All 235 final checkpoints passed reload/evaluation audits, including initial
+weights, dataset reconstruction, dropout and categorical-boundary checks. The
+report recomputes 203 arithmetic traces and verifies 1223 input artifact hashes.
+The independent verifier checks all 200 first crossings, final learning
+outcomes and first stopping epochs, all eight calibration maxima, both scalar
+constant fits, all ten nearest-capacity choices and both forms of log-log fit.
+Twenty focused training/protocol tests passed before launch; four statistical
+report tests passed, including censoring and arithmetic/geometric mean cases.
+
+The earlier CPU-only calibration audit discrepancy was resolved on the
+training GPU before selection, with no restarted training. Its original
+failure, exact numerical discrepancy, recovery source hash and timestamps
+are retained in [audit recovery](reports/p97_capacity_scaling/audit_recovery.json).
+The frozen scientific sources match commit `56ed10f`; final artifact and
+analysis hashes are recorded in
+[completion provenance](reports/p97_capacity_scaling/completion_provenance.json).
+
+Artifacts: [all 200 confirmation runs](reports/p97_capacity_scaling/confirmation_runs.csv),
+[ten-point summary](reports/p97_capacity_scaling/size_summary.csv),
+[paired outcomes](reports/p97_capacity_scaling/paired_outcomes.csv),
+[32 calibration cells](reports/p97_capacity_scaling/capacity_cells.csv),
+[complete summary](reports/p97_capacity_scaling/summary.json), and
+[independent verification](reports/p97_capacity_scaling/independent_validation.json).
+Figures are available as PNG and PDF:
+[scaling](reports/p97_capacity_scaling/scaling.png),
+[capacity calibration](reports/p97_capacity_scaling/calibration.png),
+[crossings and paired speeds](reports/p97_capacity_scaling/success_and_pairs.png),
+and [all seed trajectories](reports/p97_capacity_scaling/individual_times.png).

@@ -1,0 +1,108 @@
+{
+  "created_at_utc": "2026-10-26T06:33:37.289132+00:00",
+  "branch": "idea/discrete",
+  "run_root": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-capacity-scaling-v1",
+  "scientific_source_commit": "56ed10fe36e8c2302473a2d557cf72084a51e126",
+  "new_jobs": 223,
+  "inherited_jobs": 12,
+  "confirmation_runs": 200,
+  "all_requested_jobs_completed": true,
+  "all_frozen_scientific_sources_unchanged": true,
+  "independently_verified": {
+    "all_passed": true,
+    "confirmation_traces_recomputed": 200,
+    "first_stopping_epochs_verified": 200,
+    "calibration_maxima_recomputed": 8,
+    "constants_recomputed": {
+      "C": 0.7291169353321082,
+      "B": 0.31091702370607593
+    },
+    "matching_choices_verified": 10,
+    "independent_slopes": {
+      "complete_range_scaling": {
+        "C": -0.4830309612815268,
+        "B": -0.7809566254859808
+      },
+      "capped_time_scaling": {
+        "C": -1.085290552534792,
+        "B": -1.661395916964347
+      },
+      "mean_t_gen_scaling": {
+        "C": -0.5093148567670036,
+        "B": -1.0431087357961868
+      },
+      "mean_capped_t_gen_scaling": {
+        "C": -1.2155136300691864,
+        "B": -1.95482896065418
+      }
+    },
+    "input_hashes_verified": 1223,
+    "all_frozen_scientific_sources_unchanged": true,
+    "checkpoint_audits": 235
+  },
+  "analysis_sources_sha256": {
+    "scripts/report_p97_capacity_scaling.py": "afdf3671121747c29502b1c524126c5bed6be96ee7b6ad52e204fb7d27976deb",
+    "scripts/verify_p97_capacity_scaling.py": "0e2251783ce15785686cef60d4575288fdc87a44e6298bbd7663c379cd6ee6c5",
+    "scripts/status_p97_capacity_scaling.py": "6be350840528def211c6e44c87bf16ba1ecf1760d6c09ad0c1087857eeb3e5b9",
+    "scripts/resume_p97_capacity_scaling_audit.py": "08a53bc9cede65b451060d80da035a915d4908c53644733e22d043459334c9dc"
+  },
+  "registration_startup_correction": {
+    "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-capacity-scaling-v1-registration-parse-failure/diagnostic.json",
+    "sha256": "74a0bf3f7fc8c0c47884383d6baf0d4aa1558eb7fa52a65eef7ccf86c8f8b74d",
+    "jobs_before_correction": 0
+  },
+  "calibration_audit_recovery": {
+    "audits_completed": {
+      "completed_at": 1792986902.050071,
+      "all_passed": true
+    },
+    "manifest": {
+      "started_at": 1792986899.4760516,
+      "pid": 1730649,
+      "recovery_source_sha256": "08a53bc9cede65b451060d80da035a915d4908c53644733e22d043459334c9dc",
+      "frozen_controller_sha256": "d270391e9845c248cb3c0b5907b6be415820b9f53a3a16ea16985cbbde3ddbaa",
+      "reason": "CPU capacity recomputation differed by 0.207 bits; training-GPU audit passed.",
+      "verification_device": "cuda:1",
+      "training_jobs_restarted": 0,
+      "failed_checkpoint": "B_d48_capacity_n32768_s61",
+      "cpu_recomputed_bits": 30846.104935328243,
+      "stored_bits": 30846.311681846768,
+      "gpu_recomputed_bits": 30846.310808192356,
+      "training_source_changes": false
+    },
+    "original_campaign_error": {
+      "time": 1792986671.3089921,
+      "error": "AssertionError()"
+    }
+  },
+  "experiment_record_sha256": "28a47d312f3eba0ce5040f7ccc2639f863dee0b40d2cd7fe2246ecc71f337c02",
+  "report_artifacts_sha256": {
+    "reports/p97_capacity_scaling/analysis_plan_extension.json": "0960f4d035e1fb40ef227ecf20e4d855428d3c5cf8296117d56920b3c9f9bd8b",
+    "reports/p97_capacity_scaling/arithmetic_runs.csv": "8e12396ad99899bf2c762fe5a43834da023959f3a1769aa10741993acb6f4618",
+    "reports/p97_capacity_scaling/audit_recovery.json": "58d02e4d8144543b1a3712cf0861b26ad72a46ee2d110463c280aed25ca3d2a5",
+    "reports/p97_capacity_scaling/calibration.pdf": "7af257ba91b8e9def76b7e789416d95d309407a599b86889039c3f349d7a59ea",
+    "reports/p97_capacity_scaling/calibration.png": "58c91e8e466ba2886fb036869056a57b95ced264050b8b62314108a0f390d100",
+    "reports/p97_capacity_scaling/calibration_diagnostics.json": "3724eedf4a88ea0413bf5ae7be62a226e683337f73bc3140bb84e70c770af591",
+    "reports/p97_capacity_scaling/campaign_complete.json": "060067cf535704b4ea49daf0d121d47802788b7e13bb9bd56205186d5b193d61",
+    "reports/p97_capacity_scaling/capacity_cells.csv": "033f6ee8a3420e5c974d37bcedc65945607784e6755b2fa866285fbe233d44fc",
+    "reports/p97_capacity_scaling/capacity_constants.json": "49216e92fd372268537d70c96f23175ded0f44761b72781db87fc233dfd4416b",
+    "reports/p97_capacity_scaling/checkpoint_audits.json": "7de098f6d57781dfe62674798a4c0d5f7cafeda3ae74f80d4e225172dd22130f",
+    "reports/p97_capacity_scaling/confirmation_runs.csv": "670a1a4dc0dc6c161ad91a6a0d5c1c92bd0e8b43905369602a67199e94c82125",
+    "reports/p97_capacity_scaling/independent_validation.json": "96411603f9582a6548222f7a657d13c854abc65019848c0d3e8b14c93b0e7023",
+    "reports/p97_capacity_scaling/individual_times.pdf": "dc4408c1a512a4697dde8907c7d3747e5490c9c2adac2cf6f7c59aea0c5475d9",
+    "reports/p97_capacity_scaling/individual_times.png": "91f4bbf9b20d02dd69d9dad7410259d755e2b00f9b486e2967422f5bd74b440c",
+    "reports/p97_capacity_scaling/inherited.json": "1fbb7f277f1b344b359502a30aebba37b04d80046e7ea66e74ac54b85aeeaa44",
+    "reports/p97_capacity_scaling/input_hashes.json": "e8ca076564fae684dfd76a2c12848bd5096677f768e7678f94a1183fb95d4b3a",
+    "reports/p97_capacity_scaling/manifest.json": "3221e7192061298b8ec4c0190268eea79cf3e40ad8586d16c260cbcc771b64f6",
+    "reports/p97_capacity_scaling/paired_outcomes.csv": "08cf8957144ae3f297969e67cf3722976fb4a58d1d2e090654f4e9be5d2548f1",
+    "reports/p97_capacity_scaling/registration.yaml": "6d40705c5df39bf730b6d537c9b3c3a68861379707cdce35f93b61a9973bf8e1",
+    "reports/p97_capacity_scaling/scaling.pdf": "9d6540d3e96f6f1094ee72d43a14e82ebcd64aa4ef13a3713eeca59557da7c00",
+    "reports/p97_capacity_scaling/scaling.png": "6eef935c7ace9b04ba96814524ea4742a1f9cc795a5aa20857a7a88893e11a78",
+    "reports/p97_capacity_scaling/selection.json": "d626c0e939e54428b3d663e73544bc99e4383b16909a1a26c9115b1e6ebb14f6",
+    "reports/p97_capacity_scaling/size_summary.csv": "66bf6ff7266dd626f13310432f9730059173abba107e2df7fb14a1c145753d71",
+    "reports/p97_capacity_scaling/success_and_pairs.pdf": "b625a9cc5f39fe88ffa9490104e43edaff2b55606b60f4972b97cf5d73e51fad",
+    "reports/p97_capacity_scaling/success_and_pairs.png": "0ddebdcecc68f190ba6d5a41a7e4c7bc286803b017a7e4de8c40d240dfe38c17",
+    "reports/p97_capacity_scaling/summary.json": "414aa2f65cdf3854ee783834a8b6ad13c4f3e318c80ebdbbe73208fcb9571a5b",
+    "reports/p97_capacity_scaling/validation.json": "c98fd0fe4d5507cf93f599dbd6bb548ff10bdab69efc0820f538551bd69f3f47"
+  }
+}

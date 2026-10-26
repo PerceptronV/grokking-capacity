@@ -1,0 +1,1893 @@
+{
+  "complete": true,
+  "new_jobs": 223,
+  "audited_checkpoints": 235,
+  "calibration_cells": 32,
+  "audit_recovery": {
+    "audits_completed": {
+      "completed_at": 1792986902.050071,
+      "all_passed": true
+    },
+    "manifest": {
+      "started_at": 1792986899.4760516,
+      "pid": 1730649,
+      "recovery_source_sha256": "08a53bc9cede65b451060d80da035a915d4908c53644733e22d043459334c9dc",
+      "frozen_controller_sha256": "d270391e9845c248cb3c0b5907b6be415820b9f53a3a16ea16985cbbde3ddbaa",
+      "reason": "CPU capacity recomputation differed by 0.207 bits; training-GPU audit passed.",
+      "verification_device": "cuda:1",
+      "training_jobs_restarted": 0,
+      "failed_checkpoint": "B_d48_capacity_n32768_s61",
+      "cpu_recomputed_bits": 30846.104935328243,
+      "stored_bits": 30846.311681846768,
+      "gpu_recomputed_bits": 30846.310808192356,
+      "training_source_changes": false
+    },
+    "original_campaign_error": {
+      "time": 1792986671.3089921,
+      "error": "AssertionError()"
+    }
+  },
+  "constants": {
+    "C": {
+      "bits_per_parameter": 0.7291169353321082,
+      "relative_residuals": [
+        0.0929257477952421,
+        0.09174562301910827,
+        -0.03867125327644805,
+        -0.002189560931972201
+      ],
+      "max_absolute_relative_residual": 0.0929257477952421,
+      "affine_diagnostic": {
+        "slope": 0.641196145157214,
+        "intercept": 6095.512279254931
+      },
+      "parameter_range": [
+        39264,
+        83472
+      ],
+      "capacity_range": [
+        31254.54538872341,
+        60727.59028916557
+      ],
+      "per_seed_constants": {
+        "61": 0.7183047475803007,
+        "62": 0.7399291230839157
+      },
+      "points": [
+        {
+          "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s61",
+          "seed": 61,
+          "dim": 32,
+          "parameters": 39264,
+          "n_samples": 8192,
+          "capacity_bits": 31288.33005669216,
+          "epochs": 1625,
+          "late_drift": 0.004487896647539236,
+          "entropy_fraction": 0.5761307539339601,
+          "at_epoch_limit": false,
+          "grid": [
+            2048,
+            4096,
+            8192,
+            16384
+          ],
+          "interior": true,
+          "acceptable": true
+        },
+        {
+          "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s62",
+          "seed": 62,
+          "dim": 32,
+          "parameters": 39264,
+          "n_samples": 8192,
+          "capacity_bits": 31254.54538872341,
+          "epochs": 1584,
+          "late_drift": 0.0037790117378966315,
+          "entropy_fraction": 0.5755086566154718,
+          "at_epoch_limit": false,
+          "grid": [
+            2048,
+            4096,
+            8192,
+            16384
+          ],
+          "interior": true,
+          "acceptable": true
+        },
+        {
+          "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-capacity-scaling-v1/jobs/C_d48_capacity_n16384_s61",
+          "seed": 61,
+          "dim": 48,
+          "parameters": 83472,
+          "n_samples": 16384,
+          "capacity_bits": 58507.28352647026,
+          "epochs": 1112,
+          "late_drift": 0.006897964390588207,
+          "entropy_fraction": 0.5386648202006488,
+          "at_epoch_limit": false,
+          "grid": [
+            2048,
+            8192,
+            16384,
+            32768
+          ],
+          "interior": true,
+          "acceptable": true
+        },
+        {
+          "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-capacity-scaling-v1/jobs/C_d48_capacity_n16384_s62",
+          "seed": 62,
+          "dim": 48,
+          "parameters": 83472,
+          "n_samples": 16384,
+          "capacity_bits": 60727.59028916557,
+          "epochs": 2039,
+          "late_drift": 0.0021284835958355064,
+          "entropy_fraction": 0.5591067390700567,
+          "at_epoch_limit": false,
+          "grid": [
+            2048,
+            8192,
+            16384,
+            32768
+          ],
+          "interior": true,
+          "acceptable": true
+        }
+      ]
+    },
+    "B": {
+      "bits_per_parameter": 0.31091702370607593,
+      "relative_residuals": [
+        0.03239882415597939,
+        0.05092924369971508,
+        -0.022093928652134776,
+        -0.012899493163313847
+      ],
+      "max_absolute_relative_residual": 0.05092924369971508,
+      "affine_diagnostic": {
+        "slope": 0.2716101701155178,
+        "intercept": 8215.415211556976
+      },
+      "parameter_range": [
+        157200,
+        242580
+      ],
+      "capacity_range": [
+        50459.686114360884,
+        74449.34279160698
+      ],
+      "per_seed_constants": {
+        "61": 0.30905843321091747,
+        "62": 0.3127756142012344
+      },
+      "points": [
+        {
+          "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-capacity-scaling-v1/jobs/B_d48_capacity_n16384_s61",
+          "seed": 61,
+          "dim": 48,
+          "parameters": 157200,
+          "n_samples": 16384,
+          "capacity_bits": 50459.686114360884,
+          "epochs": 1058,
+          "late_drift": 0.007234963351352208,
+          "entropy_fraction": 0.4645722055421703,
+          "at_epoch_limit": false,
+          "grid": [
+            2048,
+            8192,
+            16384,
+            32768
+          ],
+          "interior": true,
+          "acceptable": true
+        },
+        {
+          "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-capacity-scaling-v1/jobs/B_d48_capacity_n16384_s62",
+          "seed": 62,
+          "dim": 48,
+          "parameters": 157200,
+          "n_samples": 16384,
+          "capacity_bits": 51365.38179307182,
+          "epochs": 1416,
+          "late_drift": 0.005340531915476232,
+          "entropy_fraction": 0.4729107639322314,
+          "at_epoch_limit": false,
+          "grid": [
+            2048,
+            8192,
+            16384,
+            32768
+          ],
+          "interior": true,
+          "acceptable": true
+        },
+        {
+          "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-capacity-scaling-v1/jobs/B_d60_capacity_n16384_s61",
+          "seed": 61,
+          "dim": 60,
+          "parameters": 242580,
+          "n_samples": 16384,
+          "capacity_bits": 73755.87776475151,
+          "epochs": 1276,
+          "late_drift": 0.003212177961378293,
+          "entropy_fraction": 0.6790555677895406,
+          "at_epoch_limit": false,
+          "grid": [
+            2048,
+            8192,
+            16384,
+            32768
+          ],
+          "interior": true,
+          "acceptable": true
+        },
+        {
+          "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-capacity-scaling-v1/jobs/B_d60_capacity_n16384_s62",
+          "seed": 62,
+          "dim": 60,
+          "parameters": 242580,
+          "n_samples": 16384,
+          "capacity_bits": 74449.34279160698,
+          "epochs": 1449,
+          "late_drift": 0.003177351311049348,
+          "entropy_fraction": 0.6854401611511096,
+          "at_epoch_limit": false,
+          "grid": [
+            2048,
+            8192,
+            16384,
+            32768
+          ],
+          "interior": true,
+          "acceptable": true
+        }
+      ]
+    }
+  },
+  "constant_seed_sensitivity": {
+    "61": [
+      {
+        "pair_index": 0,
+        "predicted_relative_mismatch": -0.011004864681923077
+      },
+      {
+        "pair_index": 1,
+        "predicted_relative_mismatch": -0.025165384983498185
+      },
+      {
+        "pair_index": 2,
+        "predicted_relative_mismatch": 0.049990316806381996
+      },
+      {
+        "pair_index": 3,
+        "predicted_relative_mismatch": 0.032798499362969524
+      },
+      {
+        "pair_index": 4,
+        "predicted_relative_mismatch": 0.018467586114392143
+      },
+      {
+        "pair_index": 5,
+        "predicted_relative_mismatch": 0.006338203523155617
+      },
+      {
+        "pair_index": 6,
+        "predicted_relative_mismatch": -0.004060828527128635
+      },
+      {
+        "pair_index": 7,
+        "predicted_relative_mismatch": -0.013075171875788993
+      },
+      {
+        "pair_index": 8,
+        "predicted_relative_mismatch": 0.03453275587320115
+      },
+      {
+        "pair_index": 9,
+        "predicted_relative_mismatch": 0.024219413867318407
+      }
+    ],
+    "62": [
+      {
+        "pair_index": 0,
+        "predicted_relative_mismatch": -0.028360732108534292
+      },
+      {
+        "pair_index": 1,
+        "predicted_relative_mismatch": -0.0422727495567895
+      },
+      {
+        "pair_index": 2,
+        "predicted_relative_mismatch": 0.03156404544574887
+      },
+      {
+        "pair_index": 3,
+        "predicted_relative_mismatch": 0.014673927064055459
+      },
+      {
+        "pair_index": 4,
+        "predicted_relative_mismatch": 0.0005945068932118325
+      },
+      {
+        "pair_index": 5,
+        "predicted_relative_mismatch": -0.011322017263536766
+      },
+      {
+        "pair_index": 6,
+        "predicted_relative_mismatch": -0.021538556786623975
+      },
+      {
+        "pair_index": 7,
+        "predicted_relative_mismatch": -0.03039470749862694
+      },
+      {
+        "pair_index": 8,
+        "predicted_relative_mismatch": 0.016377749121173846
+      },
+      {
+        "pair_index": 9,
+        "predicted_relative_mismatch": 0.006245395868609505
+      }
+    ]
+  },
+  "pairs": [
+    {
+      "index": 0,
+      "C": {
+        "model": "baseline",
+        "dim": 32,
+        "mlp_dim": 128
+      },
+      "B": {
+        "model": "categorical",
+        "dim": 36,
+        "mlp_dim": 144,
+        "alphabet": 8,
+        "categorical_temperature": 1.0,
+        "categorical_normalization": "slot_layernorm",
+        "categorical_training_sampling": false
+      },
+      "C_parameters": 39264,
+      "B_parameters": 90252,
+      "C_estimated_bits": 28628.047348879896,
+      "B_estimated_bits": 28060.883223520766,
+      "predicted_relative_mismatch": -0.019811484815827618
+    },
+    {
+      "index": 1,
+      "C": {
+        "model": "baseline",
+        "dim": 36,
+        "mlp_dim": 144
+      },
+      "B": {
+        "model": "categorical",
+        "dim": 40,
+        "mlp_dim": 160,
+        "alphabet": 8,
+        "categorical_temperature": 1.0,
+        "categorical_normalization": "slot_layernorm",
+        "categorical_training_sampling": false
+      },
+      "C_parameters": 48780,
+      "B_parameters": 110520,
+      "C_estimated_bits": 35566.324105500236,
+      "B_estimated_bits": 34362.54945999551,
+      "predicted_relative_mismatch": -0.033845911147128205
+    },
+    {
+      "index": 2,
+      "C": {
+        "model": "baseline",
+        "dim": 40,
+        "mlp_dim": 160
+      },
+      "B": {
+        "model": "categorical",
+        "dim": 46,
+        "mlp_dim": 184,
+        "alphabet": 8,
+        "categorical_temperature": 1.0,
+        "categorical_normalization": "slot_layernorm",
+        "categorical_training_sampling": false
+      },
+      "C_parameters": 59320,
+      "B_parameters": 144762,
+      "C_estimated_bits": 43251.216603900655,
+      "B_estimated_bits": 45008.97018573897,
+      "predicted_relative_mismatch": 0.04064055811275802
+    },
+    {
+      "index": 3,
+      "C": {
+        "model": "baseline",
+        "dim": 44,
+        "mlp_dim": 176
+      },
+      "B": {
+        "model": "categorical",
+        "dim": 50,
+        "mlp_dim": 200,
+        "alphabet": 8,
+        "categorical_temperature": 1.0,
+        "categorical_normalization": "slot_layernorm",
+        "categorical_training_sampling": false
+      },
+      "C_parameters": 70884,
+      "B_parameters": 170150,
+      "C_estimated_bits": 51682.72484408116,
+      "B_estimated_bits": 52902.53158358882,
+      "predicted_relative_mismatch": 0.023601827171218837
+    },
+    {
+      "index": 4,
+      "C": {
+        "model": "baseline",
+        "dim": 48,
+        "mlp_dim": 192
+      },
+      "B": {
+        "model": "categorical",
+        "dim": 54,
+        "mlp_dim": 216,
+        "alphabet": 8,
+        "categorical_temperature": 1.0,
+        "categorical_normalization": "slot_layernorm",
+        "categorical_training_sampling": false
+      },
+      "C_parameters": 83472,
+      "B_parameters": 197586,
+      "C_estimated_bits": 60860.848826041736,
+      "B_estimated_bits": 61432.85104598872,
+      "predicted_relative_mismatch": 0.009398525176373074
+    },
+    {
+      "index": 5,
+      "C": {
+        "model": "baseline",
+        "dim": 52,
+        "mlp_dim": 208
+      },
+      "B": {
+        "model": "categorical",
+        "dim": 58,
+        "mlp_dim": 232,
+        "alphabet": 8,
+        "categorical_temperature": 1.0,
+        "categorical_normalization": "slot_layernorm",
+        "categorical_training_sampling": false
+      },
+      "C_parameters": 97084,
+      "B_parameters": 227070,
+      "C_estimated_bits": 70785.58854978239,
+      "B_estimated_bits": 70599.92857293866,
+      "predicted_relative_mismatch": -0.002622849942303662
+    },
+    {
+      "index": 6,
+      "C": {
+        "model": "baseline",
+        "dim": 56,
+        "mlp_dim": 224
+      },
+      "B": {
+        "model": "categorical",
+        "dim": 62,
+        "mlp_dim": 248,
+        "alphabet": 8,
+        "categorical_temperature": 1.0,
+        "categorical_normalization": "slot_layernorm",
+        "categorical_training_sampling": false
+      },
+      "C_parameters": 111720,
+      "B_parameters": 258602,
+      "C_estimated_bits": 81456.94401530313,
+      "B_estimated_bits": 80403.76416443865,
+      "predicted_relative_mismatch": -0.012929282624040361
+    },
+    {
+      "index": 7,
+      "C": {
+        "model": "baseline",
+        "dim": 60,
+        "mlp_dim": 240
+      },
+      "B": {
+        "model": "categorical",
+        "dim": 66,
+        "mlp_dim": 264,
+        "alphabet": 8,
+        "categorical_temperature": 1.0,
+        "categorical_normalization": "slot_layernorm",
+        "categorical_training_sampling": false
+      },
+      "C_parameters": 127380,
+      "B_parameters": 292182,
+      "C_estimated_bits": 92874.91522260394,
+      "B_estimated_bits": 90844.35782048867,
+      "predicted_relative_mismatch": -0.021863356722839566
+    },
+    {
+      "index": 8,
+      "C": {
+        "model": "baseline",
+        "dim": 64,
+        "mlp_dim": 256
+      },
+      "B": {
+        "model": "categorical",
+        "dim": 72,
+        "mlp_dim": 288,
+        "alphabet": 8,
+        "categorical_temperature": 1.0,
+        "categorical_normalization": "slot_layernorm",
+        "categorical_training_sampling": false
+      },
+      "C_parameters": 144064,
+      "B_parameters": 346392,
+      "C_estimated_bits": 105039.50217168484,
+      "B_estimated_bits": 107699.16967559505,
+      "predicted_relative_mismatch": 0.025320640796288707
+    },
+    {
+      "index": 9,
+      "C": {
+        "model": "baseline",
+        "dim": 68,
+        "mlp_dim": 272
+      },
+      "B": {
+        "model": "categorical",
+        "dim": 76,
+        "mlp_dim": 304,
+        "alphabet": 8,
+        "categorical_temperature": 1.0,
+        "categorical_normalization": "slot_layernorm",
+        "categorical_training_sampling": false
+      },
+      "C_parameters": 161772,
+      "B_parameters": 385092,
+      "C_estimated_bits": 117950.70486254581,
+      "B_estimated_bits": 119731.6584930202,
+      "predicted_relative_mismatch": 0.015099135122166762
+    }
+  ],
+  "groups": [
+    {
+      "pair_index": 0,
+      "role": "C",
+      "dim": 32,
+      "parameters": 39264,
+      "estimated_capacity_bits": 28628.047348879896,
+      "estimated_capacity_to_dataset": 0.927486021850548,
+      "extrapolated": false,
+      "t_gen": {
+        "n": 10,
+        "observed": 9,
+        "censored": 1,
+        "mean": null,
+        "mean_lower_bound": 20553,
+        "mean_capped": 20553,
+        "median": 15030.0,
+        "median_lower_bound": 15030.0,
+        "min_observed": 8710,
+        "max_observed": 43930
+      },
+      "sustained99": {
+        "n": 10,
+        "observed": 9,
+        "censored": 1,
+        "mean": null,
+        "mean_lower_bound": 20950,
+        "mean_capped": 20950,
+        "median": 15835.0,
+        "median_lower_bound": 15835.0,
+        "min_observed": 9320,
+        "max_observed": 44060
+      },
+      "learning_successes": 9,
+      "joint_stopping_successes": 9,
+      "paper_delay": {
+        "min_observed": 0,
+        "positive": 1,
+        "zero": 8,
+        "undefined": 1,
+        "mean_all": null
+      },
+      "eval_delay": {
+        "min_observed": 0,
+        "positive": 8,
+        "zero": 1,
+        "undefined": 1,
+        "mean_all": null
+      }
+    },
+    {
+      "pair_index": 0,
+      "role": "B",
+      "dim": 36,
+      "parameters": 90252,
+      "estimated_capacity_bits": 28060.883223520766,
+      "estimated_capacity_to_dataset": 0.9091111466117635,
+      "extrapolated": true,
+      "t_gen": {
+        "n": 10,
+        "observed": 2,
+        "censored": 8,
+        "mean": null,
+        "mean_lower_bound": 43703,
+        "mean_capped": 43703,
+        "median": null,
+        "median_lower_bound": 50000.0,
+        "min_observed": 7480,
+        "max_observed": 29550
+      },
+      "sustained99": {
+        "n": 10,
+        "observed": 1,
+        "censored": 9,
+        "mean": null,
+        "mean_lower_bound": 45818,
+        "mean_capped": 45818,
+        "median": null,
+        "median_lower_bound": 50000.0,
+        "min_observed": 8180,
+        "max_observed": 8180
+      },
+      "learning_successes": 1,
+      "joint_stopping_successes": 1,
+      "paper_delay": {
+        "min_observed": 0,
+        "positive": 0,
+        "zero": 2,
+        "undefined": 8,
+        "mean_all": null
+      },
+      "eval_delay": {
+        "min_observed": 0,
+        "positive": 1,
+        "zero": 1,
+        "undefined": 8,
+        "mean_all": null
+      }
+    },
+    {
+      "pair_index": 1,
+      "role": "C",
+      "dim": 36,
+      "parameters": 48780,
+      "estimated_capacity_bits": 35566.324105500236,
+      "estimated_capacity_to_dataset": 1.1522709898601704,
+      "extrapolated": false,
+      "t_gen": {
+        "n": 10,
+        "observed": 10,
+        "censored": 0,
+        "mean": 5762,
+        "mean_lower_bound": 5762,
+        "mean_capped": 5762,
+        "median": 4485.0,
+        "median_lower_bound": 4485.0,
+        "min_observed": 3560,
+        "max_observed": 12710
+      },
+      "sustained99": {
+        "n": 10,
+        "observed": 10,
+        "censored": 0,
+        "mean": 6080,
+        "mean_lower_bound": 6080,
+        "mean_capped": 6080,
+        "median": 4820.0,
+        "median_lower_bound": 4820.0,
+        "min_observed": 4140,
+        "max_observed": 12710
+      },
+      "learning_successes": 10,
+      "joint_stopping_successes": 10,
+      "paper_delay": {
+        "min_observed": 0,
+        "positive": 1,
+        "zero": 9,
+        "undefined": 0,
+        "mean_all": 18
+      },
+      "eval_delay": {
+        "min_observed": 20,
+        "positive": 10,
+        "zero": 0,
+        "undefined": 0,
+        "mean_all": 634
+      }
+    },
+    {
+      "pair_index": 1,
+      "role": "B",
+      "dim": 40,
+      "parameters": 110520,
+      "estimated_capacity_bits": 34362.54945999551,
+      "estimated_capacity_to_dataset": 1.1132713283199496,
+      "extrapolated": true,
+      "t_gen": {
+        "n": 10,
+        "observed": 7,
+        "censored": 3,
+        "mean": null,
+        "mean_lower_bound": 26496,
+        "mean_capped": 26496,
+        "median": 23430.0,
+        "median_lower_bound": 23430.0,
+        "min_observed": 3910,
+        "max_observed": 48240
+      },
+      "sustained99": {
+        "n": 10,
+        "observed": 5,
+        "censored": 5,
+        "mean": null,
+        "mean_lower_bound": 28559,
+        "mean_capped": 28559,
+        "median": null,
+        "median_lower_bound": 32165.0,
+        "min_observed": 3990,
+        "max_observed": 14330
+      },
+      "learning_successes": 5,
+      "joint_stopping_successes": 5,
+      "paper_delay": {
+        "min_observed": 0,
+        "positive": 2,
+        "zero": 5,
+        "undefined": 3,
+        "mean_all": null
+      },
+      "eval_delay": {
+        "min_observed": 0,
+        "positive": 6,
+        "zero": 1,
+        "undefined": 3,
+        "mean_all": null
+      }
+    },
+    {
+      "pair_index": 2,
+      "role": "C",
+      "dim": 40,
+      "parameters": 59320,
+      "estimated_capacity_bits": 43251.216603900655,
+      "estimated_capacity_to_dataset": 1.4012446723760825,
+      "extrapolated": false,
+      "t_gen": {
+        "n": 10,
+        "observed": 10,
+        "censored": 0,
+        "mean": 5224,
+        "mean_lower_bound": 5224,
+        "mean_capped": 5224,
+        "median": 3220.0,
+        "median_lower_bound": 3220.0,
+        "min_observed": 3000,
+        "max_observed": 16520
+      },
+      "sustained99": {
+        "n": 10,
+        "observed": 10,
+        "censored": 0,
+        "mean": 5365,
+        "mean_lower_bound": 5365,
+        "mean_capped": 5365,
+        "median": 3330.0,
+        "median_lower_bound": 3330.0,
+        "min_observed": 3000,
+        "max_observed": 16560
+      },
+      "learning_successes": 10,
+      "joint_stopping_successes": 10,
+      "paper_delay": {
+        "min_observed": 0,
+        "positive": 1,
+        "zero": 9,
+        "undefined": 0,
+        "mean_all": 646
+      },
+      "eval_delay": {
+        "min_observed": 10,
+        "positive": 10,
+        "zero": 0,
+        "undefined": 0,
+        "mean_all": 843
+      }
+    },
+    {
+      "pair_index": 2,
+      "role": "B",
+      "dim": 46,
+      "parameters": 144762,
+      "estimated_capacity_bits": 45008.97018573897,
+      "estimated_capacity_to_dataset": 1.4581920379139752,
+      "extrapolated": true,
+      "t_gen": {
+        "n": 10,
+        "observed": 8,
+        "censored": 2,
+        "mean": null,
+        "mean_lower_bound": 14874,
+        "mean_capped": 14874,
+        "median": 6340.0,
+        "median_lower_bound": 6340.0,
+        "min_observed": 3250,
+        "max_observed": 9400
+      },
+      "sustained99": {
+        "n": 10,
+        "observed": 8,
+        "censored": 2,
+        "mean": null,
+        "mean_lower_bound": 16082,
+        "mean_capped": 16082,
+        "median": 6340.0,
+        "median_lower_bound": 6340.0,
+        "min_observed": 3250,
+        "max_observed": 20940
+      },
+      "learning_successes": 8,
+      "joint_stopping_successes": 8,
+      "paper_delay": {
+        "min_observed": 0,
+        "positive": 4,
+        "zero": 5,
+        "undefined": 1,
+        "mean_all": null
+      },
+      "eval_delay": {
+        "min_observed": 10,
+        "positive": 9,
+        "zero": 0,
+        "undefined": 1,
+        "mean_all": null
+      }
+    },
+    {
+      "pair_index": 3,
+      "role": "C",
+      "dim": 44,
+      "parameters": 70884,
+      "estimated_capacity_bits": 51682.72484408116,
+      "estimated_capacity_to_dataset": 1.6744070693982847,
+      "extrapolated": false,
+      "t_gen": {
+        "n": 10,
+        "observed": 10,
+        "censored": 0,
+        "mean": 3395,
+        "mean_lower_bound": 3395,
+        "mean_capped": 3395,
+        "median": 3190.0,
+        "median_lower_bound": 3190.0,
+        "min_observed": 2510,
+        "max_observed": 5120
+      },
+      "sustained99": {
+        "n": 10,
+        "observed": 10,
+        "censored": 0,
+        "mean": 3558,
+        "mean_lower_bound": 3558,
+        "mean_capped": 3558,
+        "median": 3220.0,
+        "median_lower_bound": 3220.0,
+        "min_observed": 2580,
+        "max_observed": 5330
+      },
+      "learning_successes": 10,
+      "joint_stopping_successes": 10,
+      "paper_delay": {
+        "min_observed": 0,
+        "positive": 0,
+        "zero": 10,
+        "undefined": 0,
+        "mean_all": 0
+      },
+      "eval_delay": {
+        "min_observed": 40,
+        "positive": 10,
+        "zero": 0,
+        "undefined": 0,
+        "mean_all": 113
+      }
+    },
+    {
+      "pair_index": 3,
+      "role": "B",
+      "dim": 50,
+      "parameters": 170150,
+      "estimated_capacity_bits": 52902.53158358882,
+      "estimated_capacity_to_dataset": 1.71392613566449,
+      "extrapolated": false,
+      "t_gen": {
+        "n": 10,
+        "observed": 7,
+        "censored": 3,
+        "mean": null,
+        "mean_lower_bound": 18938,
+        "mean_capped": 18938,
+        "median": 6915.0,
+        "median_lower_bound": 6915.0,
+        "min_observed": 3470,
+        "max_observed": 9670
+      },
+      "sustained99": {
+        "n": 10,
+        "observed": 7,
+        "censored": 3,
+        "mean": null,
+        "mean_lower_bound": 19213,
+        "mean_capped": 19213,
+        "median": 7520.0,
+        "median_lower_bound": 7520.0,
+        "min_observed": 3790,
+        "max_observed": 9670
+      },
+      "learning_successes": 7,
+      "joint_stopping_successes": 7,
+      "paper_delay": {
+        "min_observed": 0,
+        "positive": 6,
+        "zero": 1,
+        "undefined": 3,
+        "mean_all": null
+      },
+      "eval_delay": {
+        "min_observed": 310,
+        "positive": 8,
+        "zero": 0,
+        "undefined": 2,
+        "mean_all": null
+      }
+    },
+    {
+      "pair_index": 4,
+      "role": "C",
+      "dim": 48,
+      "parameters": 83472,
+      "estimated_capacity_bits": 60860.848826041736,
+      "estimated_capacity_to_dataset": 1.9717581809267763,
+      "extrapolated": false,
+      "t_gen": {
+        "n": 10,
+        "observed": 10,
+        "censored": 0,
+        "mean": 3304,
+        "mean_lower_bound": 3304,
+        "mean_capped": 3304,
+        "median": 3065.0,
+        "median_lower_bound": 3065.0,
+        "min_observed": 2520,
+        "max_observed": 5240
+      },
+      "sustained99": {
+        "n": 10,
+        "observed": 10,
+        "censored": 0,
+        "mean": 3371,
+        "mean_lower_bound": 3371,
+        "mean_capped": 3371,
+        "median": 3095.0,
+        "median_lower_bound": 3095.0,
+        "min_observed": 2520,
+        "max_observed": 5370
+      },
+      "learning_successes": 10,
+      "joint_stopping_successes": 10,
+      "paper_delay": {
+        "min_observed": 0,
+        "positive": 6,
+        "zero": 4,
+        "undefined": 0,
+        "mean_all": 20
+      },
+      "eval_delay": {
+        "min_observed": 40,
+        "positive": 10,
+        "zero": 0,
+        "undefined": 0,
+        "mean_all": 173
+      }
+    },
+    {
+      "pair_index": 4,
+      "role": "B",
+      "dim": 54,
+      "parameters": 197586,
+      "estimated_capacity_bits": 61432.85104598872,
+      "estimated_capacity_to_dataset": 1.990289799831936,
+      "extrapolated": false,
+      "t_gen": {
+        "n": 10,
+        "observed": 10,
+        "censored": 0,
+        "mean": 7551,
+        "mean_lower_bound": 7551,
+        "mean_capped": 7551,
+        "median": 4950.0,
+        "median_lower_bound": 4950.0,
+        "min_observed": 3030,
+        "max_observed": 30180
+      },
+      "sustained99": {
+        "n": 10,
+        "observed": 10,
+        "censored": 0,
+        "mean": 7725,
+        "mean_lower_bound": 7725,
+        "mean_capped": 7725,
+        "median": 5225.0,
+        "median_lower_bound": 5225.0,
+        "min_observed": 3050,
+        "max_observed": 30330
+      },
+      "learning_successes": 10,
+      "joint_stopping_successes": 10,
+      "paper_delay": {
+        "min_observed": 0,
+        "positive": 8,
+        "zero": 2,
+        "undefined": 0,
+        "mean_all": 894
+      },
+      "eval_delay": {
+        "min_observed": 290,
+        "positive": 10,
+        "zero": 0,
+        "undefined": 0,
+        "mean_all": 1493
+      }
+    },
+    {
+      "pair_index": 5,
+      "role": "C",
+      "dim": 52,
+      "parameters": 97084,
+      "estimated_capacity_bits": 70785.58854978239,
+      "estimated_capacity_to_dataset": 2.2932980069615576,
+      "extrapolated": true,
+      "t_gen": {
+        "n": 10,
+        "observed": 10,
+        "censored": 0,
+        "mean": 3022,
+        "mean_lower_bound": 3022,
+        "mean_capped": 3022,
+        "median": 2810.0,
+        "median_lower_bound": 2810.0,
+        "min_observed": 2590,
+        "max_observed": 4470
+      },
+      "sustained99": {
+        "n": 10,
+        "observed": 10,
+        "censored": 0,
+        "mean": 3048,
+        "mean_lower_bound": 3048,
+        "mean_capped": 3048,
+        "median": 2810.0,
+        "median_lower_bound": 2810.0,
+        "min_observed": 2620,
+        "max_observed": 4510
+      },
+      "learning_successes": 10,
+      "joint_stopping_successes": 10,
+      "paper_delay": {
+        "min_observed": 0,
+        "positive": 9,
+        "zero": 1,
+        "undefined": 0,
+        "mean_all": 131
+      },
+      "eval_delay": {
+        "min_observed": 80,
+        "positive": 10,
+        "zero": 0,
+        "undefined": 0,
+        "mean_all": 249
+      }
+    },
+    {
+      "pair_index": 5,
+      "role": "B",
+      "dim": 58,
+      "parameters": 227070,
+      "estimated_capacity_bits": 70599.92857293866,
+      "estimated_capacity_to_dataset": 2.2872830304163134,
+      "extrapolated": false,
+      "t_gen": {
+        "n": 10,
+        "observed": 10,
+        "censored": 0,
+        "mean": 3715,
+        "mean_lower_bound": 3715,
+        "mean_capped": 3715,
+        "median": 3750.0,
+        "median_lower_bound": 3750.0,
+        "min_observed": 2630,
+        "max_observed": 5700
+      },
+      "sustained99": {
+        "n": 10,
+        "observed": 10,
+        "censored": 0,
+        "mean": 3925,
+        "mean_lower_bound": 3925,
+        "mean_capped": 3925,
+        "median": 4010.0,
+        "median_lower_bound": 4010.0,
+        "min_observed": 2730,
+        "max_observed": 5700
+      },
+      "learning_successes": 10,
+      "joint_stopping_successes": 10,
+      "paper_delay": {
+        "min_observed": 0,
+        "positive": 9,
+        "zero": 1,
+        "undefined": 0,
+        "mean_all": 262
+      },
+      "eval_delay": {
+        "min_observed": 170,
+        "positive": 10,
+        "zero": 0,
+        "undefined": 0,
+        "mean_all": 479
+      }
+    },
+    {
+      "pair_index": 6,
+      "role": "C",
+      "dim": 56,
+      "parameters": 111720,
+      "estimated_capacity_bits": 81456.94401530313,
+      "estimated_capacity_to_dataset": 2.639026547502629,
+      "extrapolated": true,
+      "t_gen": {
+        "n": 10,
+        "observed": 10,
+        "censored": 0,
+        "mean": 2688,
+        "mean_lower_bound": 2688,
+        "mean_capped": 2688,
+        "median": 2705.0,
+        "median_lower_bound": 2705.0,
+        "min_observed": 2360,
+        "max_observed": 2940
+      },
+      "sustained99": {
+        "n": 10,
+        "observed": 10,
+        "censored": 0,
+        "mean": 2731,
+        "mean_lower_bound": 2731,
+        "mean_capped": 2731,
+        "median": 2745.0,
+        "median_lower_bound": 2745.0,
+        "min_observed": 2360,
+        "max_observed": 2960
+      },
+      "learning_successes": 10,
+      "joint_stopping_successes": 10,
+      "paper_delay": {
+        "min_observed": 0,
+        "positive": 9,
+        "zero": 1,
+        "undefined": 0,
+        "mean_all": 105
+      },
+      "eval_delay": {
+        "min_observed": 90,
+        "positive": 10,
+        "zero": 0,
+        "undefined": 0,
+        "mean_all": 200
+      }
+    },
+    {
+      "pair_index": 6,
+      "role": "B",
+      "dim": 62,
+      "parameters": 258602,
+      "estimated_capacity_bits": 80403.76416443865,
+      "estimated_capacity_to_dataset": 2.604905827417622,
+      "extrapolated": true,
+      "t_gen": {
+        "n": 10,
+        "observed": 10,
+        "censored": 0,
+        "mean": 4430,
+        "mean_lower_bound": 4430,
+        "mean_capped": 4430,
+        "median": 3935.0,
+        "median_lower_bound": 3935.0,
+        "min_observed": 2870,
+        "max_observed": 8650
+      },
+      "sustained99": {
+        "n": 10,
+        "observed": 10,
+        "censored": 0,
+        "mean": 4755,
+        "mean_lower_bound": 4755,
+        "mean_capped": 4755,
+        "median": 4170.0,
+        "median_lower_bound": 4170.0,
+        "min_observed": 2870,
+        "max_observed": 9700
+      },
+      "learning_successes": 10,
+      "joint_stopping_successes": 10,
+      "paper_delay": {
+        "min_observed": 10,
+        "positive": 10,
+        "zero": 0,
+        "undefined": 0,
+        "mean_all": 350
+      },
+      "eval_delay": {
+        "min_observed": 300,
+        "positive": 10,
+        "zero": 0,
+        "undefined": 0,
+        "mean_all": 704
+      }
+    },
+    {
+      "pair_index": 7,
+      "role": "C",
+      "dim": 60,
+      "parameters": 127380,
+      "estimated_capacity_bits": 92874.91522260394,
+      "estimated_capacity_to_dataset": 3.00894380254999,
+      "extrapolated": true,
+      "t_gen": {
+        "n": 10,
+        "observed": 10,
+        "censored": 0,
+        "mean": 2557,
+        "mean_lower_bound": 2557,
+        "mean_capped": 2557,
+        "median": 2530.0,
+        "median_lower_bound": 2530.0,
+        "min_observed": 1920,
+        "max_observed": 3210
+      },
+      "sustained99": {
+        "n": 10,
+        "observed": 10,
+        "censored": 0,
+        "mean": 2578,
+        "mean_lower_bound": 2578,
+        "mean_capped": 2578,
+        "median": 2550.0,
+        "median_lower_bound": 2550.0,
+        "min_observed": 1920,
+        "max_observed": 3280
+      },
+      "learning_successes": 10,
+      "joint_stopping_successes": 10,
+      "paper_delay": {
+        "min_observed": 20,
+        "positive": 10,
+        "zero": 0,
+        "undefined": 0,
+        "mean_all": 130
+      },
+      "eval_delay": {
+        "min_observed": 100,
+        "positive": 10,
+        "zero": 0,
+        "undefined": 0,
+        "mean_all": 222
+      }
+    },
+    {
+      "pair_index": 7,
+      "role": "B",
+      "dim": 66,
+      "parameters": 292182,
+      "estimated_capacity_bits": 90844.35782048867,
+      "estimated_capacity_to_dataset": 2.943158190835862,
+      "extrapolated": true,
+      "t_gen": {
+        "n": 10,
+        "observed": 10,
+        "censored": 0,
+        "mean": 3616,
+        "mean_lower_bound": 3616,
+        "mean_capped": 3616,
+        "median": 3440.0,
+        "median_lower_bound": 3440.0,
+        "min_observed": 2650,
+        "max_observed": 4920
+      },
+      "sustained99": {
+        "n": 10,
+        "observed": 10,
+        "censored": 0,
+        "mean": 3854,
+        "mean_lower_bound": 3854,
+        "mean_capped": 3854,
+        "median": 3515.0,
+        "median_lower_bound": 3515.0,
+        "min_observed": 2710,
+        "max_observed": 5740
+      },
+      "learning_successes": 10,
+      "joint_stopping_successes": 10,
+      "paper_delay": {
+        "min_observed": 0,
+        "positive": 9,
+        "zero": 1,
+        "undefined": 0,
+        "mean_all": 457
+      },
+      "eval_delay": {
+        "min_observed": 130,
+        "positive": 10,
+        "zero": 0,
+        "undefined": 0,
+        "mean_all": 611
+      }
+    },
+    {
+      "pair_index": 8,
+      "role": "C",
+      "dim": 64,
+      "parameters": 144064,
+      "estimated_capacity_bits": 105039.50217168484,
+      "estimated_capacity_to_dataset": 3.403049772103641,
+      "extrapolated": true,
+      "t_gen": {
+        "n": 10,
+        "observed": 10,
+        "censored": 0,
+        "mean": 2440,
+        "mean_lower_bound": 2440,
+        "mean_capped": 2440,
+        "median": 2460.0,
+        "median_lower_bound": 2460.0,
+        "min_observed": 2250,
+        "max_observed": 2620
+      },
+      "sustained99": {
+        "n": 10,
+        "observed": 10,
+        "censored": 0,
+        "mean": 2487,
+        "mean_lower_bound": 2487,
+        "mean_capped": 2487,
+        "median": 2470.0,
+        "median_lower_bound": 2470.0,
+        "min_observed": 2250,
+        "max_observed": 2670
+      },
+      "learning_successes": 10,
+      "joint_stopping_successes": 10,
+      "paper_delay": {
+        "min_observed": 100,
+        "positive": 10,
+        "zero": 0,
+        "undefined": 0,
+        "mean_all": 143
+      },
+      "eval_delay": {
+        "min_observed": 140,
+        "positive": 10,
+        "zero": 0,
+        "undefined": 0,
+        "mean_all": 234
+      }
+    },
+    {
+      "pair_index": 8,
+      "role": "B",
+      "dim": 72,
+      "parameters": 346392,
+      "estimated_capacity_bits": 107699.16967559505,
+      "estimated_capacity_to_dataset": 3.489217172994969,
+      "extrapolated": true,
+      "t_gen": {
+        "n": 10,
+        "observed": 10,
+        "censored": 0,
+        "mean": 3281,
+        "mean_lower_bound": 3281,
+        "mean_capped": 3281,
+        "median": 2910.0,
+        "median_lower_bound": 2910.0,
+        "min_observed": 2460,
+        "max_observed": 5580
+      },
+      "sustained99": {
+        "n": 10,
+        "observed": 10,
+        "censored": 0,
+        "mean": 3464,
+        "mean_lower_bound": 3464,
+        "mean_capped": 3464,
+        "median": 3275.0,
+        "median_lower_bound": 3275.0,
+        "min_observed": 2460,
+        "max_observed": 5580
+      },
+      "learning_successes": 10,
+      "joint_stopping_successes": 10,
+      "paper_delay": {
+        "min_observed": 130,
+        "positive": 10,
+        "zero": 0,
+        "undefined": 0,
+        "mean_all": 465
+      },
+      "eval_delay": {
+        "min_observed": 270,
+        "positive": 10,
+        "zero": 0,
+        "undefined": 0,
+        "mean_all": 670
+      }
+    },
+    {
+      "pair_index": 9,
+      "role": "C",
+      "dim": 68,
+      "parameters": 161772,
+      "estimated_capacity_bits": 117950.70486254581,
+      "estimated_capacity_to_dataset": 3.8213444561635814,
+      "extrapolated": true,
+      "t_gen": {
+        "n": 10,
+        "observed": 10,
+        "censored": 0,
+        "mean": 2379,
+        "mean_lower_bound": 2379,
+        "mean_capped": 2379,
+        "median": 2335.0,
+        "median_lower_bound": 2335.0,
+        "min_observed": 2080,
+        "max_observed": 2780
+      },
+      "sustained99": {
+        "n": 10,
+        "observed": 10,
+        "censored": 0,
+        "mean": 2409,
+        "mean_lower_bound": 2409,
+        "mean_capped": 2409,
+        "median": 2360.0,
+        "median_lower_bound": 2360.0,
+        "min_observed": 2150,
+        "max_observed": 2800
+      },
+      "learning_successes": 10,
+      "joint_stopping_successes": 10,
+      "paper_delay": {
+        "min_observed": 80,
+        "positive": 10,
+        "zero": 0,
+        "undefined": 0,
+        "mean_all": 214
+      },
+      "eval_delay": {
+        "min_observed": 120,
+        "positive": 10,
+        "zero": 0,
+        "undefined": 0,
+        "mean_all": 310
+      }
+    },
+    {
+      "pair_index": 9,
+      "role": "B",
+      "dim": 76,
+      "parameters": 385092,
+      "estimated_capacity_bits": 119731.6584930202,
+      "estimated_capacity_to_dataset": 3.8790434524555377,
+      "extrapolated": true,
+      "t_gen": {
+        "n": 10,
+        "observed": 10,
+        "censored": 0,
+        "mean": 3168,
+        "mean_lower_bound": 3168,
+        "mean_capped": 3168,
+        "median": 3030.0,
+        "median_lower_bound": 3030.0,
+        "min_observed": 2370,
+        "max_observed": 4680
+      },
+      "sustained99": {
+        "n": 10,
+        "observed": 10,
+        "censored": 0,
+        "mean": 3302,
+        "mean_lower_bound": 3302,
+        "mean_capped": 3302,
+        "median": 3030.0,
+        "median_lower_bound": 3030.0,
+        "min_observed": 2370,
+        "max_observed": 4680
+      },
+      "learning_successes": 10,
+      "joint_stopping_successes": 10,
+      "paper_delay": {
+        "min_observed": 0,
+        "positive": 9,
+        "zero": 1,
+        "undefined": 0,
+        "mean_all": 364
+      },
+      "eval_delay": {
+        "min_observed": 240,
+        "positive": 10,
+        "zero": 0,
+        "undefined": 0,
+        "mean_all": 666
+      }
+    }
+  ],
+  "paired_comparisons": [
+    {
+      "pair_index": 0,
+      "B_wins": 1,
+      "C_wins": 8,
+      "ties": 0,
+      "both_censored": 1,
+      "geometric_mean_B_over_C": null,
+      "bootstrap_ratio_95_interval": null
+    },
+    {
+      "pair_index": 1,
+      "B_wins": 3,
+      "C_wins": 7,
+      "ties": 0,
+      "both_censored": 0,
+      "geometric_mean_B_over_C": null,
+      "bootstrap_ratio_95_interval": null
+    },
+    {
+      "pair_index": 2,
+      "B_wins": 2,
+      "C_wins": 8,
+      "ties": 0,
+      "both_censored": 0,
+      "geometric_mean_B_over_C": null,
+      "bootstrap_ratio_95_interval": null
+    },
+    {
+      "pair_index": 3,
+      "B_wins": 1,
+      "C_wins": 9,
+      "ties": 0,
+      "both_censored": 0,
+      "geometric_mean_B_over_C": null,
+      "bootstrap_ratio_95_interval": null
+    },
+    {
+      "pair_index": 4,
+      "B_wins": 2,
+      "C_wins": 8,
+      "ties": 0,
+      "both_censored": 0,
+      "geometric_mean_B_over_C": 1.7937565882500595,
+      "bootstrap_ratio_95_interval": [
+        1.269178155917259,
+        2.7951588349696452
+      ]
+    },
+    {
+      "pair_index": 5,
+      "B_wins": 1,
+      "C_wins": 9,
+      "ties": 0,
+      "both_censored": 0,
+      "geometric_mean_B_over_C": 1.2113285154290956,
+      "bootstrap_ratio_95_interval": [
+        1.0099866619355329,
+        1.4232192178410332
+      ]
+    },
+    {
+      "pair_index": 6,
+      "B_wins": 0,
+      "C_wins": 10,
+      "ties": 0,
+      "both_censored": 0,
+      "geometric_mean_B_over_C": 1.5685957560097765,
+      "bootstrap_ratio_95_interval": [
+        1.3286366882874145,
+        1.912318327393467
+      ]
+    },
+    {
+      "pair_index": 7,
+      "B_wins": 1,
+      "C_wins": 9,
+      "ties": 0,
+      "both_censored": 0,
+      "geometric_mean_B_over_C": 1.3984515834235123,
+      "bootstrap_ratio_95_interval": [
+        1.1770770317428751,
+        1.6291940985960256
+      ]
+    },
+    {
+      "pair_index": 8,
+      "B_wins": 1,
+      "C_wins": 9,
+      "ties": 0,
+      "both_censored": 0,
+      "geometric_mean_B_over_C": 1.3047105867044835,
+      "bootstrap_ratio_95_interval": [
+        1.1449605830181795,
+        1.523128871381386
+      ]
+    },
+    {
+      "pair_index": 9,
+      "B_wins": 1,
+      "C_wins": 9,
+      "ties": 0,
+      "both_censored": 0,
+      "geometric_mean_B_over_C": 1.3106999799081869,
+      "bootstrap_ratio_95_interval": [
+        1.1348969518392797,
+        1.5386103488086889
+      ]
+    }
+  ],
+  "complete_range_scaling": {
+    "available": true,
+    "pair_indices": [
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "roles": {
+      "C": {
+        "mean_slope": -0.4830309612815203,
+        "seed_slopes": [
+          -0.95828803782044,
+          -0.6471366355872368,
+          -0.47123195355343755,
+          -0.3365213158690324,
+          -0.39601618591087295,
+          -0.23025365463187902,
+          -0.1421833047455495,
+          -0.931584853969565,
+          -0.005971787300506597,
+          -0.7111218834266829
+        ],
+        "bootstrap_95_interval": [
+          -0.673172111204911,
+          -0.29263462317173083
+        ]
+      },
+      "B": {
+        "mean_slope": -0.7809566254859795,
+        "seed_slopes": [
+          -0.21272223965027665,
+          0.028136498824717103,
+          -0.5290707323387354,
+          -2.801883116451244,
+          -1.1639797571181656,
+          -1.2921428153776437,
+          -0.25919421972041556,
+          -0.18518274485214675,
+          -0.660657093609222,
+          -0.7328700345666628
+        ],
+        "bootstrap_95_interval": [
+          -1.3144999953624006,
+          -0.3610122644024387
+        ]
+      }
+    },
+    "B_minus_C": {
+      "mean_slope_difference": -0.29792566420445926,
+      "seed_differences": [
+        0.7455657981701633,
+        0.6752731344119539,
+        -0.057838778785297806,
+        -2.4653618005822113,
+        -0.7679635712072926,
+        -1.0618891607457648,
+        -0.11701091497486607,
+        0.7464021091174182,
+        -0.6546853063087154,
+        -0.021748151139979854
+      ],
+      "bootstrap_95_interval": [
+        -0.9162302593638657,
+        0.24242061105734805
+      ]
+    },
+    "interpretation": "Per-seed log(t) on log(estimated capacity), with intercept. Negative slope means faster generalisation as capacity increases.",
+    "scope": "Conditional on common sizes with all twenty observed times",
+    "seed_bootstrap_resamples": 10000,
+    "bootstrap_seed": 9001
+  },
+  "capped_time_scaling": {
+    "available": true,
+    "pair_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "roles": {
+      "C": {
+        "mean_slope": -1.0852905525347913,
+        "seed_slopes": [
+          -1.0412951569705453,
+          -0.8318524480675824,
+          -0.9469613866996143,
+          -1.4280772112295197,
+          -0.9233495454548396,
+          -1.0069399761741817,
+          -0.714356080605629,
+          -1.7003055699859435,
+          -0.9640643244443665,
+          -1.295703825715693
+        ],
+        "bootstrap_95_interval": [
+          -1.2689488446635315,
+          -0.9197758499258937
+        ]
+      },
+      "B": {
+        "mean_slope": -1.6613959169643515,
+        "seed_slopes": [
+          -1.2393040231471324,
+          -1.2497124152180341,
+          -1.8516189906496554,
+          -2.023458878498197,
+          -1.289404152111879,
+          -2.449748061473832,
+          -1.779143302292808,
+          -1.129229374142446,
+          -1.318165538960203,
+          -2.2841744331493294
+        ],
+        "bootstrap_95_interval": [
+          -1.9601298359953678,
+          -1.391172601454369
+        ]
+      }
+    },
+    "B_minus_C": {
+      "mean_slope_difference": -0.5761053644295601,
+      "seed_differences": [
+        -0.19800886617658708,
+        -0.4178599671504517,
+        -0.9046576039500411,
+        -0.5953816672686774,
+        -0.3660546066570395,
+        -1.44280808529965,
+        -1.064787221687179,
+        0.5710761958434976,
+        -0.3541012145158364,
+        -0.9884706074336365
+      ],
+      "bootstrap_95_interval": [
+        -0.9000182208481808,
+        -0.2359215199898765
+      ]
+    },
+    "interpretation": "Per-seed log(t) on log(estimated capacity), with intercept. Negative slope means faster generalisation as capacity increases.",
+    "scope": "All-size capped-time sensitivity",
+    "seed_bootstrap_resamples": 10000,
+    "bootstrap_seed": 9001
+  },
+  "mean_t_gen_scaling": {
+    "available": true,
+    "pair_indices": [
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "roles": {
+      "C": {
+        "slope": -0.5093148567669548,
+        "bootstrap_95_interval": [
+          -0.7069176629810514,
+          -0.30186220569142563
+        ]
+      },
+      "B": {
+        "slope": -1.0431087357960511,
+        "bootstrap_95_interval": [
+          -1.714131432115712,
+          -0.37387806671671797
+        ]
+      }
+    },
+    "B_minus_C": {
+      "slope_difference": -0.5337938790290964,
+      "bootstrap_95_interval": [
+        -1.299929654747766,
+        0.25599676176694636
+      ]
+    },
+    "aggregation": "Log of arithmetic mean across all ten seeds at each size; paired seed resampling before computing each mean.",
+    "scope": "Common sizes with all twenty observed times",
+    "seed_bootstrap_resamples": 10000,
+    "bootstrap_seed": 9001
+  },
+  "mean_capped_t_gen_scaling": {
+    "available": true,
+    "pair_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "roles": {
+      "C": {
+        "slope": -1.215513630069187,
+        "bootstrap_95_interval": [
+          -1.4106633313453127,
+          -0.9699122309493943
+        ]
+      },
+      "B": {
+        "slope": -1.9548289606542053,
+        "bootstrap_95_interval": [
+          -2.1803382033302388,
+          -1.6441966011403564
+        ]
+      }
+    },
+    "B_minus_C": {
+      "slope_difference": -0.7393153305850184,
+      "bootstrap_95_interval": [
+        -1.0559754260069056,
+        -0.36676204209888097
+      ]
+    },
+    "aggregation": "Log of arithmetic mean across all ten seeds at each size; paired seed resampling before computing each mean.",
+    "scope": "All-size capped-time sensitivity",
+    "seed_bootstrap_resamples": 10000,
+    "bootstrap_seed": 9001
+  },
+  "notes": [
+    "Capacities are estimated as family-specific constant times actual parameter count; only calibration sizes have direct empirical measurements.",
+    "One constant rescales the horizontal axis; within each family the log-log slope versus estimated capacity equals the slope versus parameter count.",
+    "All models use FF4d; C is fully continuous and B uses normalized deterministic eight-symbol categorical interfaces.",
+    "Every role and size shares the same seed-specific dataset, but different tensor shapes consume initialization RNG differently.",
+    "Missing first held-out99 crossings are right-censored at50000 updates. No success-only average is presented as an all-seed mean.",
+    "Complete-range slopes condition on sizes with all twenty events; capped-time slopes are a separate descriptive sensitivity analysis.",
+    "Both registered per-seed log slopes (geometric-mean trend) and additional arithmetic-mean t_gen curve slopes are reported; these can differ with size-dependent tails.",
+    "Fit residuals and parameter-range extrapolation limit the accuracy of capacity matching.",
+    "Bootstrap intervals resample the ten arithmetic seeds and condition on the fitted constants and frozen architectures; calibration uncertainty is reported separately.",
+    "The capacity constants are empirical measurements under this training protocol, not intrinsic information-theoretic bounds.",
+    "An observed first held-out99 crossing is not the same as sustained learning or passing the final learning check; both outcomes are retained."
+  ]
+}

@@ -1,0 +1,162 @@
+{
+  "C_d32_s61": {
+    "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s61",
+    "seed": 61,
+    "dim": 32,
+    "parameters": 39264,
+    "n_samples": 8192,
+    "capacity_bits": 31288.33005669216,
+    "epochs": 1625,
+    "late_drift": 0.004487896647539236,
+    "entropy_fraction": 0.5761307539339601,
+    "at_epoch_limit": false,
+    "grid": [
+      2048,
+      4096,
+      8192,
+      16384
+    ],
+    "interior": true,
+    "acceptable": true
+  },
+  "C_d32_s62": {
+    "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-dropout-match-v1/jobs/A32f128_capacity_n8192_s62",
+    "seed": 62,
+    "dim": 32,
+    "parameters": 39264,
+    "n_samples": 8192,
+    "capacity_bits": 31254.54538872341,
+    "epochs": 1584,
+    "late_drift": 0.0037790117378966315,
+    "entropy_fraction": 0.5755086566154718,
+    "at_epoch_limit": false,
+    "grid": [
+      2048,
+      4096,
+      8192,
+      16384
+    ],
+    "interior": true,
+    "acceptable": true
+  },
+  "B_d48_s61": {
+    "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-capacity-scaling-v1/jobs/B_d48_capacity_n16384_s61",
+    "seed": 61,
+    "dim": 48,
+    "parameters": 157200,
+    "n_samples": 16384,
+    "capacity_bits": 50459.686114360884,
+    "epochs": 1058,
+    "late_drift": 0.007234963351352208,
+    "entropy_fraction": 0.4645722055421703,
+    "at_epoch_limit": false,
+    "grid": [
+      2048,
+      8192,
+      16384,
+      32768
+    ],
+    "interior": true,
+    "acceptable": true
+  },
+  "C_d48_s61": {
+    "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-capacity-scaling-v1/jobs/C_d48_capacity_n16384_s61",
+    "seed": 61,
+    "dim": 48,
+    "parameters": 83472,
+    "n_samples": 16384,
+    "capacity_bits": 58507.28352647026,
+    "epochs": 1112,
+    "late_drift": 0.006897964390588207,
+    "entropy_fraction": 0.5386648202006488,
+    "at_epoch_limit": false,
+    "grid": [
+      2048,
+      8192,
+      16384,
+      32768
+    ],
+    "interior": true,
+    "acceptable": true
+  },
+  "C_d48_s62": {
+    "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-capacity-scaling-v1/jobs/C_d48_capacity_n16384_s62",
+    "seed": 62,
+    "dim": 48,
+    "parameters": 83472,
+    "n_samples": 16384,
+    "capacity_bits": 60727.59028916557,
+    "epochs": 2039,
+    "late_drift": 0.0021284835958355064,
+    "entropy_fraction": 0.5591067390700567,
+    "at_epoch_limit": false,
+    "grid": [
+      2048,
+      8192,
+      16384,
+      32768
+    ],
+    "interior": true,
+    "acceptable": true
+  },
+  "B_d48_s62": {
+    "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-capacity-scaling-v1/jobs/B_d48_capacity_n16384_s62",
+    "seed": 62,
+    "dim": 48,
+    "parameters": 157200,
+    "n_samples": 16384,
+    "capacity_bits": 51365.38179307182,
+    "epochs": 1416,
+    "late_drift": 0.005340531915476232,
+    "entropy_fraction": 0.4729107639322314,
+    "at_epoch_limit": false,
+    "grid": [
+      2048,
+      8192,
+      16384,
+      32768
+    ],
+    "interior": true,
+    "acceptable": true
+  },
+  "B_d60_s61": {
+    "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-capacity-scaling-v1/jobs/B_d60_capacity_n16384_s61",
+    "seed": 61,
+    "dim": 60,
+    "parameters": 242580,
+    "n_samples": 16384,
+    "capacity_bits": 73755.87776475151,
+    "epochs": 1276,
+    "late_drift": 0.003212177961378293,
+    "entropy_fraction": 0.6790555677895406,
+    "at_epoch_limit": false,
+    "grid": [
+      2048,
+      8192,
+      16384,
+      32768
+    ],
+    "interior": true,
+    "acceptable": true
+  },
+  "B_d60_s62": {
+    "path": "/lambda/nfs/vincent-in-georgia/predicting-grokking/results/discrete/p97-capacity-scaling-v1/jobs/B_d60_capacity_n16384_s62",
+    "seed": 62,
+    "dim": 60,
+    "parameters": 242580,
+    "n_samples": 16384,
+    "capacity_bits": 74449.34279160698,
+    "epochs": 1449,
+    "late_drift": 0.003177351311049348,
+    "entropy_fraction": 0.6854401611511096,
+    "at_epoch_limit": false,
+    "grid": [
+      2048,
+      8192,
+      16384,
+      32768
+    ],
+    "interior": true,
+    "acceptable": true
+  }
+}

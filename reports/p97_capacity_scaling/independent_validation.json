@@ -1,0 +1,32 @@
+{
+  "all_passed": true,
+  "confirmation_traces_recomputed": 200,
+  "first_stopping_epochs_verified": 200,
+  "calibration_maxima_recomputed": 8,
+  "constants_recomputed": {
+    "C": 0.7291169353321082,
+    "B": 0.31091702370607593
+  },
+  "matching_choices_verified": 10,
+  "independent_slopes": {
+    "complete_range_scaling": {
+      "C": -0.4830309612815268,
+      "B": -0.7809566254859808
+    },
+    "capped_time_scaling": {
+      "C": -1.085290552534792,
+      "B": -1.661395916964347
+    },
+    "mean_t_gen_scaling": {
+      "C": -0.5093148567670036,
+      "B": -1.0431087357961868
+    },
+    "mean_capped_t_gen_scaling": {
+      "C": -1.2155136300691864,
+      "B": -1.95482896065418
+    }
+  },
+  "input_hashes_verified": 1223,
+  "all_frozen_scientific_sources_unchanged": true,
+  "checkpoint_audits": 235
+}
