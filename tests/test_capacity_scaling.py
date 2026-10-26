@@ -34,3 +34,14 @@ def test_ten_pairs_match_predicted_capacity_with_different_parameter_counts():
         assert p['B_parameters']>2.5*p['C_parameters']
         assert p['B']['alphabet']==8 and p['C']['model']=='baseline'
     with pytest.raises(ValueError):match_pairs({'C':.8,'B':.01},range(32,69,4),[24,26])
+
+
+def test_registration_parses_and_defines_ten_sizes_and_ten_seeds():
+    from pathlib import Path
+    import yaml
+    root=Path(__file__).resolve().parents[1]
+    reg=yaml.safe_load((root/'configs/discrete_p97_capacity_scaling.yaml').read_text())
+    assert reg['matching']['C_widths']==list(range(32,69,4))
+    assert reg['confirmation']['seeds']==list(range(401,411))
+    assert reg['common']['dropout']==.2
+    assert set(reg['resources']['devices'])=={'cuda:1'}

@@ -3462,7 +3462,9 @@ labelled an uncensored power law.
 
 Registration: `configs/discrete_p97_capacity_scaling.yaml`; worker:
 `src/grokking_capacity/experiments/capacity_scaling.py`; durable controller:
-`scripts/run_p97_capacity_scaling.py`. The 19 focused tests passed before
-launch. GPU0 runs unrelated PID1637741 and is left alone; use up to eight
+`scripts/run_p97_capacity_scaling.py`. The 20 focused tests passed before
+launch. A descriptive YAML scalar needed quoting; the first startup failed
+before source freezing or any training. Its empty run root and log are preserved
+in `results/discrete/p97-capacity-scaling-v1-registration-parse-failure`. GPU0 runs unrelated PID1637741 and is left alone; use up to eight
 small workers on the idle GPU1. Prior scientific sources and results remain
 unchanged. Run root: `results/discrete/p97-capacity-scaling-v1`.

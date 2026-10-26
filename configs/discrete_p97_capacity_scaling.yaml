@@ -34,7 +34,7 @@ calibration:
   stopping: Original CapacityTrainer patience100/min_delta1e-4, maximum5000 epochs; retain primary result and continue live optimizer/RNG in200-epoch segments if late100/previous100 drift>1% or unavailable.
   maxima: Maximum final learned bits across N for each architecture and calibration seed. Require interior maximum, <95% label entropy, <5000 epochs, late drift<=1%.
   expansion: If maximum lies at largest N, double only that architecture/seed's largest N, up to131072. Otherwise retain failed calibration diagnostics and stop dependent matching; never replace seeds or label lower bounds as measured capacities.
-  constant: For each role, fit through origin to the four architecture/seed maxima: kappa=sum(P*K)/sum(P^2). Record affine fit and residuals as diagnostics, per-seed sensitivity and calibration range. One constant per family; no per-size capacity tuning.
+  constant: "For each role, fit through origin to the four architecture/seed maxima: kappa=sum(P*K)/sum(P^2). Record affine fit and residuals as diagnostics, per-seed sensitivity and calibration range. One constant per family; no per-size capacity tuning."
 matching:
   C_widths: [32, 36, 40, 44, 48, 52, 56, 60, 64, 68]
   B_width_candidates: {start: 24, stop: 160, step: 2}
