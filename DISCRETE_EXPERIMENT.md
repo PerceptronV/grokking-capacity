@@ -2,12 +2,23 @@
 
 Branch: `idea/discrete`. Initial registration: 2026-10-24. The p97 dropout rematch was registered 2026-10-25 before its training.
 
-Active follow-up: a logarithmic dataset-size sweep will resize both C and B
-from the calibrated capacity constants to match each dataset's complexity.
-The previous fixed-pair proposal was not launched. See the
-[dataset-matched sweep registration](#dataset-matched-logarithmic-sweep-registration).
+Latest completed result: all 200 runs of the logarithmic dataset-size sweep
+finished, with B and C each resized from calibrated capacity constants to match
+N*log2(99). All 200 checkpoint audits and independent verification passed.
+There is no established uncensored mean-time crossing. Capped mean times
+reverse ordering between N=1,858 and 2,342, but the paired difference at
+1,858 is -580 updates with a 95% interval [-14,623, 13,517]. Only N=2,342
+and 2,952 have all twenty first99 crossings; C has the lower mean at both.
+First99 totals are C 63/100 and B 50/100; final learning totals are 63 and 47.
+Both families fail to generalise within 50,000 updates on every seed at the
+three smallest sizes. C has positive paper-style delay on all ten seeds at
+N=2,342 (minimum 150 updates); no B size meets that all-ten-seed criterion.
+See the [completed dataset-matched sweep](#completed-dataset-matched-logarithmic-sweep),
+[final plot](reports/p97_dataset_scaling/dataset_scaling_final.png),
+[all 200 runs](reports/p97_dataset_scaling/runs.csv), and
+[verified results](reports/p97_dataset_scaling/summary.json).
 
-Latest completed result: the capacity-constant matched scaling sweep is complete: ten
+Previous completed result: the capacity-constant matched scaling sweep is complete: ten
 C/B size pairs and ten fresh seeds per pair, 200 arithmetic runs. Capacity is
 estimated from parameter count using separately calibrated constants,
 kappa_C = 0.729117 and kappa_B = 0.310917 bits/parameter.
@@ -3742,3 +3753,96 @@ initialization reproduced, representation boundaries audited, and update,
 example and stopping counts checked. The scheduler uses four workers on GPU1
 and leaves other workloads untouched. Configuration:
 [discrete_p97_dataset_scaling.yaml](configs/discrete_p97_dataset_scaling.yaml).
+
+## Completed dataset-matched logarithmic sweep
+
+All 200 registered arithmetic runs finished on 2026-10-26; the final report
+was reviewed and recorded on 2026-10-27. There were no training or pipeline
+errors. All 200 final checkpoints passed reload, initialization, data,
+representation, metric and stopping audits. The independent verifier
+reconstructed the data permutation from the original generator, recomputed
+capacity constants and nearest-width selection, checked every training trace
+and first stopping point, and verified 1,000 input artifact hashes. Thirteen
+focused tests passed before launch. The source registration is commit `8191f82`.
+
+The experiment used p=97 modular division, ten logarithmically spaced training
+sizes, seeds 501-510, dropout 0.2 and the frozen AdamW recipe. Each seed has
+nested training subsets and the same disjoint 1,863-example held-out set.
+Both models were resized at every N from the family capacity constants to
+target D=N*log2(99), maintaining depth 2, one head and FF=4d. The maximum predicted
+model-to-dataset error is 8.02%; maximum B-to-C mismatch is 9.80%.
+These are predicted empirical-capacity matches. The smaller models extrapolate
+the calibration: C widths 14-30 and B widths 16-42 are below the calibrated
+parameter ranges. The calibration residuals (C 9.29%, B 5.09%) are additional
+to rounding error. Dataset size and predicted model capacity increase together.
+
+The table reports mean t_gen, the first held-out 99 crossing in actual optimizer
+updates. Evaluation occurs every ten updates. Every missing crossing is
+right-censored at 50,000; > marks a lower bound on the all-ten-seed mean.
+First crossings, final learning and delayed grokking are separate outcomes.
+
+| Training N | C/B widths | Mean t_gen C | Mean t_gen B | First99 C/B of 10 | Final learning C/B of 10 |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 928 | 14/16 | >50,000 | >50,000 | 0/0 | 0/0 |
+| 1,170 | 16/18 | >50,000 | >50,000 | 0/0 | 0/0 |
+| 1,474 | 18/20 | >50,000 | >50,000 | 0/0 | 0/0 |
+| 1,858 | 20/24 | >35,812 | >35,232 | 4/7 | 4/7 |
+| 2,342 | 22/26 | 7,796 | 9,433 | 10/10 | 10/10 |
+| 2,952 | 26/30 | 4,702 | 4,968 | 10/10 | 10/10 |
+| 3,720 | 30/34 | 4,284 | >16,665 | 10/8 | 10/8 |
+| 4,689 | 34/38 | 5,668 | >30,859 | 10/5 | 10/5 |
+| 5,910 | 38/42 | 6,462 | >28,216 | 10/6 | 10/4 |
+| 7,449 | 42/48 | >10,718 | >38,349 | 9/4 | 9/3 |
+
+No adjacent fully observed mean-time points reverse ordering, and no crossing
+is resolved by the registered simultaneous confidence-band criterion. The
+only two sizes with all twenty first crossings are 2,342 and 2,952: C has the
+lower arithmetic mean at both, but their paired pointwise 95% difference
+intervals also include zero. At 2,342, B-minus-C is 1,637 updates
+[-1,347,4,320]; at 2,952 it is 266 [-53,588].
+
+The capped-time sensitivity curve has a descriptive reversal between 1,858
+and 2,342. Its log-N interpolation is approximately 1,974 examples, but this
+is not an estimated crossing of uncensored means. At 1,858, B has 7/10 first
+crossings versus C 4/10; capped mean(B)-mean(C) is only -580 updates, with a
+paired pointwise 95% interval [-14,623,13,517]. Both uncensored means are
+unknown. At the three smallest sizes all times are censored, so equality
+of capped times at 50,000 provides no evidence that actual times are equal.
+The simultaneous 95% band half-width is 18,229.2 updates. It favors C for
+capped-time comparisons at 4,689, 5,910 and 7,449, but does not resolve a
+sign reversal. Bootstrap uncertainty is conditional on the selected
+architectures and calibrated constants, not a calibration-uncertainty interval.
+
+Across all 100 paired comparisons C is faster in 53, B in 14, one pair ties,
+and 32 pairs are censored for both. Totals are C 63/100 versus B 50/100 first 99%
+crossings, and C 63/100 versus B 47/100 final learning checks. Three B runs
+have transient first crossings and fail the final learning check:
+
+| B run | First99 updates | Final held-out accuracy |
+| --- | ---: | ---: |
+| width 48, N=7,449, seed 503 | 49,440 | 98.71% |
+| width 42, N=5,910, seed 504 | 37,700 | 97.85% |
+| width 42, N=5,910, seed 507 | 11,650 | 98.77% |
+
+Under the registered paper-style delay (online training 99 to held-out 98,
+clipped at zero), C has 28 positive-delay runs and B 14. The only size with
+positive delay on every one of ten seeds is C at N=2,342, minimum 150 updates.
+At that same size B has one positive delay and nine zero delays, minimum 0.
+No B size meets the all-ten-seed positive-delay criterion in this sweep;
+failures and undefined thresholds remain in the report. The C result at
+N=2,342 uses an extrapolated capacity constant and therefore does not establish
+directly measured equality of model capacity and dataset complexity.
+
+The frozen report and original figures are retained. A separate presentation
+renderer suppresses duplicate logarithmic minor tick labels in the final
+figure; it reads the same saved summary, changes no statistics, and records
+its own source/output hashes in rendering_provenance.json. Original completion
+provenance hashes were rechecked before the final presentation was saved.
+
+Artifacts: [final figure](reports/p97_dataset_scaling/dataset_scaling_final.png),
+[PDF](reports/p97_dataset_scaling/dataset_scaling_final.pdf),
+[original four-panel figure](reports/p97_dataset_scaling/dataset_scaling.png),
+[size table](reports/p97_dataset_scaling/size_summary.csv),
+[all runs](reports/p97_dataset_scaling/runs.csv),
+[summary](reports/p97_dataset_scaling/summary.json), and
+[independent validation](reports/p97_dataset_scaling/independent_validation.json).

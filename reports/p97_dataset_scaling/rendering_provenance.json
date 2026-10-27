@@ -1,0 +1,10 @@
+{
+  "presentation_only": true,
+  "summary_sha256": "e90b69ffbe41b14c4a997e3a17525d38c82b5885836677e6049d55636094d7a7",
+  "renderer_sha256": "44ba1472df2bd2961528c342dd1c48858e327241b121638f394e901a122ac332",
+  "output_hashes": {
+    "dataset_scaling_final.png": "d4e0f4926131c96be422aaff3bba5be57f765c17c69757777396b0aa688efbdc",
+    "dataset_scaling_final.pdf": "6634dfaaeb7add6a576ad2793f2b24eb1f8f78d5a1e51fe74f618a55dcaa2ed5"
+  },
+  "reason": "Suppress duplicate logarithmic minor tick labels; preserve frozen statistics and original report artifacts."
+}

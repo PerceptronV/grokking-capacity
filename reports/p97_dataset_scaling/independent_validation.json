@@ -1,0 +1,12 @@
+{
+  "all_passed": true,
+  "runs": 200,
+  "dataset_sizes": 10,
+  "seeds": 10,
+  "first99": 113,
+  "joint_success": 110,
+  "final_learning": 110,
+  "observed_crossing_brackets": 0,
+  "verifier_sha256": "e7bdb9cc5e3fa1c3d0182bfd76cf0ba8088a6441a2fabc727d6fcce8ab1297d2",
+  "source_commit": "8191f82bb6fe13d0d286740572cc9d8d1dd385c9"
+}

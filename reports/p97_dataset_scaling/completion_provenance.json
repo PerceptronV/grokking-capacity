@@ -1,0 +1,20 @@
+{
+  "completed_at": 1793047623.24893,
+  "report_source_sha256": "648e07f02125eb7c239a8d4eed6cfe4db9d42a927e62094b5399a553b04f079c",
+  "verifier_source_sha256": "e7bdb9cc5e3fa1c3d0182bfd76cf0ba8088a6441a2fabc727d6fcce8ab1297d2",
+  "report_hashes": {
+    "campaign_complete.json": "04ea9141bf7e52933bdb6ad030813a1fbc605778d86df61387cd58542ce0f24a",
+    "checkpoint_audits.json": "e3c83a4ca3b92fb440dfa51484b053a0a1d962f2c5123990a60e7048ef1659c9",
+    "dataset_scaling.pdf": "7ca7452d28116d61d3cee4a663a52a6615d123573c2366ae2ff8673e55437d3e",
+    "dataset_scaling.png": "558797b163feca9c8171067fbf3f94bcdc6408f13b87db2088e7bc43f9b5aba2",
+    "independent_validation.json": "85a527ecd9a92e84aa5a3bbcc81b72474496829c6b81e1dae2d0568d330782f9",
+    "input_hashes.json": "1d1d27f918087286cd4d5af54b546f0df4bb7dda195ad3b72f4cd7c4a3d23120",
+    "job_registry.json": "7c9b03ba81c43bc9e154f05937dfdb107ed48bc9540b72ccd16b4080ba218992",
+    "manifest.json": "1660e7adfe29f9da323dd72d9879a0fdc8d5128b6e781d690a8b6a9bec8165cc",
+    "registration.yaml": "8cc1aa5ba5279ab7495ba37d4a617b8d15e627606a325b46447c713b38717302",
+    "runs.csv": "52ef76203fa321d65502d8dbd9e2720ae5a590d596017cf8f231e6fbe4051bd6",
+    "selection.json": "0a98e2bb25f81803c74ca3d5113162e16c36d2413c9a5ced98bb6c6d69c70151",
+    "size_summary.csv": "a2dfec75148d3ea61598a7deed9b72e8fec099590c35ce7e379d91fd2da3522a",
+    "summary.json": "e90b69ffbe41b14c4a997e3a17525d38c82b5885836677e6049d55636094d7a7"
+  }
+}
