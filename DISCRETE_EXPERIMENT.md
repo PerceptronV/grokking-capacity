@@ -3846,3 +3846,65 @@ Artifacts: [final figure](reports/p97_dataset_scaling/dataset_scaling_final.png)
 [all runs](reports/p97_dataset_scaling/runs.csv),
 [summary](reports/p97_dataset_scaling/summary.json), and
 [independent validation](reports/p97_dataset_scaling/independent_validation.json).
+
+## Follow-up at N=2,952
+
+A descriptive follow-up on 2026-10-27 re-read the twenty existing traces;
+no new training or primary statistical analysis was performed. All trace and
+summary hashes match the completed campaign. N=2,952 uses 31.70% of the
+9,312 modular input pairs for training and 1,863 examples for evaluation.
+There are six optimizer updates per epoch at batch size 512, with the last
+392-example batch retained. The mean first 99% times correspond to roughly
+784 epochs for C and 828 for B, but optimizer updates remain the primary unit.
+
+Both models pass first 99%, sustained 99%, final learning and joint stopping on
+all ten seeds. C26 has 26,910 parameters and B30 has 63,690 (2.367 times C).
+Predicted capacities are 19,620.54 and 19,802.31 bits against a 19,569.86-bit
+dataset target, errors +0.26% and +1.19%; B versus C differs by 0.93%. Both model
+sizes are below their families' calibration ranges, so the close prediction
+is not a direct measurement of equal empirical capacity.
+
+| Measure (optimizer updates unless stated) | C26 | B30 |
+| --- | ---: | ---: |
+| Mean first held-out 99% | 4,702 | 4,968 |
+| Median first held-out 99% | 4,650 | 4,740 |
+| First99 range across seeds | 3,680-5,370 | 4,390-5,800 |
+| Mean sustained 99% onset | 4,769 | 5,119 |
+| Mean training 99%, online/dropout active | 4,357 | 4,820 |
+| Mean training 99%, full training set/dropout off | 4,158 | 4,354 |
+| Positive registered delay /10 seeds | 9 | 3 |
+| Mean registered delay | 204 | 102 |
+| Minimum registered delay | 0 | 0 |
+| Positive dropout-free delay /10 seeds | 10 | 10 |
+| Mean dropout-free delay | 403 | 453 |
+| Minimum dropout-free delay | 110 | 100 |
+
+The mean B-minus-C first 99% difference is 266 updates, or 5.66% of C's mean.
+The registered paired pointwise 95% bootstrap interval is [-53, 588] updates;
+the ratio interval is [0.989, 1.131]. C is faster on seven paired seeds, B on
+two, with one tie at the ten-update evaluation resolution. These observations
+show close update counts, without establishing statistical equivalence or a
+resolved nonzero speed difference. The pointwise interval does not correct
+for selecting this size after inspecting the ten-size sweep.
+
+Delay is max(0, first held-out 98% minus first training 99%). Under the registered
+online/dropout-active metric neither family has positive delay on all ten
+seeds. Using dropout-free training evaluation, both have positive delay on
+all ten; the means are close at 403 and 453 updates. The online 99% threshold
+occurs later than the dropout-free 99% threshold by 199 updates on average for
+C and 466 for B. Online accuracy also uses a moving training window, whereas
+evaluation tests the entire training set at fixed weights. The 9/10 versus
+3/10 positive-delay comparison is therefore sensitive to the measurement
+convention; it does not establish that categorical B avoids delayed
+generalisation while C has it.
+
+This is B's fastest all-seed mean in the tested grid and one of only two
+sizes where both families learn on all ten seeds. At the next larger size,
+N=3,720, C's mean improves to 4,284 while B has two censored first 99% times and
+an all-seed mean lower bound of 16,665. Both dataset size and architecture
+change between those points, so this observation alone cannot identify the
+cause of B's loss of reliability.
+
+[Paired-seed and delay plot](reports/p97_dataset_scaling/n2952/seed_comparison.png),
+[per-seed table](reports/p97_dataset_scaling/n2952/seeds.csv), and
+[follow-up statistics](reports/p97_dataset_scaling/n2952/summary.json).
