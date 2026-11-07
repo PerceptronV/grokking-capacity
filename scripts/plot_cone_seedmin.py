@@ -1,80 +1,83 @@
 #!/usr/bin/env python3
-"""The grokking region on the canonical protocol, all registry data.
-Per cell (protocol, p, d): seed-minimum canonical delay (val-98 epoch minus
-train-mode train-99 epoch, clipped at zero; runs never reaching train-99
-dropped). Filled marker: seed-min > 0 (grokking at every seed); open marker:
-seed-min = 0. Colour: seed-mean delay. Left: fixed rate (central runs.db at
-wd 1.0, cone fill, band gaps, p197 column, crossing_fixed, lr_wall_check);
-right: per-layer scaling base 236 (mup_depth_series, mup_laws, crossing_mup,
-lr_wall_check, open_top). Fixed-rate panel overlays the law-derived onset
-crossing and p* = 167.5. Writes figures/theory/cone_seedmin.pdf (+ media)."""
-import os, sys, sqlite3, json, math, shutil
-from collections import defaultdict
-import numpy as np, matplotlib, matplotlib.ticker
-matplotlib.use("Agg"); import matplotlib.pyplot as plt
+"""Render the cone from explicit hardware cohorts, unique seeds and censored clocks.
+
+Defaults to both learning-rate panels. --fixed-only selects the paper's opening
+figure. --final uses the latest published audited cohort (including later extensions).
+--publish copies the PDF into the paper; otherwise outputs stay in the
+analysis directory. --reuse reads already audited rows/cells without rescoring.
+"""
+from pathlib import Path
+import argparse,json,shutil
+import numpy as np
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
-H = os.path.expanduser("~")
-BASE = ("experiment_type='groks' and status='completed' and operation='/' and train_fraction=0.5 and dropout=0.2 "
-        "and weight_decay=1.0 and lr=0.001 and batch_size=512 and depth=2 and heads=1")
-SRC = {0: [("runs.db", BASE + " and mup_base=0"), (f"{H}/cone_fill_runs.db", BASE), (f"{H}/band_gaps_runs.db", BASE),
-           (f"{H}/p197_runs.db", BASE), (f"{H}/crossing_fixed_runs.db", BASE), (f"{H}/lr_wall_check_runs.db", BASE + " and mup_base=0")],
-       236: [(f"{H}/mup_depth_series_runs.db", BASE), (f"{H}/mup_laws_runs.db", BASE), (f"{H}/crossing_mup_runs.db", BASE),
-             (f"{H}/lr_wall_check_runs.db", BASE + " and mup_base=236"), (f"{H}/open_top_runs.db", BASE)]}
-def delays(db, where):
-    if not os.path.exists(db): return
-    c = sqlite3.connect(db); c.row_factory = sqlite3.Row
-    for r in c.execute(f"select p, dim, param_count, npz_path from runs where {where}"):
-        path = r["npz_path"]
-        if not os.path.exists(path): path = os.path.join("data", "groks", os.path.basename(os.path.dirname(path)), "trace.npz")
-        if not os.path.exists(path): continue
-        try: z = np.load(path); tr, va = z["train_acc"], z["val_acc"]
-        except Exception: continue
-        ti = np.nonzero(tr >= 99)[0]
-        if not ti.size: continue
-        vi = np.nonzero(va >= 98)[0]; te = ti[0] + 1
-        yield r["p"], r["dim"], r["param_count"], (max(0, vi[0] + 1 - te) if vi.size else max(0, len(va) - te))
-cells = {0: defaultdict(list), 236: defaultdict(list)}; Pof = {}
-for mb, srcs in SRC.items():
-    for db, where in srcs:
-        for p, d, P, dl in delays(db, where):
-            cells[mb][(p, d)].append(dl); Pof[(p, d)] = P
-R = json.load(open("results/theory/forecast_onset.json")); C = 2.16
-g, lnb, lnA, a, beta = R["mem_law"]["gamma"], R["mem_law"]["ln_b"], R["gen_law"]["lnA"], R["gen_law"]["a"], R["gen_law"]["beta"]
-K = lambda p: (p * (p - 1) // 2) * math.log2(p + 2)
-def law_onset_P(p):
-    # onset root x+ of x - beta ln x = R(p); P = gamma K / (C x)
-    Rp = lnA - lnb + a * math.log(p) - beta * math.log(g * K(p) / C)
-    if Rp < beta * (1 - math.log(beta)): return None
-    from scipy.optimize import brentq
-    x = brentq(lambda x: x - beta * math.log(x) - Rp, beta, 1e3)
-    return g * K(p) / (C * x)
-FIXED_ONLY = "--fixed-only" in sys.argv
-if FIXED_ONLY:
-    fig, ax0 = plt.subplots(1, 1, figsize=(5.0, 4.0)); axs = np.array([ax0]); panels = ((ax0, 0, "fixed learning rate"),)
-else:
-    fig, axs = plt.subplots(1, 2, figsize=(13, 5.2), sharey=True); panels = ((axs[0], 0, "fixed learning rate"), (axs[1], 236, "per-layer scaling (base 236)"))
-for ax, mb, title in panels:
-    cs = cells[mb]; ps = [k[0] for k in cs]; Ps = [Pof[k] for k in cs]
-    mn = np.array([min(v) for v in cs.values()]); mean = np.array([np.mean(v) for v in cs.values()])
-    grok = mn > 0
-    ms = 16 if FIXED_ONLY else 28
-    sc = ax.scatter(np.array(ps)[grok], np.array(Ps)[grok], c=np.clip(mean[grok], 1, None), cmap="viridis", norm=LogNorm(1, 1500), s=ms, edgecolors="k", linewidths=.3, label="seed-min delay > 0 (grokking)")
-    ax.scatter(np.array(ps)[~grok], np.array(Ps)[~grok], facecolors="none", edgecolors="grey", s=ms*0.8, linewidths=.6, label="seed-min delay = 0")
-    ax.set(yscale="log", xlabel="prime $p$", title=f"{title}: {len(cs)} cells, {sum(len(v) for v in cs.values())} runs")
-    ax.set_xticks(sorted(set(ps))[::2]); ax.tick_params(axis="x", labelsize=8 if FIXED_ONLY else 7, rotation=90)
-    if FIXED_ONLY:
-        ax.xaxis.label.set_size(12); ax.set_title(""); ax.tick_params(axis="y", labelsize=10)
-        ax.set_xticks([97, 113, 139, 149, 163, 179, 197]); ax.tick_params(axis="x", labelsize=10, rotation=0)
-    if mb == 0:
-        pp = np.arange(97, 168); Pl = [law_onset_P(p) for p in pp]
-        ax.plot([p for p, P in zip(pp, Pl) if P], [P for P in Pl if P], "r-", lw=1.5, label="law-derived onset crossing")
-        ax.axvline(167.5, color="r", ls="--", lw=1, label="$p^* = 167.5$")
-    ax.legend(fontsize=9 if FIXED_ONLY else 7, loc="upper left")
-axs.flat[0].set_ylabel("parameters $P$", fontsize=13 if FIXED_ONLY else 10)
-cb = fig.colorbar(sc, ax=axs, fraction=.04 if FIXED_ONLY else .03, pad=.02); cb.set_label("seed-mean delay (epochs)", fontsize=10 if FIXED_ONLY else 10)
-name = "cone_seedmin_fixed" if FIXED_ONLY else "cone_seedmin"
-fig.savefig(f"figures/theory/{name}.pdf", bbox_inches="tight"); fig.savefig(f"/tmp/{name}.png", dpi=90, bbox_inches="tight")
-dst = f"docs/papers/2026 Grokking Capacity/media/theory/{name}.pdf"
-if os.path.isdir(os.path.dirname(dst)): shutil.copy(f"figures/theory/{name}.pdf", dst)
-for mb in (0, 236):
-    print(f"mup_base={mb}: primes {sorted(set(k[0] for k in cells[mb]))}")
+from matplotlib.lines import Line2D
+from cone_data import ROOT,OUT,build,law_coefficients,law_onset,write_json
+from grokking_capacity.analysis._figure_style import save_paper_figure
+
+def plot(cells,summary,out,fixed_only=True,filename=None,title=None):
+    out=Path(out);out.mkdir(parents=True,exist_ok=True)
+    # Regenerating the published ten-seed cone must preserve unresolved-seed
+    # overlays in known-zero cells, its ten-seed legend and canonical layout.
+    if fixed_only and summary.get('ten_seed_completion') and filename is None:
+        if any(c.get('aggregation_metric', 'min') != 'min' for c in cells):
+            raise ValueError('Use plot_cone_aggregate.py for alternative metrics; this entrypoint reproduces the published minimum cone.')
+        assert all(c['mup_base']==0 and c['n_seeds']==10 and c['seeds']==list(range(42,52))
+                   and c['state']!='pending' for c in cells)
+        from analyse_cone_ten_seeds import render as render_ten_seed_cone
+        render_ten_seed_cone(cells,out)
+        return out/'cone_seedmin_fixed.pdf'
+    panels=[0] if fixed_only else [0,236]
+    fig,axs=plt.subplots(1,len(panels),figsize=(6.5,4.8) if fixed_only else (12,5),squeeze=False,sharey=True,layout='constrained')
+    coeffs=law_coefficients();fold=coeffs['capacity_update']['fold_new']
+    norm=LogNorm(1,1500);cmap=plt.get_cmap('viridis')
+    for ax,mb in zip(axs.flat,panels):
+        cs=[c for c in cells if c['mup_base']==mb]
+        for state in ['zero','positive','unresolved','pending']:
+            rr=[c for c in cs if c['state']==state]
+            xx=[c['p'] for c in rr];yy=[c['param_count'] for c in rr]
+            if state=='positive':ax.scatter(xx,yy,c=[c['mean_delay'] for c in rr],cmap=cmap,norm=norm,s=17,edgecolors='#202d38',linewidths=.3,zorder=3)
+            elif state=='zero':ax.scatter(xx,yy,s=12,facecolors='none',edgecolors='#9299a2',linewidths=.5,alpha=.65,zorder=1)
+            elif state=='unresolved':ax.scatter(xx,yy,s=26,marker='x',color='#b35d12',linewidths=1,zorder=5)
+            else:ax.scatter(xx,yy,s=24,marker='^',facecolors='none',edgecolors='#377ba8',linewidths=.8,zorder=5)
+        if mb==0:
+            pp=np.linspace(97,fold-1e-7,500);pred=[law_onset(p,coeffs) for p in pp]
+            ax.plot(pp,pred,color='#c7353b',lw=1.7,zorder=4)
+            ax.axvline(fold,color='#c7353b',ls='--',lw=1.1,zorder=2)
+        ax.set(yscale='log',xlabel='Prime $p$',ylabel='Parameters $P$' if mb==0 else '',xlim=(min(c['p'] for c in cs)-2,max(c['p'] for c in cs)+2))
+        ticks=[97,113,127,139,149,163,179,max(c['p'] for c in cs)] if mb==0 else sorted({c['p'] for c in cs})[::2]
+        ax.set_xticks(ticks);ax.tick_params(labelsize=9)
+        ax.grid(axis='y',which='major',color='#d4d8de',alpha=.55,lw=.6);ax.set_axisbelow(True)
+        ax.spines[['top','right']].set_visible(False)
+    handles=[Line2D([],[],marker='o',ls='',markerfacecolor=cmap(.55),markeredgecolor='#202d38',markersize=5,label='Positive delay in every seed'),Line2D([],[],marker='o',ls='',markerfacecolor='none',markeredgecolor='#9299a2',markersize=5,label='At least one zero-delay seed'),Line2D([],[],marker='x',ls='',color='#b35d12',markersize=5,label='Unresolved'),Line2D([],[],color='#c7353b',lw=1.7,label='Law-derived onset crossing'),Line2D([],[],color='#c7353b',lw=1.1,ls='--',label=rf'$p^*={fold:.1f}$')]
+    if any(c['state']=='pending' for c in cells):handles.append(Line2D([],[],marker='^',ls='',markerfacecolor='none',markeredgecolor='#377ba8',markersize=5,label='Awaiting planned seeds'))
+    axs.flat[0].legend(handles=handles,loc='lower left',bbox_to_anchor=(0,1.02),ncol=2,fontsize=8,frameon=False,borderaxespad=0,columnspacing=1.4,handlelength=2.3)
+    sm=plt.cm.ScalarMappable(norm=norm,cmap=cmap);cb=fig.colorbar(sm,ax=list(axs.flat),fraction=.035,pad=.025);cb.set_label('Mean delay (epochs)',fontsize=10);cb.ax.tick_params(labelsize=9)
+    name=filename or ('cone_seedmin_fixed' if fixed_only else 'cone_seedmin')
+    save_paper_figure(fig,out/(name+'.pdf'),max_columns=2);plt.close(fig)
+    write_json(out/(name+'_plot.json'),{'cells':len(cells),'fixed_only':fixed_only,'capacity':coeffs['C_convention'],'fold':fold,'law_invariant_under_capacity_rescaling':True,'classification_rules':summary['state_rules']})
+    return out/(name+'.pdf')
+
+def main():
+    ap=argparse.ArgumentParser(description=__doc__);ap.add_argument('--fixed-only',action='store_true');ap.add_argument('--out',type=Path,default=OUT);ap.add_argument('--reuse',action='store_true');ap.add_argument('--publish',action='store_true');ap.add_argument('--final',action='store_true');args=ap.parse_args()
+    latest=ROOT/'results/cone_latest.json'
+    latest_out=ROOT/json.loads(latest.read_text())['analysis_directory'] if latest.exists() else OUT/'final'
+    if args.final:
+        assert args.fixed_only,'Final cohort is for the fixed-rate cone'
+        if args.out==OUT:args.out=latest_out
+        args.reuse=True
+    if args.publish and latest.exists() and args.out.resolve()!=latest_out.resolve():
+        raise RuntimeError('A newer audited cone is published. Use --fixed-only --final --publish to preserve it.')
+    if args.publish and args.out==OUT and (OUT/'final/summary.json').exists():
+        raise RuntimeError('The completed replication cohort exists. Use --fixed-only --final --publish to preserve it.')
+    if args.reuse:summary=json.loads((args.out/'summary.json').read_text());cells=json.loads((args.out/'cells.json').read_text())
+    else:summary,cells=build(args.out,panels=(0,) if args.fixed_only else (0,236))
+    path=plot(cells,summary,args.out,args.fixed_only)
+    if args.publish:
+        for parent in [ROOT/'figures/theory',ROOT/'docs/papers/2026 Grokking Capacity/media/theory']:
+            parent.mkdir(parents=True,exist_ok=True)
+            for suffix in ['.pdf','.png']:shutil.copy2(path.with_suffix(suffix),parent/path.with_suffix(suffix).name)
+    print(json.dumps({k:summary[k] for k in ['selected_rows','unique_runs','duplicate_seed_observations_removed','cells','cell_state_counts','event_counts','seed_count_distribution','budget_distribution','five_seed_sensitivity']},indent=2),flush=True)
+if __name__=='__main__':main()

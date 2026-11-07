@@ -74,6 +74,7 @@ def test_compute_delays_train_never_saturates_dropped():
     val[10:] = 100
     assert aggregate.compute_delays(
         [{"param_count": 5000, "train_acc": train, "val_acc": val}],
+        censoring="legacy_lower_bound",
     ) == []
 
 
@@ -83,6 +84,7 @@ def test_compute_delays_val_never_saturates_uses_run_length():
     val = np.zeros(100)  # never reaches threshold
     delays = aggregate.compute_delays(
         [{"param_count": 5000, "train_acc": train, "val_acc": val}],
+        censoring="legacy_lower_bound",
     )
     # Falls back to len(val) - train_epoch = 100 - 10 = 90.
     assert delays == [(5000.0, 90.0)]

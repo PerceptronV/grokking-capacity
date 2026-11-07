@@ -90,23 +90,12 @@ ax.set(xlabel="prime $p$", ylabel="parameters $P$", yscale="log",
 ax.legend(fontsize=7.5, loc="upper left"); st(ax)
 fig.savefig(OUT/"cone.pdf", bbox_inches="tight"); plt.close(fig)
 
-# ---- 4: T_gen vs lambda ------------------------------------------------------
-con = sqlite3.connect("runs.db"); con.row_factory = sqlite3.Row
-cells = {}
-for r in con.execute("select weight_decay w, dim, grokking_epoch g from runs where experiment_type='groks' and status='completed' and p=113 and grokking_epoch is not null and dropout=0.2 and lr=0.001 and weight_decay in (0.01,0.03,0.1,0.3,1.0)"):
-    cells.setdefault((r["w"], r["dim"]), []).append(r["g"])
-fig, ax = plt.subplots(figsize=(5.6,4))
-lams = [0.01,0.03,0.1,0.3,1.0]
-for dim, col in ((56,BLUE),(112,ORANGE),(224,AQUA)):
-    T = [np.mean(cells[(l,dim)]) for l in lams]
-    ax.plot(lams, T, "o-", color=col, ms=6, label=f"d={dim} (measured)")
-xg = np.geomspace(.01,1,50)
-ax.plot(xg, 700*(xg/0.1)**-.42, color=INK, lw=2, ls="-", alpha=.6, label=r"$\lambda^{-0.42}$ (fit)")
-ax.plot(xg, 700*(xg/0.1)**-1, color=RED, lw=1.4, ls="--", label=r"norm-min. $1/\lambda$ (rejected)")
-ax.set(xscale="log", yscale="log", xlabel=r"weight decay $\lambda$", ylabel=r"$T_{\rm gen}$ (epochs)",
-       title=r"$T_{\rm gen}\propto\lambda^{-1/2}$, not $1/\lambda$  (p=113)")
-ax.legend(fontsize=7.5); st(ax)
-fig.savefig(OUT/"tgen_lambda.pdf", bbox_inches="tight"); plt.close(fig)
+# ---- 4: T_gen vs lambda: strict cohort and censoring rules ---------------------
+from weight_decay_scaling import analyse as analyse_weight_decay
+import shutil
+wd_analysis_dir = Path("results/weight_decay_matched_20261103")
+analyse_weight_decay(Path("runs.db"), wd_analysis_dir)
+shutil.copy2(wd_analysis_dir / "tgen_lambda.pdf", OUT / "tgen_lambda.pdf")
 
 # ---- 5: p=197 — the curves that never cross ---------------------------------
 import os

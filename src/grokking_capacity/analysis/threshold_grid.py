@@ -37,7 +37,7 @@ from typing import Optional
 import numpy as np
 
 from .. import consts
-from .aggregate import find_grokking_onset, find_intersection, min_delay_curve
+from .aggregate import find_grokking_onset, find_intersection, delay_curve
 from .matching import compute_n_equiv
 
 # ---------------------------------------------------------------------------
@@ -217,14 +217,9 @@ def _delays(
 def _reduce_delays(
     delays: list[tuple[float, float]], how: str,
 ) -> dict[float, float]:
-    """Per-param-count seed reduction of delays: min / median / mean."""
-    if how == "min":
-        return min_delay_curve(delays)
-    bins: dict[float, list[float]] = {}
-    for pc, d in delays:
-        bins.setdefault(float(pc), []).append(float(d))
-    fn = np.median if how == "median" else np.mean
-    return {k: float(fn(v)) for k, v in sorted(bins.items())}
+    """Shared configurable reducer; inputs retain this audit's legacy censoring."""
+    return delay_curve(delays, metric=how)
+
 
 
 def _per_prime(

@@ -12,6 +12,7 @@ import numpy as np
 import seaborn as sns
 
 from .aggregate import find_intersection
+from ._figure_style import save_paper_figure
 
 
 def calculate_grokking_delay(
@@ -51,6 +52,9 @@ def plot_grokking_delay_with_speed(
     show: bool = False,
     x_label: str = "Parameter count",
     colour_label: str = "Dimension",
+    crossing_direction: str = "any",
+    show_unresolved: bool = True,
+    legend_inside: bool = False,
 ) -> Optional[Tuple[float, float]]:
     """The intersection plot (Image #1).
 
@@ -71,6 +75,10 @@ def plot_grokking_delay_with_speed(
             per-seed delay from the npz traces for the scatter. May
             differ from the curve thresholds.
 
+    show_unresolved=False omits flagged cells from the delay scatter only.
+    Clock curves and their intersection always use the supplied full curves.
+    legend_inside=True places the legend at the upper right of the axes.
+
     Returns the intersection (x, epochs) or None.
     """
     if not delay_records or not speed_curve or not groks_curve:
@@ -81,13 +89,21 @@ def plot_grokking_delay_with_speed(
     colours = np.array([r["colour"] for r in delay_records], dtype=float)
     delays = np.array([r["delay"] for r in delay_records], dtype=float)
 
-    fig, ax1 = plt.subplots(figsize=(7, 6.2))
+    fig, ax1 = plt.subplots(figsize=(8, 6.2) if legend_inside else (7, 6.2))
 
     crest = sns.color_palette("crest", as_cmap=True)
+    incomplete = np.array([r.get("n_unresolved", 0) > 0 for r in delay_records])
+    visible = np.ones(len(delay_records), dtype=bool) if show_unresolved else ~incomplete
+    colour_limits = {} if show_unresolved else {"vmin": colours.min(), "vmax": colours.max()}
     scatter = ax1.scatter(
-        xs, delays, c=colours, cmap=crest, s=55, alpha=0.7, edgecolors="none",
+        xs[visible], delays[visible], c=colours[visible], cmap=crest,
+        **colour_limits, s=55, alpha=0.7, edgecolors="none",
         label=f"Generalisation delay (val≥{threshold_val:.0f}% − train≥{threshold_train:.0f}%)",
     )
+    if show_unresolved and incomplete.any():
+        ax1.scatter(xs[incomplete], np.full(incomplete.sum(), .04),
+                    transform=ax1.get_xaxis_transform(), marker="x", color="#b86b14",
+                    s=35, linewidths=1, label="Unresolved seed outcome (marks along axis)")
     ax1.set_xlabel(x_label, fontsize=17)
     ax1.set_ylabel("Generalisation delay (epochs)", fontsize=17, color="#1b7a3d")
     ax1.set_xscale("log")
@@ -114,7 +130,7 @@ def plot_grokking_delay_with_speed(
     ax2.set_yscale("log")
     ax2.tick_params(axis="y", labelcolor="#d95f02", labelsize=14)
 
-    intersection = find_intersection(speed_curve, groks_curve)
+    intersection = find_intersection(speed_curve, groks_curve, direction=crossing_direction)
     if intersection is not None:
         ix, iy = intersection
         ax2.axvline(x=ix, color="#8B0000", linestyle=":", linewidth=1.5, alpha=0.5)
@@ -132,13 +148,17 @@ def plot_grokking_delay_with_speed(
 
     h1, l1 = ax1.get_legend_handles_labels()
     h2, l2 = ax2.get_legend_handles_labels()
-    ax2.legend(h1 + h2, l1 + l2, loc="upper center", bbox_to_anchor=(0.5, -0.2), ncol=1, fontsize=13, frameon=False)
+    if legend_inside:
+        ax2.legend(h1 + h2, l1 + l2, loc="upper right", fontsize=10.5,
+                   frameon=True, framealpha=0.9, borderpad=0.4)
+    else:
+        ax2.legend(h1 + h2, l1 + l2, loc="upper center", bbox_to_anchor=(0.5, -0.2), ncol=1, fontsize=13, frameon=False)
     if title:
         ax1.set_title(title, fontsize=17)
 
     plt.tight_layout()
     if save_path:
-        plt.savefig(save_path, bbox_inches="tight", dpi=150)
+        save_paper_figure(fig, save_path, footer=not legend_inside)
     if show:
         plt.show()
     else:
@@ -197,7 +217,7 @@ def plot_capacity_curves(
     ax.grid(True, alpha=0.3, which="both")
     plt.tight_layout()
     if save_path:
-        plt.savefig(save_path, bbox_inches="tight", dpi=150)
+        save_paper_figure(fig, save_path)
     if show:
         plt.show()
     else:
@@ -244,7 +264,7 @@ def plot_capacity_estimation(
     )
     plt.tight_layout()
     if save_path:
-        plt.savefig(save_path, bbox_inches="tight", dpi=150)
+        save_paper_figure(fig, save_path)
     if show:
         plt.show()
     else:
@@ -304,7 +324,7 @@ def plot_saturation_epochs_vs_inverse_capacity(
     ax.grid(True, alpha=0.3, which="both")
     plt.tight_layout()
     if save_path:
-        plt.savefig(save_path, bbox_inches="tight", dpi=150)
+        save_paper_figure(fig, save_path)
     if show:
         plt.show()
     else:
@@ -401,7 +421,7 @@ def plot_saturation_time_vs_capacity_fraction(
     )
     plt.tight_layout()
     if save_path:
-        plt.savefig(save_path, bbox_inches="tight", dpi=150)
+        save_paper_figure(fig, save_path)
     if show:
         plt.show()
     else:

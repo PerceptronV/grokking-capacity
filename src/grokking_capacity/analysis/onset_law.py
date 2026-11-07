@@ -7,7 +7,7 @@ The central quantity is the *onset capacity fraction*
 where K_mem is the dataset memorisation load in bits
 (`matching.compute_n_equiv`), C is the capacity constant in bits/param
 (`consts.C`), and P_onset is the empirical grokking-onset parameter count —
-located exactly the way `stats._empirical_onset` does (min-delay over seeds,
+located exactly the way `stats._empirical_onset` does (configured seed aggregate,
 smallest grid point past the last zero-delay one). If grokking onset is set
 by the model's capacity relative to the dataset, f_onset should be a
 dimensionless constant f* — flat in p, flat in train fraction alpha, and
@@ -165,6 +165,10 @@ def extract_onset_cells(
         "max_dim": figure.max_dim,
         "delay_train_threshold": figure.delay_train_threshold,
         "delay_val_threshold": figure.delay_val_threshold,
+        "delay_aggregation": str(figure.delay_aggregation),
+        "timescale_aggregation": str(figure.timescale_aggregation),
+        "delay_censoring": figure.delay_censoring,
+        "delay_positive_threshold": figure.delay_positive_threshold,
         "cells": cells,
     }
 
@@ -243,7 +247,7 @@ def analyze_prime_flatness(cells: list[dict], *, n_bootstrap: int = 5000) -> dic
     spread of log10 f_onset is at or below the median gap, the CV is
     reported as resolution-limited rather than as real scatter.
 
-    The empirical onset is a seed-minimum order statistic, so no seed-level
+    The empirical onset is a nonlinear seed-and-grid statistic, so no seed-level
     resampling is done here; the flatness slope CI comes from a prime-level
     bootstrap instead.
     """
@@ -745,7 +749,7 @@ def format_summary_markdown(results: dict[str, Any]) -> str:
     L.append("# Onset capacity fraction law — f_onset = K_mem / (C · P_onset)")
     L.append("")
     L.append("C = 2.16 bits/param (`consts.C`); P_onset located as in "
-             "`stats._empirical_onset` (min-delay over seeds, first grid "
+             "`stats._empirical_onset` (configured seed aggregate, first grid "
              "point past the last zero-delay one, dim ≤ 256, thresholds "
              "train 99 / val 98); P_cross from `stats._predicted_onset`.")
     L.append("")
@@ -775,7 +779,7 @@ def format_summary_markdown(results: dict[str, Any]) -> str:
              f"{_fmt(ols['slope'])} (95% prime-bootstrap CI "
              f"[{_fmt(boot['ci_low'])}, {_fmt(boot['ci_high'])}], "
              f"{boot['n_resamples']} resamples). No seed-level bootstrap is "
-             f"run: the onset is a seed-min order statistic.")
+             f"run: the onset is a nonlinear seed-and-grid statistic.")
     L.append("")
 
     L.append("## A2b — flatness in train fraction α")

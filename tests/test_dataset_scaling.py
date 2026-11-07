@@ -14,7 +14,9 @@ def test_logarithmic_registration_and_capacity_selection():
     assert reg['common']['max_updates'] == 50000 and reg['common']['eval_every'] == 10
     assert reg['common']['dropout'] == .2
     assert len(reg['confirmation']['seeds']) == 10
-    old = ds.read(ds.ROOT/reg['models']['source'])
+    # Freeze measured constants so this unit test does not require generated reports.
+    old = ds.read(Path(__file__).parent/'fixtures/dataset_scaling_constants.json')
+    assert old['source_path'] == reg['models']['source']
     pairs = ds.select_pairs(old['constants'],reg['dataset']['sizes'])
     assert len(pairs)==10
     assert [(p['C']['dim'],p['B']['dim']) for p in pairs]==[(14,16),(16,18),(18,20),(20,24),(22,26),(26,30),(30,34),(34,38),(38,42),(42,48)]

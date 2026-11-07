@@ -1,93 +1,120 @@
 #!/usr/bin/env python3
-"""Normalisation-clock test analysis (principled/gen-solvable-circuit
-falsifier). Compares RMSNorm-frozen groks runs (~/normfrozen_runs.db)
-against matched unfrozen cells in the repo registry.
+"""Analyse explicitly paired frozen/unfrozen runs from one H100 campaign.
 
-Predictions under the spherical-motion-clock reading of the λ^(−1/2) law:
-  (i) frozen λ-slope d ln T_gen/d ln λ steepens from ≈−0.42 toward −1;
-  (ii) frozen width-slope β collapses toward the λ→0 value (~0.2).
-
-Usage: python scripts/normfrozen_analysis.py [--db ~/normfrozen_runs.db]
-Output: results/theory/normfrozen_analysis.json
+Requires separate arm registries, identical starting data/model/RNG hashes,
+and complete outcomes. Never imports a control arm from the merged registry.
 """
-import argparse
-import json
-import math
-import os
-import sqlite3
-from collections import defaultdict
 from pathlib import Path
-
+import argparse,hashlib,itertools,json,sqlite3
 import numpy as np
+ROOT=Path(__file__).resolve().parents[1]
+DEFAULT_CAMPAIGN=ROOT/'results/normfrozen_h100_paired_20261103'
+SETTINGS=[(128,.1),(128,.3),(128,1.),(64,1.),(256,1.)]
+SEEDS=[42,43,44]
+def model_hashes(state):
+    return {k:hashlib.sha256(v.detach().cpu().contiguous().numpy().tobytes()).hexdigest() for k,v in state.items()}
+def fit_metrics(times,parameters):
+    lam_slope=float(np.polyfit(np.log([.1,.3,1.]),np.log(times[:3].mean(axis=1)),1)[0])
+    indices=[3,2,4]
+    beta=-float(np.polyfit(np.log([parameters[i] for i in indices]),np.log(times[indices].mean(axis=1)),1)[0])
+    return lam_slope,beta
 
-P = 113
-LAMBDAS = (0.1, 0.3, 1.0)
-DIMS_BETA = (64, 128, 256)
-SEEDS = (42, 43, 44)
+def analyse(campaign=DEFAULT_CAMPAIGN,verify_checkpoints=True):
+    campaign=Path(campaign);manifest=json.loads((campaign/'manifest.json').read_text())
+    completion=json.loads((campaign/'completion.json').read_text());assert len(completion)==30 and all(r['returncode']==0 for r in completion)
+    assert manifest['settings']==[list(x) for x in SETTINGS] and manifest['seeds']==SEEDS
+    # Source hashes at training time are copied into the campaign; verify the snapshot.
+    for rel,h in manifest['source_hashes'].items():assert hashlib.sha256((campaign/'source'/rel).read_bytes()).hexdigest()==h,rel
+    rows={};times={};metas={};checks=[];all_uuids=[];params=[]
+    for arm in ['frozen','unfrozen']:
+        c=sqlite3.connect((campaign/(arm+'.db')).resolve().as_uri()+'?mode=ro',uri=True);c.row_factory=sqlite3.Row
+        rs=[dict(r) for r in c.execute('select * from runs')];c.close();assert len(rs)==15 and all(r['status']=='completed' for r in rs)
+        idx={(r['dim'],r['weight_decay'],r['seed']):r for r in rs};assert len(idx)==15
+        times[arm]=np.empty((5,3));rows[arm]=[]
+        for i,(d,w) in enumerate(SETTINGS):
+            for k,s in enumerate(SEEDS):
+                r=idx[d,w,s];all_uuids.append(r['uuid']);meta=json.loads((campaign/'jobs'/f'd{d}_wd{w:g}_s{s}_{arm}.json').read_text());metas[arm,d,w,s]=meta
+                assert r['host']==manifest['host'] and r['gpu_type']=='H100' and meta['host']==manifest['host']
+                assert r['p']==113 and r['operation']=='/' and r['train_fraction']==.5 and r['depth']==2 and r['heads']==1 and r['dropout']==.2 and r['init_scale']==1 and r['batch_size']==512 and r['mup_base']==0
+                assert r['lr']==.001 and r['beta1']==.9 and r['beta2']==.98 and r['max_epochs']==5000
+                assert r['param_count']==meta['trainable_parameters']
+                assert meta['arm']==arm and meta['freeze_norm_scales']==(arm=='frozen') and meta['frozen_parameters_unchanged']
+                with np.load(r['npz_path'],allow_pickle=False) as z:
+                    tr=z['train_acc'];va=z['val_acc'];assert np.all(np.isfinite(tr)) and np.all(np.isfinite(va))
+                    hits=np.flatnonzero(va>=99);first=int(hits[0]+1) if len(hits) else None
+                    assert first==r['grokking_epoch'];assert len(va)==r['epochs_trained']
+                    if first is None:raise RuntimeError('Censored outcome: preserve row and revise analysis; do not omit it from the paired slope')
+                    assert tr[-1]>=99 and va[-1]>=99
+                times[arm][i,k]=first
+                row={key:r[key] for key in ['uuid','dim','weight_decay','seed','host','gpu_type','git_hash','git_dirty','grokking_epoch','epochs_trained','npz_path','param_count','wallclock_seconds']};row.update(arm=arm,total_parameters=meta['total_parameters'],trainable_parameters=meta['trainable_parameters']);rows[arm].append(row)
+                if arm=='frozen' and k==0:params.append(meta['total_parameters'])
+                if verify_checkpoints:checks.append(checkpoint_check(r,meta))
+    assert len(set(all_uuids))==30
+    pairs=[]
+    for d,w in SETTINGS:
+        for s in SEEDS:
+            a=metas['frozen',d,w,s];b=metas['unfrozen',d,w,s]
+            for field in ['dataset_hashes','initial_state_hashes','cpu_rng_hash','cuda_rng_hash','total_parameters','host','gpu_uuid','torch','cuda','dtype','tf32_matmul','tf32_cudnn']:assert a[field]==b[field],(d,w,s,field)
+            pairs.append({'dim':d,'weight_decay':w,'seed':s,'identical_data_initialisation_rng':True,'gpu_uuid':a['gpu_uuid']})
+    result={'campaign':str(campaign),'manifest_sha256':hashlib.sha256((campaign/'manifest.json').read_bytes()).hexdigest(),'settings':SETTINGS,'seeds':SEEDS,'pairs_verified':len(pairs),'host':manifest['host'],'gpu_uuid':pairs[0]['gpu_uuid'],'censored_runs':0,'paired_checks':pairs,'checkpoint_checks':checks,'width_parameter_convention':'Common total architecture parameter count in both arms; trainable counts also retained per run.','bootstrap_scope':'Exact paired resampling of 3 seeds jointly over both arms and all settings (27 draws); conditional on this grid; descriptive uncertainty only.'}
+    boot={arm:[] for arm in times};delta=[]
+    for inds in itertools.product(range(3),repeat=3):
+        values={arm:fit_metrics(t[:,list(inds)],params) for arm,t in times.items()}
+        for arm in times:boot[arm].append(values[arm])
+        delta.append(np.asarray(values['frozen'])-np.asarray(values['unfrozen']))
+    for arm,t in times.items():
+        lam,beta=fit_metrics(t,params)
+        result[arm]={'lambda_slope_d128':lam,'beta_lambda1':beta,'seed_bootstrap_CI95':np.quantile(np.array(boot[arm]),[.025,.975],axis=0).T.tolist(),'cells':{f'd{d}_wd{w:g}':{'n':3,'mean_T':float(t[i].mean()),'T':t[i].tolist(),'total_parameters':params[i]} for i,(d,w) in enumerate(SETTINGS)},'runs':rows[arm]}
+    result['paired_effect']={'lambda_slope_difference':result['frozen']['lambda_slope_d128']-result['unfrozen']['lambda_slope_d128'],'beta_difference':result['frozen']['beta_lambda1']-result['unfrozen']['beta_lambda1'],'seed_bootstrap_CI95':np.quantile(np.array(delta),[.025,.975],axis=0).T.tolist()}
+    result['unfrozen_baseline']=result['unfrozen']  # preserve the published result schema
+    (campaign/'analysis.json').write_text(json.dumps(result,indent=2)+'\n');plot(result,campaign);return result
 
+_DATA_CACHE={}
+def checkpoint_check(r,meta):
+    import torch
+    from grokking_capacity.data import grokking_data_torch
+    from grokking_capacity.models import TransformerTorch
+    torch.set_num_threads(1)
+    if r['seed'] not in _DATA_CACHE:
+        np.random.seed(r['seed']);_DATA_CACHE[r['seed']]=grokking_data_torch(113,op='/',split_type='random',train_fraction=.5,device='cpu')
+    data=_DATA_CACHE[r['seed']]
+    assert [hashlib.sha256(x.numpy().tobytes()).hexdigest() for x in data]==meta['dataset_hashes']
+    folder=Path(r['npz_path']).parent
+    initial=torch.load(folder/'model_init.pt',map_location='cpu',weights_only=True)['model_state_dict']
+    state=torch.load(folder/'model.pt',map_location='cpu',weights_only=True)['model_state_dict']
+    assert model_hashes(initial)==meta['initial_state_hashes']
+    gains=[k for k in state if 'norm.weight' in k]
+    max_gain_change=max(float((state[k]-initial[k]).abs().max()) for k in gains)
+    assert (max_gain_change==0)==(meta['arm']=='frozen')
+    assert any(not torch.equal(state[k],initial[k]) for k in state if k not in gains)
+    model=TransformerTorch(depth=2,dim=r['dim'],heads=1,n_tokens=115,seq_len=4,dropout=.2,init_scale=1.)
+    model.load_state_dict(state);model.eval();X,Y=data[2:];correct=0
+    with torch.no_grad():
+        for start in range(0,len(Y),512):correct+=(model(X[start:start+512]).argmax(1)==Y[start:start+512]).sum().item()
+    acc=100*correct/len(Y);assert abs(acc-r['final_val_acc'])<=100/len(Y)+1e-8,(r['uuid'],acc,r['final_val_acc'])
+    return {'uuid':r['uuid'],'arm':meta['arm'],'cpu_validation_accuracy':acc,'recorded_validation_accuracy':r['final_val_acc'],'maximum_norm_gain_change':max_gain_change,'checkpoint_sha256':hashlib.sha256((folder/'model.pt').read_bytes()).hexdigest()}
 
-def cells_from(db_path, *, where_extra=""):
-    con = sqlite3.connect(os.path.expanduser(db_path))
-    con.row_factory = sqlite3.Row
-    q = ("select dim, weight_decay wd, seed, param_count, grokking_epoch g "
-         "from runs where experiment_type='groks' and status='completed' "
-         f"and p={P} and operation='/' and train_fraction=0.5 and depth=2 "
-         "and heads=1 and dropout=0.2 and lr=0.001 and init_scale=1.0 "
-         "and batch_size=512 and grokking_epoch is not null " + where_extra)
-    out = defaultdict(list)
-    pc = {}
-    for r in con.execute(q):
-        out[(int(r["dim"]), float(r["wd"]))].append(float(r["g"]))
-        pc[int(r["dim"])] = float(r["param_count"])
-    return out, pc
-
-
-def slope(xs, ys):
-    b, a = np.polyfit(np.log(xs), np.log(ys), 1)
-    return float(b)
-
-
-def analyse(cells, pc, label):
-    res = {"label": label, "cells": {f"d{d}_wd{w:g}": {
-        "n": len(v), "mean_T": float(np.mean(v)), "T": v}
-        for (d, w), v in sorted(cells.items())}}
-    lam_pts = [(w, np.mean(cells[(128, w)])) for w in LAMBDAS
-               if (128, w) in cells and cells[(128, w)]]
-    if len(lam_pts) >= 2:
-        res["lambda_slope_d128"] = slope([x for x, _ in lam_pts],
-                                         [y for _, y in lam_pts])
-    wid_pts = [(pc[d], np.mean(cells[(d, 1.0)])) for d in DIMS_BETA
-               if (d, 1.0) in cells and cells[(d, 1.0)] and d in pc]
-    if len(wid_pts) >= 2:
-        res["beta_lambda1"] = -slope([x for x, _ in wid_pts],
-                                     [y for _, y in wid_pts])
-    print(f"[{label}] lambda-slope(d=128): "
-          f"{res.get('lambda_slope_d128', float('nan')):+.3f}   "
-          f"beta(wd=1): {res.get('beta_lambda1', float('nan')):+.3f}")
-    for k, v in res["cells"].items():
-        print(f"   {k}: n={v['n']} T_gen mean {v['mean_T']:.0f}  {v['T']}")
-    return res
-
+def plot(result,out):
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    fig,axs=plt.subplots(1,2,figsize=(10,4),layout='constrained')
+    for arm,col in [('unfrozen','#2a78d6'),('frozen','#eb6834')]:
+        res=result[arm];cells=res['cells'];ls=[.1,.3,1.]
+        for s in range(3):axs[0].plot(ls,[cells[f'd128_wd{w:g}']['T'][s] for w in ls],color=col,alpha=.3,lw=.8)
+        axs[0].plot(ls,[cells[f'd128_wd{w:g}']['mean_T'] for w in ls],'o-',color=col,label=f"{arm}: slope {res['lambda_slope_d128']:.2f}")
+        ds=[64,128,256];ps=[cells[f'd{d}_wd1']['total_parameters'] for d in ds]
+        axs[1].plot(ps,[cells[f'd{d}_wd1']['mean_T'] for d in ds],'o-',color=col,label=f"{arm}: beta {res['beta_lambda1']:.2f}")
+    axs[0].set(xscale='log',yscale='log',xlabel='Weight decay',ylabel='First validation-99% epoch',title='Width 128: paired seeds on one H100')
+    axs[1].set(xscale='log',yscale='log',xlabel='Total architecture parameters',ylabel='First validation-99% epoch',title='Weight decay 1: same three seeds')
+    from matplotlib.ticker import NullFormatter
+    axs[1].set_xticks(ps,labels=[f'{p/1e6:.2f}M' for p in ps])
+    axs[1].xaxis.set_minor_formatter(NullFormatter())
+    for ax in axs:ax.grid(alpha=.2,which='both');ax.legend(fontsize=9)
+    fig.savefig(out/'normfrozen_paired.pdf');fig.savefig(out/'normfrozen_paired.png',dpi=170);plt.close(fig)
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--db", default="~/normfrozen_runs.db")
-    ap.add_argument("--out", default="results/theory/normfrozen_analysis.json")
-    args = ap.parse_args()
-
-    frozen, pc_f = cells_from(args.db)
-    seeds = ",".join(str(s) for s in SEEDS)
-    unfrozen, pc_u = cells_from("runs.db",
-                                where_extra=f"and seed in ({seeds})")
-    out = {"frozen": analyse(frozen, pc_f, "frozen"),
-           "unfrozen_baseline": analyse(unfrozen, pc_u, "unfrozen"),
-           "prediction": {"lambda_slope": "frozen steepens toward -1 "
-                          "(unfrozen ~ -0.42)",
-                          "beta": "frozen collapses toward ~0.2 "
-                          "(unfrozen ~ 1.1)"}}
-    Path(args.out).write_text(json.dumps(out, indent=1))
-    print("saved", args.out)
-
-
-if __name__ == "__main__":
-    main()
+    ap=argparse.ArgumentParser(description=__doc__);ap.add_argument('--campaign',type=Path,default=DEFAULT_CAMPAIGN);ap.add_argument('--out',type=Path,default=ROOT/'results/theory/normfrozen_analysis.json');args=ap.parse_args()
+    result=analyse(args.campaign);args.out.parent.mkdir(parents=True,exist_ok=True);args.out.write_text(json.dumps(result,indent=2)+'\n')
+    print(json.dumps({'frozen':result['frozen']['lambda_slope_d128'],'unfrozen':result['unfrozen']['lambda_slope_d128'],'paired_effect':result['paired_effect'],'pairs_verified':result['pairs_verified'],'checkpoint_checks':len(result['checkpoint_checks'])},indent=2))
+if __name__=='__main__':main()

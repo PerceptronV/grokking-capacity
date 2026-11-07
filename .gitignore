@@ -189,12 +189,7 @@ runs.db-shm
 .vscode
 .idea
 .pytest_cache
-.coverage
-.coverage.*
-.cache
 .hypothesis
-.pytest_cache
-.pytest_cache
 
 # Cursor
 .cursor
@@ -206,3 +201,6 @@ code.zip
 # Puddle data
 .puddle
 docs/
+
+# Generated manuscript build logs, snapshots and audit previews
+/reports/paper_*/

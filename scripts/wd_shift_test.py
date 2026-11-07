@@ -71,13 +71,15 @@ def group_data(group, figure):
                           "train_acc": npz["train_acc"],
                           "val_acc": npz["val_acc"]}],
                         threshold_train=figure.delay_train_threshold,
-                        threshold_val=figure.delay_val_threshold)
+                        threshold_val=figure.delay_val_threshold,
+                        censoring=figure.delay_censoring)
             except (FileNotFoundError, KeyError):
                 continue
             if d:
                 pairs.append(d[0])
         onsets[p] = aggregate.find_grokking_onset(
-            aggregate.min_delay_curve(pairs))
+            aggregate.delay_curve(pairs, figure.delay_aggregation),
+            threshold=figure.delay_positive_threshold)
     return C, K_of, speed, gen, onsets
 
 

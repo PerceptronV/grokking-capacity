@@ -32,6 +32,53 @@ gc-figures --all
 
 To render a single config or restrict to a figure family, see `gc-figures --help`.
 
+## Revised paper workflow
+
+The manuscript lives in the separate `docs` checkout of
+[PerceptronV/writings](https://github.com/PerceptronV/writings), on branch `base`.
+Its sparse checkout contains `papers/2026 Grokking Capacity`. Commit and push
+that repository separately; do not stage missing paths outside its sparse cone.
+
+Install the publication dependencies with `pip install -e '.[paper,test]'`.
+The build also requires TeX Live (`pdflatex`, `bibtex`), the local run registries
+and traces, and the analysis inputs under `results/`. These large experiment
+artifacts are not installed with the Python package.
+
+```bash
+# Rebuild tables, PDF/PNG assets and the paper from existing analyses.
+python scripts/build_revised_paper.py --reuse-analyses
+
+# Recompute the selected analyses before building (requires local experiment data).
+python scripts/build_revised_paper.py
+
+# Run the test suite without unrelated globally installed pytest plugins.
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest tests -q
+```
+
+The build preserves author prose and updates only generated tables and figure
+assets. After recomputing analyses, reconcile numerical claims in the prose
+explicitly. Numerical validation checks tables, roots, figure pairs, references
+and raw-trace fingerprints; it does not substitute for the test suite or visual
+review. Build logs and validation records are written to
+`reports/paper_corrections_20261107/`, with the paper exported to
+`docs/papers/2026 Grokking Capacity/exports/paper-neurips-revised.pdf`.
+
+The active entry points are `recompute_paper_crossings.py`,
+`recompute_paper_statistics.py`, `prepare_paper_revision_models.py`,
+`prepare_paper_revision_supplement.py`, `publish_paper_revision.py` and
+`validate_revised_paper.py`, all under `scripts/`. The publisher discovers
+figures from the current TeX includes. `paper_tables.py` only formats
+the generated sensitivity table; it does not rewrite the manuscript.
+
+The paper uses arithmetic means of observed times within each cell for both
+learning timescales, and minimum paired delay across ten seeds for the cone.
+See [aggregation conventions](src/grokking_capacity/analysis/AGGREGATION.txt)
+for the configurable reducers and handling of unresolved outcomes. The older
+`crossing_analysis.py` and `analysis/forecast_onset.py` retain different
+estimators for comparison; they do not generate the revised paper's results.
+One-off `update_*_paper.py` scripts preserve earlier revision steps and are not
+part of the current build.
+
 ## License and Attribution
 
 Use the following BibTeX entry to cite this work:

@@ -39,7 +39,7 @@ ARCH_KEY_FIELDS: tuple[str, ...] = (
     "operation", "train_fraction", "split_type",
     "depth", "heads", "dropout", "init_scale",
     "lr", "weight_decay", "beta1", "beta2", "batch_size",
-    "architecture_family",
+    "architecture_family", "mup_base",
 )
 
 
@@ -60,6 +60,7 @@ _TOML_DEFAULTS: dict[str, Any] = {
     "beta2": 0.98,
     "batch_size": 512,
     "architecture_family": "transformer_gated",
+    "mup_base": 0,
 }
 
 
@@ -95,6 +96,7 @@ class ArchKey:
     beta2: float
     batch_size: int
     architecture_family: str
+    mup_base: int = 0
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> "ArchKey":
@@ -138,7 +140,7 @@ def _row_to_dict(row: Any) -> dict[str, Any]:
         "experiment_type", "p", "operation", "train_fraction", "split_type",
         "dataset_type", "n_samples", "dim", "depth", "heads", "dropout",
         "init_scale", "lr", "weight_decay", "beta1", "beta2", "batch_size",
-        "max_epochs", "seed", "architecture_family",
+        "max_epochs", "seed", "architecture_family", "mup_base", "gpu_type",
         "param_count", "uuid", "npz_path", "n_equiv", "dataset_bits", "host",
         "saturation_step", "saturation_epoch", "saturated", "final_acc",
         "final_loss", "final_train_acc", "final_val_acc", "grokking_epoch",
@@ -183,7 +185,15 @@ class IntersectionFigure:
     centres on; other families swap the roles to test the same theory along
     e.g. dataset complexity.
 
-    Filters and thresholds:
+    Filters, aggregates and thresholds:
+      - `delay_aggregation`: min (default), median, mean, quantile:<q>, or
+        a Python callable; changes the empirical target, not the timescale fits.
+      - `timescale_aggregation`: mean (default) or another reducer for the
+        observed timescale curves. Missing crossing times are not imputed.
+      - `delay_censoring`: unresolved (default), or legacy_lower_bound only
+        to reproduce old outputs that substituted elapsed follow-up.
+      - `delay_positive_threshold`: require aggregate delay strictly above
+        this many epochs (default zero). Changing it changes the estimand.
       - `max_dim`: drop rows with `dim > max_dim` from every input to this
         figure (curves, scatter, intersection, slice-value enumeration). Set
         from the YAML when wide-dim runs aren't trustworthy on the right
@@ -210,6 +220,10 @@ class IntersectionFigure:
     delay_val_threshold: float = 99.0
     mem_curve_threshold: float = 99.0
     gen_curve_threshold: float = 99.0
+    delay_aggregation: Any = "min"
+    timescale_aggregation: Any = "mean"
+    delay_censoring: str = "unresolved"
+    delay_positive_threshold: float = 0.0
 
 
 _DEFAULT_INTERSECTION_FIGURE = IntersectionFigure(
@@ -287,6 +301,10 @@ def _parse_intersection_figures(spec: dict[str, Any]) -> list[IntersectionFigure
             delay_val_threshold=float(entry.get("delay_val_threshold", 99.0)),
             mem_curve_threshold=float(entry.get("mem_curve_threshold", 99.0)),
             gen_curve_threshold=float(entry.get("gen_curve_threshold", 99.0)),
+            delay_aggregation=entry.get("delay_aggregation", "min"),
+            timescale_aggregation=entry.get("timescale_aggregation", "mean"),
+            delay_censoring=entry.get("delay_censoring", "unresolved"),
+            delay_positive_threshold=float(entry.get("delay_positive_threshold", 0.0)),
         ))
     return out
 
@@ -340,9 +358,17 @@ class ConfigView:
         # dispatcher would have produced. We don't query wallow per dispatched
         # row — one wallow query per (arch_key, experiment_type) is enough,
         # because the dispatcher uniquely defines the run.
-        seen: set[ArchKey] = set()
-        for run in expand_runs(spec):
-            seen.add(ArchKey.from_dict(run))
+        # Only architecture fields are needed here. Avoid constructing models
+        # to resolve a matched-width dispatch grid just to discover these keys.
+        from copy import deepcopy
+        key_spec = deepcopy(spec)
+        key_spec.setdefault("defaults", {}).update(primes=[113], seeds=[42])
+        for exp in key_spec.get("experiments", {}).values():
+            exp.pop("match_by", None)
+            exp.pop("param_count_targets", None)
+            exp.pop("dim_ranges", None)
+            exp.update(dims=[20], primes=[113], seeds=[42], n_samples=[10])
+        seen = {ArchKey.from_dict(run) for run in expand_runs(key_spec)}
 
         store = get_store(db_path)
         groups: list[ArchGroup] = []

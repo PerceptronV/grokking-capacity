@@ -68,17 +68,12 @@ def _delay_records_for_slice(
     figure: IntersectionFigure,
     slice_value,
 ) -> list[dict]:
-    """Min-across-seeds delay scatter records for one slice value.
+    """One configurable seed aggregate per (x, colour), including missingness.
 
-    Returns one dict per `(x, colour)` cell, holding the minimum delay
-    observed across compatible seeds — the same convention
-    `aggregate.find_grokking_onset` uses when locating the empirical
-    onset. The keys `x`, `colour`, `delay` are generic so the rendering
-    primitive stays axis-agnostic; the figure spec decides which row
-    fields those map to. Delay is recomputed from the npz traces using
-    the figure spec's train/val thresholds.
+    Unresolved delays retain their place in the seed pool. The record includes
+    bounds and seed counts; `delay=None` is not an observed positive or zero.
     """
-    per_cell: dict[tuple, dict] = {}
+    per_cell: dict[tuple, list] = {}
     for row in group.groks_runs:
         if row.get(figure.slice_field) != slice_value:
             continue
@@ -89,28 +84,30 @@ def _delay_records_for_slice(
                 train = npz["train_acc"]
                 val = npz["val_acc"]
         except (FileNotFoundError, KeyError):
-            continue
-        delays = aggregate.compute_delays(
-            [{figure.x_field: row.get(figure.x_field),
-              "train_acc": train, "val_acc": val}],
-            x_field=figure.x_field,
-            threshold_train=figure.delay_train_threshold,
-            threshold_val=figure.delay_val_threshold,
-        )
+            if figure.delay_censoring == 'legacy_lower_bound':
+                continue
+            delays = [(row.get(figure.x_field), None)] if row.get(figure.x_field) is not None else []
+        else:
+            delays = aggregate.compute_delays(
+                [{figure.x_field: row.get(figure.x_field),
+                  "train_acc": train, "val_acc": val}],
+                x_field=figure.x_field,
+                threshold_train=figure.delay_train_threshold,
+                threshold_val=figure.delay_val_threshold,
+                censoring=figure.delay_censoring,
+            )
         if not delays:
             continue
         x_value, delay = delays[0]
         colour_raw = row.get(figure.colour_field)
         colour = float(colour_raw if colour_raw is not None else 0)
         key = (float(x_value), colour)
-        existing = per_cell.get(key)
-        if existing is None or delay < existing["delay"]:
-            per_cell[key] = {
-                "x": float(x_value),
-                "colour": colour,
-                "delay": float(delay),
-            }
-    return list(per_cell.values())
+        per_cell.setdefault(key, []).append(delay)
+    return [{"x": x, "colour": colour,
+             "delay": (summary := aggregate.summarize_delays(values, figure.delay_aggregation))["value"],
+             **summary}
+            for (x, colour), values in per_cell.items()]
+
 
 
 def _curve_for_slice(
@@ -119,7 +116,7 @@ def _curve_for_slice(
     slice_value,
     y_field: str,
 ) -> dict[float, float]:
-    """Build the mean-over-seeds curve for one slice value.
+    """Build the configured timescale aggregate for one slice value.
 
     Drops speed rows where `saturated=False` — those carry
     `saturation_epoch = total_steps / steps_per_epoch` (the full run
@@ -130,14 +127,14 @@ def _curve_for_slice(
     wallow column is unset for groks runs), so we check `is not False`
     rather than truthiness — None passes through.
     """
-    return aggregate.mean_over_seeds(
+    return aggregate.aggregate_over_seeds(
         (r for r in rows
          if r.get(figure.slice_field) == slice_value
          and _passes_filters(r, figure)
          and r.get(figure.x_field) is not None
          and r.get(y_field) is not None
          and r.get("saturated") is not False),
-        x_field=figure.x_field, y_field=y_field,
+        x_field=figure.x_field, y_field=y_field, metric=figure.timescale_aggregation,
     )
 
 
@@ -154,6 +151,9 @@ def render_intersection(
     save_dir: Path,
     figure: IntersectionFigure = None,
     suffix: str = "",
+    *,
+    show_unresolved: bool = True,
+    legend_inside: bool = False,
 ) -> list[Path]:
     """One PDF per slice value. Skips slices with no groks/speed overlap."""
     if figure is None:
@@ -205,6 +205,9 @@ def render_intersection(
             save_path=str(path),
             x_label=figure.x_label,
             colour_label=figure.colour_label,
+            crossing_direction="decreasing" if figure.x_field == "param_count" else "any",
+            show_unresolved=show_unresolved,
+            legend_inside=legend_inside,
         )
         out.append(path)
     return out

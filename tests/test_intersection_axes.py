@@ -233,7 +233,8 @@ def test_delay_thresholds_are_wired_through(synth_group, tmp_path):
     figure_unreachable_train = IntersectionFigure(
         name="ur_train", slice_field="p", x_field="param_count",
         x_label="Parameter count", colour_field="dim", colour_label="Dim",
-        delay_train_threshold=101.0,  # synthetic train maxes at 100 → drop all
+        delay_train_threshold=101.0,  # legacy policy drops uncrossed training
+        delay_censoring="legacy_lower_bound",
     )
     assert _delay_records_for_slice(synth_group, figure_unreachable_train, 113) == []
 

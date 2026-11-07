@@ -1,4 +1,8 @@
-"""Day-0 timescale-law fits and the pre-registered p=197 onset forecast.
+"""Historical timescale-law fits and recorded p=197 onset forecast.
+
+The current arithmetic-cell-mean publication pipeline is
+scripts/build_revised_paper.py. This module preserves the earlier estimator;
+its outputs are not the revised manuscript coefficients.
 
 Implements, verbatim, the pre-committed procedure of
 ``docs/papers/2026 Grokking Capacity/theory/theory-trunk.md`` §0 (written and mtime-stamped before this
@@ -83,6 +87,8 @@ def _pick_group(view: ConfigView):
 def collect(view: ConfigView) -> dict[str, Any]:
     figure = view.intersection_figures[0]
     group = _pick_group(view)
+    if figure.timescale_aggregation != 'mean':
+        raise ValueError('Forecast law fits retain their original estimators; use analyse_seed_aggregation.py laws for unified timescale aggregation. Configurable timescale_aggregation applies to measured intersection curves.')
     C = float(group.capacity_constant)
     op = group.key.operation
     tf = float(group.key.train_fraction)
@@ -137,13 +143,17 @@ def collect(view: ConfigView) -> dict[str, Any]:
                 with load_npz(r) as npz:
                     train, val = npz["train_acc"], npz["val_acc"]
             except (FileNotFoundError, KeyError):
-                continue
-            delays = aggregate.compute_delays(
-                [{"param_count": r.get("param_count"),
-                  "train_acc": train, "val_acc": val}],
-                x_field="param_count",
-                threshold_train=figure.delay_train_threshold,
-                threshold_val=figure.delay_val_threshold)
+                if figure.delay_censoring == 'legacy_lower_bound':
+                    continue
+                delays = [(r.get('param_count'), None)] if r.get('param_count') is not None else []
+            else:
+                delays = aggregate.compute_delays(
+                    [{"param_count": r.get("param_count"),
+                      "train_acc": train, "val_acc": val}],
+                    x_field="param_count",
+                    threshold_train=figure.delay_train_threshold,
+                    threshold_val=figure.delay_val_threshold,
+                    censoring=figure.delay_censoring)
             if delays:
                 recs.append({"x": delays[0][0], "delay": delays[0][1],
                              "seed": r.get("seed"), "dim": r.get("dim")})
@@ -157,7 +167,8 @@ def collect(view: ConfigView) -> dict[str, Any]:
     return {"C": C, "operation": op, "train_fraction": tf, "K_of": K_of,
             "speed_pts": speed_pts, "tgen_cells": tgen_cells,
             "delay_records": delay_records, "pipeline_cross": pipeline_cross,
-            "figure": figure, "group": group}
+            "figure": figure, "group": group, "delay_aggregation": figure.delay_aggregation,
+            "delay_positive_threshold": figure.delay_positive_threshold}
 
 
 # --------------------------------------------------------------------------- #
@@ -324,11 +335,12 @@ def solve_crossing(p: int, K: float, C: float, mem: dict, gen: dict
     return float(brentq(h, grid[i], grid[i + 1], xtol=1e-6))
 
 
-def empirical_onset(records: list[dict], seeds: Optional[set] = None
+def empirical_onset(records: list[dict], seeds: Optional[set] = None, *,
+                    metric: aggregate.Reducer = "min", threshold: float = 0.
                     ) -> Optional[float]:
     pairs = [(r["x"], r["delay"]) for r in records
              if seeds is None or r["seed"] in seeds]
-    return aggregate.find_grokking_onset(aggregate.min_delay_curve(pairs))
+    return aggregate.find_grokking_onset(aggregate.delay_curve(pairs, metric), threshold=threshold)
 
 
 def full_pipeline(data: dict, primes: tuple, forecast_ps: tuple, *,
@@ -346,7 +358,7 @@ def full_pipeline(data: dict, primes: tuple, forecast_ps: tuple, *,
     per_prime = {}
     for p in primes:
         Lc = solve_crossing(p, K_of(p), C, mem, gen)
-        Pon = empirical_onset(data["delay_records"].get(p, []))
+        Pon = empirical_onset(data["delay_records"].get(p, []), metric=data.get("delay_aggregation", "min"), threshold=data.get("delay_positive_threshold", 0.))
         if Lc is None or Pon is None:
             continue
         r = math.log10(Pon) - Lc
@@ -412,7 +424,7 @@ def seed_noise_floor(data: dict) -> dict[str, Any]:
         vals, n_none = [], 0
         for _ in range(N_SEED_DRAWS):
             sub = set(rng.choice(seeds, size=SEED_SUBSAMPLE_M, replace=False))
-            on = empirical_onset(recs, seeds=sub)
+            on = empirical_onset(recs, seeds=sub, metric=data.get("delay_aggregation", "min"), threshold=data.get("delay_positive_threshold", 0.))
             if on is None:
                 n_none += 1
             else:
@@ -489,7 +501,7 @@ def run(config: str, db: str, out_dir: Path) -> dict[str, Any]:
         for p in CENTRAL_PRIMES:
             Lc = solve_crossing(p, data["K_of"](p), data["C"], point["mem"], gen_p)
             Pon = (data["delay_records"].get(p) and
-                   empirical_onset(data["delay_records"][p]))
+                   empirical_onset(data["delay_records"][p], metric=data.get("delay_aggregation", "min"), threshold=data.get("delay_positive_threshold", 0.)))
             if Lc is not None and Pon:
                 resid.append(math.log10(Pon) - Lc)
         dh = float(np.median(resid))
@@ -557,7 +569,7 @@ def run(config: str, db: str, out_dir: Path) -> dict[str, Any]:
     def _null_fit(primes):
         xs, ys = [], []
         for p in primes:
-            on = empirical_onset(data["delay_records"].get(p, []))
+            on = empirical_onset(data["delay_records"].get(p, []), metric=data.get("delay_aggregation", "min"), threshold=data.get("delay_positive_threshold", 0.))
             if on:
                 xs.append(math.log10(p)); ys.append(math.log10(on))
         if len(set(xs)) < 2:
@@ -601,7 +613,7 @@ def run(config: str, db: str, out_dir: Path) -> dict[str, Any]:
                 null_model["p197"]["total_half_band_dex"] <= BAND_GATE_DEX}
 
     # Held-out p=149 dry run of the frozen pipeline.
-    Pon149 = empirical_onset(data["delay_records"].get(HELD_OUT_PRIME, []))
+    Pon149 = empirical_onset(data["delay_records"].get(HELD_OUT_PRIME, []), metric=data.get("delay_aggregation", "min"), threshold=data.get("delay_positive_threshold", 0.))
     check149 = {"P_onset_empirical": Pon149,
                 "pred_log10": point["forecast_log10"][HELD_OUT_PRIME],
                 "resid_dex": (None if (Pon149 is None or
@@ -637,6 +649,10 @@ def run(config: str, db: str, out_dir: Path) -> dict[str, Any]:
 
     results = {
         "pre_committed": "docs/papers/2026 Grokking Capacity/theory/theory-trunk.md §0 (+ amendments §0b, §0c)",
+        "delay_aggregation": aggregate.reducer_name(data.get("delay_aggregation", "min")),
+        "delay_censoring": data['figure'].delay_censoring,
+        "delay_positive_threshold": data.get("delay_positive_threshold", 0.),
+        "timescale_fit_estimators": "Per-run log OLS for memorisation; log of arithmetic observed-seed mean for generalisation.",
         "C_convention": data["C"],
         "gamma_per_bit_per_param": point["mem"]["gamma"] / data["C"],
         "mem_law": point["mem"],

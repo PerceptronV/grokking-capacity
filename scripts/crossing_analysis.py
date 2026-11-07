@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Crossing programme analysis, as registered (theory/registrations.md R1).
+"""Historical crossing analysis (local protocol and later amendments).
+
+For the revised paper use scripts/build_revised_paper.py or
+scripts/recompute_paper_crossings.py. This legacy estimator deliberately
+retains geometric means and capped times for historical comparison only.
 Per prime: seed-geometric-mean ln T_mem and ln T_gen vs ln P (registry
 param_count; censored cells at the cap), local linear fit to each over the
 grid, intersection = crossing, 95 % CI from 300 seed-bootstrap resamples;
@@ -8,16 +12,33 @@ Onset: canonical estimator (smallest width above the last zero of the
 per-seed-minimum canonical delay). Mechanism score: agreement between
 'mem faster' and 'seed-min delay > 0' per cell. Fixed-rate law crossing
 from results/theory/forecast_onset.json for comparison.
-Usage: python scripts/crossing_analysis.py fixed|mup
+Usage: python scripts/crossing_analysis.py fixed|mup [--plots-only]
+--plots-only uses the existing crossing CSV without recomputing or writing statistics.
 Writes results/theory/crossing_<which>.csv and figures/theory/crossing_<which>.pdf."""
-import os, sys, sqlite3, math, csv, json, shutil
+import os, sys, sqlite3, math, csv, json, shutil, argparse
+from pathlib import Path
+from grokking_capacity.analysis.aggregate import summarize_delays, compute_delays, onset_summary
 from collections import defaultdict
+from grokking_capacity.analysis._figure_style import save_paper_figure
 import numpy as np, matplotlib, matplotlib.ticker
 matplotlib.use("Agg"); import matplotlib.pyplot as plt
 
-which = sys.argv[1] if len(sys.argv) > 1 else "fixed"
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('which', nargs='?', default='fixed', choices=['fixed','mup'])
+parser.add_argument('--plots-only', action='store_true')
+parser.add_argument('--delay-aggregation', default='min')
+parser.add_argument('--censoring', choices=['legacy_lower_bound','unresolved'], default='legacy_lower_bound')
+parser.add_argument('--out', type=Path)
+args = parser.parse_args()
+which = args.which
+if (args.delay_aggregation != 'min' or args.censoring != 'legacy_lower_bound') and args.out is None:
+    parser.error('alternative estimators require --out to preserve the registered results')
+if args.out is not None:
+    args.out.mkdir(parents=True, exist_ok=True)
+result_path = args.out / f'crossing_{which}.csv' if args.out else Path(f'results/theory/crossing_{which}.csv')
+figure_path = args.out / f'crossing_{which}.pdf' if args.out else Path(f'figures/theory/crossing_{which}.pdf')
 db = os.path.expanduser(f"~/crossing_{which}_runs.db")
-c = sqlite3.connect(db); c.row_factory = sqlite3.Row
+c = sqlite3.connect(Path(db).resolve().as_uri()+"?mode=ro",uri=True); c.row_factory = sqlite3.Row
 R = json.load(open("results/theory/forecast_onset.json")); C = 2.16
 g, lnb, lnA, a, beta = R["mem_law"]["gamma"], R["mem_law"]["ln_b"], R["gen_law"]["lnA"], R["gen_law"]["a"], R["gen_law"]["beta"]
 K = lambda p: (p * (p - 1) // 2) * math.log2(p + 2)
@@ -31,6 +52,8 @@ for r in c.execute("select p, dim, param_count, grokking_epoch, max_epochs, npz_
     d98 = None
     if ti.size:
         te = ti[0] + 1; d98 = max(0, vi[0] + 1 - te) if vi.size else max(0, len(va) - te)
+    if args.censoring == 'unresolved':
+        d98 = compute_delays([dict(param_count=r['param_count'],train_acc=tr,val_acc=va)],threshold_train=99,threshold_val=98)[0][1]
     gen[(r["p"], r["dim"])].append((r["grokking_epoch"] or r["max_epochs"], d98)); Pof[(r["p"], r["dim"])] = r["param_count"]
 
 def crossing(lP, lm, lg):
@@ -63,46 +86,72 @@ def onset_domain(dmin, lP):
     if zeros[-1] + 1 < n: return float(lP[zeros[-1] + 1])
     return "none"
 
-rows = []
-primes = sorted({p for p, _ in gen} & {p for p, _ in mem})
-for p in primes:
-    ds = sorted(d for pp, d in gen if pp == p and (pp, d) in mem)
-    if len(ds) < 4: continue
-    lP = np.log10([Pof[(p, d)] for d in ds])
-    lm = np.array([np.mean(np.log(mem[(p, d)])) for d in ds]); lg = np.array([np.mean(np.log([t for t, _ in gen[(p, d)]])) for d in ds])
-    x = crossing(lP, lm, lg)
-    boots = []
-    rng = np.random.default_rng(0)
-    for _ in range(300):
-        bm = np.array([np.mean(np.log(rng.choice(mem[(p, d)], len(mem[(p, d)])))) for d in ds])
-        bg = np.array([np.mean(np.log(rng.choice([t for t, _ in gen[(p, d)]], len(gen[(p, d)])))) for d in ds])
-        v = crossing(lP, bm, bg)
-        if isinstance(v, float): boots.append(v)
-    ci = (np.percentile(boots, 2.5), np.percentile(boots, 97.5)) if len(boots) > 30 else (None, None)
-    dmin = [min([x_ for _, x_ in gen[(p, d)] if x_ is not None], default=None) for d in ds]
-    onset = onset_domain([0 if v is None else v for v in dmin], lP)
-    graze = float(np.mean([abs(lm[i] - lg[i]) <= math.log(1.3) for i in range(len(ds) // 2, len(ds))]))
-    # law crossing (fixed-rate constants)
-    lawx = None
-    if which == "fixed":
-        gaps = [(lnb + g * K(p) / (C * Pof[(p, d)])) - (lnA + a * math.log(p) - beta * math.log(Pof[(p, d)])) for d in ds]
-        for i in range(len(ds) - 1):
-            if gaps[i] > 0 and gaps[i + 1] <= 0:
-                lawx = lP[i] + (lP[i + 1] - lP[i]) * gaps[i] / (gaps[i] - gaps[i + 1]); break
-    agree = np.mean([(lm[i] < lg[i]) == (dmin[i] is not None and dmin[i] > 0) for i in range(len(ds))])
-    ratio_wide = [round(float(np.exp(lm[i] - lg[i])), 2) for i in range(len(ds) // 2, len(ds))]
-    rows.append(dict(p=p, n_widths=len(ds), crossing_log10P=(round(x, 2) if isinstance(x, float) else x), ci_lo=None if ci[0] is None else round(ci[0], 2),
-                     ci_hi=None if ci[1] is None else round(ci[1], 2), onset_log10P=(round(onset, 2) if isinstance(onset, float) else onset),
-                     law_crossing_log10P=None if lawx is None else round(float(lawx), 2), mech_agreement=round(float(agree), 2), graze_frac_wide=round(graze, 2), ratio_wide_half=ratio_wide,
-                     seedmin_delay_by_width=dmin))
-if not rows:
-    sys.exit(f"no prime with >= 4 matched widths yet ({len(mem)} mem cells, {len(gen)} gen cells)")
-os.makedirs("results/theory", exist_ok=True)
-with open(f"results/theory/crossing_{which}.csv", "w") as fh:
-    w = csv.DictWriter(fh, fieldnames=list(rows[0])); w.writeheader(); w.writerows(rows)
-print(f"{'p':>4} {'crossing':>28} {'95% CI':>14} {'onset':>30} {'law':>6} {'agree':>6} {'graze':>6}  ratio (wide half)")
-for r in rows:
-    print(f"{r['p']:>4} {str(r['crossing_log10P']):>28} {str((r['ci_lo'], r['ci_hi'])):>14} {str(r['onset_log10P']):>30} {str(r['law_crossing_log10P']):>6} {r['mech_agreement']:>6} {r['graze_frac_wide']:>6}  {r['ratio_wide_half']}")
+plots_only = args.plots_only
+if plots_only:
+    with open(result_path) as fh:
+        rows = list(csv.DictReader(fh))
+    for row in rows:
+        row["p"] = int(row["p"])
+        for key in ["crossing_log10P", "onset_log10P", "law_crossing_log10P"]:
+            value = row[key]
+            try:
+                row[key] = float(value) if value else None
+            except ValueError:
+                row[key] = value
+else:
+    rows = []
+    primes = sorted({p for p, _ in gen} & {p for p, _ in mem})
+    for p in primes:
+        ds = sorted(d for pp, d in gen if pp == p and (pp, d) in mem)
+        if len(ds) < 4: continue
+        lP = np.log10([Pof[(p, d)] for d in ds])
+        lm = np.array([np.mean(np.log(mem[(p, d)])) for d in ds]); lg = np.array([np.mean(np.log([t for t, _ in gen[(p, d)]])) for d in ds])
+        x = crossing(lP, lm, lg)
+        boots = []
+        rng = np.random.default_rng(0)
+        for _ in range(300):
+            bm = np.array([np.mean(np.log(rng.choice(mem[(p, d)], len(mem[(p, d)])))) for d in ds])
+            bg = np.array([np.mean(np.log(rng.choice([t for t, _ in gen[(p, d)]], len(gen[(p, d)])))) for d in ds])
+            v = crossing(lP, bm, bg)
+            if isinstance(v, float): boots.append(v)
+        ci = (np.percentile(boots, 2.5), np.percentile(boots, 97.5)) if len(boots) > 30 else (None, None)
+        dmin = [summarize_delays([x_ for _, x_ in gen[(p,d)]
+                                  if args.censoring != 'legacy_lower_bound' or x_ is not None],
+                                 args.delay_aggregation)['value'] for d in ds]
+        if args.censoring == 'legacy_lower_bound':
+            onset = onset_domain([0 if v is None else v for v in dmin], lP)
+        else:
+            W=len(dmin)
+            for i in range(len(dmin)-1,0,-1):
+                if dmin[i]==0 and dmin[i-1]==0: W=i-1
+                else: break
+            safe=onset_summary(dict(zip(lP[:W],dmin[:W])))
+            onset=safe['value'] if safe['status']=='observed' else safe['status']
+        graze = float(np.mean([abs(lm[i] - lg[i]) <= math.log(1.3) for i in range(len(ds) // 2, len(ds))]))
+        # law crossing (fixed-rate constants)
+        lawx = None
+        if which == "fixed":
+            gaps = [(lnb + g * K(p) / (C * Pof[(p, d)])) - (lnA + a * math.log(p) - beta * math.log(Pof[(p, d)])) for d in ds]
+            for i in range(len(ds) - 1):
+                if gaps[i] > 0 and gaps[i + 1] <= 0:
+                    lawx = lP[i] + (lP[i + 1] - lP[i]) * gaps[i] / (gaps[i] - gaps[i + 1]); break
+        known=[i for i in range(len(ds)) if dmin[i] is not None]
+        agree = np.mean([(lm[i] < lg[i]) == (dmin[i] > 0) for i in known]) if known else float('nan')
+        ratio_wide = [round(float(np.exp(lm[i] - lg[i])), 2) for i in range(len(ds) // 2, len(ds))]
+        rows.append(dict(p=p, n_widths=len(ds), crossing_log10P=(round(x, 2) if isinstance(x, float) else x), ci_lo=None if ci[0] is None else round(ci[0], 2),
+                         ci_hi=None if ci[1] is None else round(ci[1], 2), onset_log10P=(round(onset, 2) if isinstance(onset, float) else onset),
+                         law_crossing_log10P=None if lawx is None else round(float(lawx), 2), mech_agreement=round(float(agree), 2), graze_frac_wide=round(graze, 2), ratio_wide_half=ratio_wide,
+                         seedmin_delay_by_width=dmin if args.delay_aggregation=='min' else None,
+                         aggregate_delay_by_width=dmin, delay_aggregation=args.delay_aggregation,
+                         delay_censoring=args.censoring, scored_cells=len(known)))
+    if not rows:
+        sys.exit(f"no prime with >= 4 matched widths yet ({len(mem)} mem cells, {len(gen)} gen cells)")
+    os.makedirs("results/theory", exist_ok=True)
+    with open(result_path, "w") as fh:
+        w = csv.DictWriter(fh, fieldnames=list(rows[0])); w.writeheader(); w.writerows(rows)
+    print(f"{'p':>4} {'crossing':>28} {'95% CI':>14} {'onset':>30} {'law':>6} {'agree':>6} {'graze':>6}  ratio (wide half)")
+    for r in rows:
+        print(f"{r['p']:>4} {str(r['crossing_log10P']):>28} {str((r['ci_lo'], r['ci_hi'])):>14} {str(r['onset_log10P']):>30} {str(r['law_crossing_log10P']):>6} {r['mech_agreement']:>6} {r['graze_frac_wide']:>6}  {r['ratio_wide_half']}")
 
 n = len(rows); cols = 4; rws = int(np.ceil(n / cols))
 fig, axs = plt.subplots(rws, cols, figsize=(3.0 * cols, 2.5 * rws), squeeze=False, sharey=True)
@@ -114,7 +163,9 @@ for ax, r in zip(axs.flat, rows):
     if isinstance(r["crossing_log10P"], float): ax.axvline(10 ** r["crossing_log10P"], color="k", lw=0.8, ls="--")
     if isinstance(r["onset_log10P"], float): ax.axvline(10 ** r["onset_log10P"], color="C2", lw=0.8, ls=":")
     if r["law_crossing_log10P"]: ax.axvline(10 ** r["law_crossing_log10P"], color="C1", lw=0.8, ls="-.")
-    ax.set(xscale="log", yscale="log", title=f"$p={p}$"); ax.tick_params(labelsize=7); ax.title.set_fontsize(9)
+    ax.set(xscale="log", yscale="log"); ax.tick_params(labelsize=7)
+    ax.text(.5, .95, f"$p={p}$", transform=ax.transAxes, ha="center", va="top", fontsize=9,
+            bbox=dict(facecolor="white", edgecolor="none", alpha=.85, pad=1))
     ax.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
     ax.xaxis.set_major_locator(matplotlib.ticker.LogLocator(base=10, numticks=4))
     ax.xaxis.set_major_formatter(matplotlib.ticker.LogFormatterSciNotation(base=10))
@@ -122,6 +173,7 @@ for ax in axs.flat[n:]: ax.axis("off")
 axs.flat[0].legend(fontsize=6)
 for ax in axs[-1]: ax.set_xlabel("parameters $P$", fontsize=8)
 for ax in axs[:, 0]: ax.set_ylabel("epochs", fontsize=8)
-fig.tight_layout(); fig.savefig(f"figures/theory/crossing_{which}.pdf", bbox_inches="tight"); fig.savefig(f"/tmp/crossing_{which}.png", dpi=80, bbox_inches="tight")
+fig.tight_layout(); save_paper_figure(fig, figure_path)
 dst = f"docs/papers/2026 Grokking Capacity/media/theory/crossing_{which}.pdf"
-if os.path.isdir(os.path.dirname(dst)): shutil.copy(f"figures/theory/crossing_{which}.pdf", dst)
+if args.out is None and os.path.isdir(os.path.dirname(dst)):
+    for ext in ["pdf", "png"]: shutil.copy(f"figures/theory/crossing_{which}.{ext}", dst.removesuffix("pdf") + ext)
