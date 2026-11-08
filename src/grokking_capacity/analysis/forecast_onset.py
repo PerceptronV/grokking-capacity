@@ -1,7 +1,7 @@
 """Historical timescale-law fits and recorded p=197 onset forecast.
 
 The current arithmetic-cell-mean publication pipeline is
-scripts/build_revised_paper.py. This module preserves the earlier estimator;
+docs/papers/2026 Grokking Capacity/code/build_revised_paper.py. This module preserves the earlier estimator;
 its outputs are not the revised manuscript coefficients.
 
 Implements, verbatim, the pre-committed procedure of

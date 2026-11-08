@@ -1,8 +1,0 @@
-{
-  "recorded_at": 1792985483.962192,
-  "before_pair_selection": true,
-  "before_confirmation": true,
-  "reason": "The primary t_gen summary is an arithmetic mean, whereas averaging per-seed log slopes describes the geometric-mean trend; size-dependent tails can make these differ.",
-  "addition": "Also fit log of the arithmetic-mean t_gen at each complete common size on log estimated capacity. Bootstrap paired seeds before computing each mean. Keep all registered per-seed log fits and the separate capped-time sensitivities.",
-  "unchanged": "No training setting, stopping rule, seed, calibration fit or matching rule changes."
-}

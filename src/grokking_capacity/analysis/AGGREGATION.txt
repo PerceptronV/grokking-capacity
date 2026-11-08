@@ -56,7 +56,7 @@ Non-minimum previews use their named aggregate for both.
 
 The current paper fits both timescales to the log of arithmetic observed-event
 means within cells, weighting each cell equally. The entry point is
-scripts/build_revised_paper.py; censored runs are excluded before averaging.
+docs/papers/2026 Grokking Capacity/code/build_revised_paper.py; censored runs are excluded before averaging.
 
 Legacy forecast law fitting is a separate estimator choice: that earlier fit uses
 per-run log OLS for memorisation and log arithmetic observed-seed means for

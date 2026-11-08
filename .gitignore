@@ -204,3 +204,4 @@ docs/
 
 # Generated manuscript build logs, snapshots and audit previews
 /reports/paper_*/
+reports

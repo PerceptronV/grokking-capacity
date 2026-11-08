@@ -46,13 +46,13 @@ artifacts are not installed with the Python package.
 
 ```bash
 # Rebuild tables, PDF/PNG assets and the paper from existing analyses.
-python scripts/build_revised_paper.py --reuse-analyses
+python "docs/papers/2026 Grokking Capacity/code/build_revised_paper.py" --reuse-analyses
 
 # Recompute the selected analyses before building (requires local experiment data).
-python scripts/build_revised_paper.py
+python "docs/papers/2026 Grokking Capacity/code/build_revised_paper.py"
 
 # Run the test suite without unrelated globally installed pytest plugins.
-PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest tests -q
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest tests "docs/papers/2026 Grokking Capacity/code/tests" -q
 ```
 
 The build preserves author prose and updates only generated tables and figure
@@ -66,7 +66,8 @@ review. Build logs and validation records are written to
 The active entry points are `recompute_paper_crossings.py`,
 `recompute_paper_statistics.py`, `prepare_paper_revision_models.py`,
 `prepare_paper_revision_supplement.py`, `publish_paper_revision.py` and
-`validate_revised_paper.py`, all under `scripts/`. The publisher discovers
+`validate_revised_paper.py`, all under `docs/papers/2026 Grokking Capacity/code/`.
+The cone renderer and its publication helpers also live beside the paper. The publisher discovers
 figures from the current TeX includes. `paper_tables.py` only formats
 the generated sensitivity table; it does not rewrite the manuscript.
 

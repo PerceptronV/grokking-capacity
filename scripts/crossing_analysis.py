@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Historical crossing analysis (local protocol and later amendments).
 
-For the revised paper use scripts/build_revised_paper.py or
-scripts/recompute_paper_crossings.py. This legacy estimator deliberately
+For the revised paper use docs/papers/2026 Grokking Capacity/code/build_revised_paper.py or
+docs/papers/2026 Grokking Capacity/code/recompute_paper_crossings.py. This legacy estimator deliberately
 retains geometric means and capped times for historical comparison only.
 Per prime: seed-geometric-mean ln T_mem and ln T_gen vs ln P (registry
 param_count; censored cells at the cap), local linear fit to each over the
