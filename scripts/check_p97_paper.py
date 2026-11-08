@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify saved p97 central-sweep traces; never modify the original registry."""
+"""Verify saved p97 main-sweep traces; never modify the original registry."""
 import csv
 import hashlib
 import json

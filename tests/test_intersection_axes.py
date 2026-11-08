@@ -294,11 +294,11 @@ def test_curve_thresholds_label_the_legend(synth_group, tmp_path):
     """
     import grokking_capacity.analysis.plots as plots_mod
     captured = {}
-    real = plots_mod.plot_grokking_delay_with_speed
+    real = plots_mod.plot_generalisation_delay_with_speed
     def wrapper(*a, **kw):
         captured.update(kw)
         return real(*a, **kw)
-    plots_mod.plot_grokking_delay_with_speed = wrapper
+    plots_mod.plot_generalisation_delay_with_speed = wrapper
     try:
         figure = IntersectionFigure(
             name="thr_check", slice_field="p", x_field="param_count",
@@ -307,7 +307,7 @@ def test_curve_thresholds_label_the_legend(synth_group, tmp_path):
         )
         plots_mod.render_intersection(synth_group, tmp_path / "out", figure=figure)
     finally:
-        plots_mod.plot_grokking_delay_with_speed = real
+        plots_mod.plot_generalisation_delay_with_speed = real
     assert captured["mem_curve_threshold"] == 97.5
     assert captured["gen_curve_threshold"] == 98.5
 

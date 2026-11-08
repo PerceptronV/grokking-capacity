@@ -194,7 +194,7 @@ def plots(confirm,pairings,jobs):
         ax.set(xticks=range(10),xticklabels=range(321,331),xlabel='Seed',title=title,ylabel='Delay (optimizer updates)');ax.axhline(0,c='black',lw=.6)
         ax.legend()
     fig.suptitle('Delay = max(0, first held-out98 − first training99); ? means undefined')
-    save(fig,'grokking_delays')
+    save(fig,'generalisation_delays')
     fig,axes=plt.subplots(1,2,figsize=(11,4),sharex=True,sharey=True)
     for ax,role in zip(axes,['C','B']):
         for result,manifest,trace in jobs.values():

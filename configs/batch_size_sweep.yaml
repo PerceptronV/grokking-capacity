@@ -5,7 +5,7 @@ description: >
   B in {128, 512, 2048} changes minibatch noise ~16x; a thermal barrier
   predicts gamma ~ 1/B (adjudicated in STEPS, pre-specified), a geometric
   barrier predicts invariance. Fresh seed pool (52-54) so these cells
-  never collide with the central sweep's rows and stay a matched pool
+  never collide with the main sweep's rows and stay a matched pool
   across all three B arms on this machine.
 
 defaults:

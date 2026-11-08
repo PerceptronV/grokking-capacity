@@ -3428,7 +3428,7 @@ Artifacts: [all arithmetic runs](reports/p97_categorical_groks/arithmetic_runs.c
 Figures are exported as PNG and PDF:
 [arithmetic learning curves](reports/p97_categorical_groks/train_test.png),
 [first-crossing times](reports/p97_categorical_groks/learning_times.png),
-[per-seed delays](reports/p97_categorical_groks/grokking_delays.png), and
+[per-seed delays](reports/p97_categorical_groks/generalisation_delays.png), and
 [random-label learning curves](reports/p97_categorical_groks/random_learning.png).
 
 ## Registered capacity-constant matched scaling sweep (2026-10-26)

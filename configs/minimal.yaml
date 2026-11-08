@@ -1,5 +1,5 @@
 name: minimal_mechanism
-description: "Minimal sweep to build the two-mechanism theory: norm contraction (T_gen) + jamming hazard (T_mem). Replaces the expensive central sweep for this purpose."
+description: "Minimal sweep to build the two-mechanism theory: norm contraction (T_gen) + jamming hazard (T_mem). Replaces the expensive main sweep for this purpose."
 
 # ---------------------------------------------------------------------------
 # Purpose

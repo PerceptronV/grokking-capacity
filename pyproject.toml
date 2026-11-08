@@ -46,6 +46,8 @@ gc-merge-registries = "grokking_capacity.registry.merge:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+include = ["grokking_capacity", "grokking_capacity.*"]
+namespaces = false
 
 [tool.setuptools.package-data]
 grokking_capacity = ["py.typed"]

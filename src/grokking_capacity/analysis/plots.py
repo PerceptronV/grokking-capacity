@@ -13,7 +13,7 @@ from typing import Iterable, Optional
 from ._primitives import (
     plot_capacity_curves,
     plot_capacity_estimation,
-    plot_grokking_delay_with_speed,
+    plot_generalisation_delay_with_speed,
     plot_saturation_epochs_vs_inverse_capacity,
     plot_saturation_time_vs_capacity_fraction,
 )
@@ -196,7 +196,7 @@ def render_intersection(
             )
         # Title intentionally omitted — slice identity (e.g. p=113, dim=64)
         # already lives in the filename.
-        plot_grokking_delay_with_speed(
+        plot_generalisation_delay_with_speed(
             records, speed_curve=speed_curve, groks_curve=groks_curve,
             mem_curve_threshold=figure.mem_curve_threshold,
             gen_curve_threshold=figure.gen_curve_threshold,

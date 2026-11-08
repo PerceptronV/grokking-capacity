@@ -7,7 +7,7 @@ description: >
   params (d ~ 160, log10 band [5.83, 6.10]). The width grid covers the
   null's band densely and extends to ~10x its centre so an
   absence-of-grokking verdict is meaningful. Seeds and estimator match the
-  central sweep (seed-min over 42-51, thresholds 99/99/98).
+  main sweep (seed-min over 42-51, thresholds 99/99/98).
   DO NOT LAUNCH before the pre-registration comment is posted on
   OpenReview — the timestamp is the entire point.
 

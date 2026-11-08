@@ -15,7 +15,7 @@ from .aggregate import find_intersection
 from ._figure_style import save_paper_figure
 
 
-def calculate_grokking_delay(
+def calculate_generalisation_delay(
     train_acc, val_acc,
     threshold_train: float = 99.0, threshold_val: float = 99.0,
 ):
@@ -38,7 +38,7 @@ def calculate_grokking_delay(
     return None, None, None
 
 
-def plot_grokking_delay_with_speed(
+def plot_generalisation_delay_with_speed(
     delay_records: List[Dict],
     speed_curve: Dict[float, float],
     groks_curve: Dict[float, float],
