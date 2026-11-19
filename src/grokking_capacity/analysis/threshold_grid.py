@@ -1,6 +1,6 @@
 """Threshold-sensitivity analysis of the pipeline quantities.
 
-The pipeline's three scalar outputs per prime — T_mem(P), T_gen(P), and the
+The pipeline's timescale curves and onset per prime — T_mem(P,p), T_gen(P,p), and the
 grokking onset P_onset — all depend on accuracy thresholds. This tool
 recomputes every quantity directly from the raw traces under a grid of
 threshold conventions (tau_train; tau_gen; tau_delay_val) and reports how the
@@ -346,14 +346,14 @@ def run_e2(speed: list[dict], groks: list[dict]) -> dict:
 # ---------------------------------------------------------------------------
 
 def _fit_log_linear(f: np.ndarray, y: np.ndarray) -> dict:
-    """Fit ln(y) = a*f + ln(b); return a, b, R^2."""
+    """Fit ln(y) = gamma*f + ln(B); return gamma, B, R^2."""
     ln_y = np.log(y)
-    a, ln_b = np.polyfit(f, ln_y, 1)
-    resid = ln_y - (a * f + ln_b)
+    gamma, ln_B = np.polyfit(f, ln_y, 1)
+    resid = ln_y - (gamma * f + ln_B)
     ss_res = float(np.sum(resid ** 2))
     ss_tot = float(np.sum((ln_y - ln_y.mean()) ** 2))
     r2 = 1.0 - ss_res / ss_tot if ss_tot > 0 else float("nan")
-    return {"a": float(a), "b": float(np.exp(ln_b)), "r2": float(r2),
+    return {"gamma": float(gamma), "B": float(np.exp(ln_B)), "r2": float(r2),
             "n_points": int(y.size)}
 
 

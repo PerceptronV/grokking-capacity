@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Independent arithmetic and artifact-preservation checks for the sensitivity audit."""
+from grokking_capacity.analysis.timescale_laws import normalise_timescale_laws
 from pathlib import Path
 from collections import defaultdict,Counter
 import csv,hashlib,json,math,statistics,shutil
@@ -43,17 +44,17 @@ def main():
         df=pd.read_csv(OUT/f'statistics/central_main_ten/{metric}/predictiveness.csv')
         assert len(df)==10 and set(df.slice_value)=={97,101,103,107,109,113,127,131,137,139}
     # Check the fold condition and actual fitted-law equality independently.
-    laws=json.loads((OUT/'laws/comparison.json').read_text())['unified_cell_reducers']
+    laws=normalise_timescale_laws(json.loads((OUT/'laws/comparison.json').read_text()))['unified_cell_reducers']
     for name,x in laws.items():
         m,g=x['mem'],x['gen'];p=x['fold'];K=p*(p-1)/2*math.log2(p+2);q=m['gamma_original']/2.16
-        P=q*K/g['beta']
-        gap=m['ln_b']+q*K/P-(g['lnA']+g['a']*math.log(p)-g['beta']*math.log(P))
+        P=q*K/g['b']
+        gap=m['ln_B']+q*K/P-(g['lnA']+g['a']*math.log(p)-g['b']*math.log(P))
         assert abs(gap)<1e-9,(name,gap)
         for p in [149,197]:
             P=x[f'p{p}']
             if P is None:continue
             K=p*(p-1)/2*math.log2(p+2)
-            gap=m['ln_b']+q*K/P-(g['lnA']+g['a']*math.log(p)-g['beta']*math.log(P))
+            gap=m['ln_B']+q*K/P-(g['lnA']+g['a']*math.log(p)-g['b']*math.log(P))
             assert abs(gap)<1e-8
     before=json.loads((OUT/'protected_before.json').read_text())
     for rel,digest in before.items():assert sha(ROOT/rel)==digest,rel

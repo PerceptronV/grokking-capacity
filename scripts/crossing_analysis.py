@@ -15,6 +15,7 @@ from results/theory/forecast_onset.json for comparison.
 Usage: python scripts/crossing_analysis.py fixed|mup [--plots-only]
 --plots-only uses the existing crossing CSV without recomputing or writing statistics.
 Writes results/theory/crossing_<which>.csv and figures/theory/crossing_<which>.pdf."""
+from grokking_capacity.analysis.timescale_laws import normalise_timescale_laws
 import os, sys, sqlite3, math, csv, json, shutil, argparse
 from pathlib import Path
 from grokking_capacity.analysis.aggregate import summarize_delays, compute_delays, onset_summary
@@ -39,8 +40,8 @@ result_path = args.out / f'crossing_{which}.csv' if args.out else Path(f'results
 figure_path = args.out / f'crossing_{which}.pdf' if args.out else Path(f'figures/theory/crossing_{which}.pdf')
 db = os.path.expanduser(f"~/crossing_{which}_runs.db")
 c = sqlite3.connect(Path(db).resolve().as_uri()+"?mode=ro",uri=True); c.row_factory = sqlite3.Row
-R = json.load(open("results/theory/forecast_onset.json")); C = 2.16
-g, lnb, lnA, a, beta = R["mem_law"]["gamma"], R["mem_law"]["ln_b"], R["gen_law"]["lnA"], R["gen_law"]["a"], R["gen_law"]["beta"]
+R = normalise_timescale_laws(json.load(open("results/theory/forecast_onset.json"))); C = 2.16
+g, lnB, lnA, a, b = R["mem_law"]["gamma"], R["mem_law"]["ln_B"], R["gen_law"]["lnA"], R["gen_law"]["a"], R["gen_law"]["b"]
 K = lambda p: (p * (p - 1) // 2) * math.log2(p + 2)
 
 mem = defaultdict(list); gen = defaultdict(list); Pof = {}
@@ -131,7 +132,7 @@ else:
         # law crossing (fixed-rate constants)
         lawx = None
         if which == "fixed":
-            gaps = [(lnb + g * K(p) / (C * Pof[(p, d)])) - (lnA + a * math.log(p) - beta * math.log(Pof[(p, d)])) for d in ds]
+            gaps = [(lnB + g * K(p) / (C * Pof[(p, d)])) - (lnA + a * math.log(p) - b * math.log(Pof[(p, d)])) for d in ds]
             for i in range(len(ds) - 1):
                 if gaps[i] > 0 and gaps[i + 1] <= 0:
                     lawx = lP[i] + (lP[i + 1] - lP[i]) * gaps[i] / (gaps[i] - gaps[i + 1]); break

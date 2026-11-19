@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
+from grokking_capacity.analysis.timescale_laws import normalise_timescale_laws
 import json,math,hashlib
 import numpy as np
 from scipy.stats import wilcoxon
@@ -18,7 +19,7 @@ for r in nu:
 result['init_null']={'cells':nr,'max_abs_real_vs_null':max(abs(r['real_vs_null_fraction']) for r in nr),'max_abs_formula_vs_real':max(abs(r['formula_vs_real_fraction']) for r in nr),'max_abs_formula_vs_null':max(abs(r['formula_vs_null_fraction']) for r in nr)}
 g=read(T/'character_growth_lambda_sweep.json');lams=[.1,.3,1.];rates=[g[str(l)]['windows']['grok+[0,300]']['amplitude']['winner'] for l in lams];result['winner_lambda']={'lambda':lams,'rates':rates,'slope':float(np.polyfit(np.log(lams),np.log(rates),1)[0]),'window':'grok+[0,300] AFTER grokking','takeoff':[g[str(l)]['takeoff_1p5x'] for l in lams],'grok':[g[str(l)]['grok_epoch'] for l in lams]}
 al=read(T/'character_alpha_width.json');result['character_alpha_width']={k:{m:v for m,v in d.items() if m.startswith('exponent')} for k,d in al.items()}
-wd=read(T/'wd_shift_test.json');result['wd_other_exponents']=[{'lambda':r['lambda'],'gamma_current':r['gamma']*scale,'beta':r['beta']} for r in wd if 'gamma' in r]
+wd=normalise_timescale_laws(read(T/'wd_shift_test.json'));result['wd_other_exponents']=[{'lambda':r['lambda'],'gamma_current':r['gamma']*scale,'b':r['b']} for r in wd if 'gamma' in r]
 result['sources']=used
 (O/'secondary_numbers.json').write_text(json.dumps(result,indent=2))
 print(json.dumps({k:v for k,v in result.items() if k not in ['sources','init_null','wd_other_exponents']},indent=2));print('INIT NULL maxima',{k:v for k,v in result['init_null'].items() if k!='cells'})

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Update validated numbers, the decay plot, and approved norm-freezing wording."""
 from pathlib import Path
+from grokking_capacity.analysis.timescale_laws import normalise_timescale_laws
 import hashlib,json,re,shutil
 ROOT=Path(__file__).resolve().parents[1]
 PAPER=ROOT/'docs/papers/2026 Grokking Capacity'
@@ -9,7 +10,7 @@ WD=ROOT/'results/weight_decay_matched_20261103'
 
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def main():
-    wd=json.loads((WD/'summary.json').read_text());n=json.loads((CAMPAIGN/'analysis.json').read_text());before=json.loads((CAMPAIGN/'publication_before_hashes.json').read_text())
+    wd=json.loads((WD/'summary.json').read_text());n=normalise_timescale_laws(json.loads((CAMPAIGN/'analysis.json').read_text()));before=json.loads((CAMPAIGN/'publication_before_hashes.json').read_text())
     assert wd['selected_runs']==400 and wd['primary']['runs']==300 and wd['censored_runs']==12
     assert n['pairs_verified']==15 and len(n['checkpoint_checks'])==30 and n['censored_runs']==0
     decay=f"{wd['primary']['slope']:.2f}";frozen=f"{n['frozen']['lambda_slope_d128']:.2f}";unfrozen=f"{n['unfrozen']['lambda_slope_d128']:.2f}"
@@ -52,7 +53,7 @@ def main():
     delta=n['paired_effect'];flags=[
       'The decay estimate now uses twelve fully observed widths and five paired seeds per setting. Four censored width groups are retained in the audit and restricted-time sensitivity. This selection detail belongs in the methods when wording edits are authorised.',
       'The exact seed bootstrap is conditional on the fixed grid, with five seeds for decay and three for norm freezing. It is not a population-of-widths or formal equivalence analysis.',
-      f'Resolved with user-approved wording on 2026-11-04: replaced "leaves the clock unchanged" with preservation of qualitative decay dependence and explicit timing/exponent changes. The paired evidence is: the paired lambda-slope difference is {delta["lambda_slope_difference"]:+.3f}, with descriptive three-seed interval {delta["seed_bootstrap_CI95"][0]}. The fixed-grid interval excludes zero; it is not a formal equivalence test. The width betas also differ ({n["frozen"]["beta_lambda1"]:.3f} frozen versus {n["unfrozen"]["beta_lambda1"]:.3f} unfrozen). This does not establish that removing normalisation has the same effect.',
+      f'Resolved with user-approved wording on 2026-11-04: replaced "leaves the clock unchanged" with preservation of qualitative decay dependence and explicit timing/exponent changes. The paired evidence is: the paired lambda-slope difference is {delta["lambda_slope_difference"]:+.3f}, with descriptive three-seed interval {delta["seed_bootstrap_CI95"][0]}. The fixed-grid interval excludes zero; it is not a formal equivalence test. The width exponents also differ ({n["frozen"]["b_lambda1"]:.3f} frozen versus {n["unfrozen"]["b_lambda1"]:.3f} unfrozen). This does not establish that removing normalisation has the same effect.',
       'The norm intervention freezes gains; it does not remove the RMS normalisation operation. The existing statement that removing normalisation remains a separate test is preserved.',
       'The weight-decay experiment here concerns the appendix T_gen-versus-decay scaling. It does not alter the main onset/crossing robustness table or the central/fold predictions.',
       'The cone issue is deferred as requested; its file and the main manuscript source remain unchanged.'
@@ -86,8 +87,8 @@ Frozen lambda slope: {n['frozen']['lambda_slope_d128']:.9f}
 Unfrozen lambda slope: {n['unfrozen']['lambda_slope_d128']:.9f}
 Paired difference: {delta['lambda_slope_difference']:.9f}
 Descriptive paired-seed 95% interval: {delta['seed_bootstrap_CI95'][0]}
-Frozen width beta: {n['frozen']['beta_lambda1']:.9f}
-Unfrozen width beta: {n['unfrozen']['beta_lambda1']:.9f}
+Frozen width b: {n['frozen']['b_lambda1']:.9f}
+Unfrozen width b: {n['unfrozen']['b_lambda1']:.9f}
 Width fits use the same total architecture parameter count for both arms;
 trainable counts are retained separately. The analysis now requires paired
 campaign manifests and never obtains controls from the mixed root registry.

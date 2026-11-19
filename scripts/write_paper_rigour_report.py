@@ -12,7 +12,7 @@ def save(n,x):(O/n).write_text(json.dumps(x,indent=2,ensure_ascii=False)+'\n')
 add('R01','high','Current clock fit has not reached the manuscript or publication pipeline',
  ['paper-neurips-revised.tex:127','paper-neurips-revised.tex:156','theory/theory-section.tex:22','theory/consequences.tex:93','theory/principled.tex:167'],
  ['law_raw_verification.json','current_law_forecasts.csv'],
- 'The current all-observed-seed fit has ln(b)=1.092417962, gamma=15.372290226 at C=0.784932771; ln(A)=20.269441126, a=-0.814000014, beta=0.946743826; p*=183.469907582, f_fold=0.061587689, P_fold=2,609,067.83. Paper and canonical cone still use beta=1.109, a=-0.452, p*=167.5 and the old bootstrap interval [148,192]. Both current fits use A100 only. The latest preview is a separate artifact; the canonical pointer and forecast CLI still refer to the old estimator. No confidence interval has been calculated for this new fit in the adopted workflow.',
+ 'The current all-observed-seed fit has ln(B)=1.092417962, gamma=15.372290226 at C=0.784932771; ln(A)=20.269441126, a=-0.814000014, b=0.946743826; p*=183.469907582, f_fold=0.061587689, P_fold=2,609,067.83. Paper and canonical cone still use b=1.109, a=-0.452, p*=167.5 and the old bootstrap interval [148,192]. Both current fits use A100 only. The latest preview is a separate artifact; the canonical pointer and forecast CLI still refer to the old estimator. No confidence interval has been calculated for this new fit in the adopted workflow.',
  'Propagate the chosen estimator and its coefficients, predictions, local slopes, calibration and figures together. Preserve original registered predictions explicitly as historical tests; do not relabel them as predictions from the new fit or transplant their confidence interval.')
 add('R02','high','The new law fails the published 0.11-dex crossing-agreement claim',
  ['paper-neurips-revised.tex:127','theory/theory-section.tex:102','paper-neurips-revised.tex:1286'],
@@ -67,7 +67,7 @@ add('R12','high','The cited lambda^0.53 measurement is post-grok, not the escape
  'Label the phase and sample size; treat this as post-transition growth evidence, or measure the escape interval before making an escape-clock claim.')
 add('R13','medium','Fold expansion has the wrong remainder order',
  ['theory/consequences.tex:114'],['law_raw_verification.json'],
- 'The next term is +(2/3)Delta R for both roots. Correctly x±=beta±sqrt(2 beta Delta R)+(2/3)Delta R+O(Delta R^(3/2)). The paper uses sqrt(Delta R)*(1+O(Delta R)), which omits an O(Delta R) term. Independent root calculations give omitted residual/Delta R tending to2/3.',
+ 'The next term is +(2/3)Delta R for both roots. Correctly x±=b±sqrt(2 b Delta R)+(2/3)Delta R+O(Delta R^(3/2)). The paper uses sqrt(Delta R)*(1+O(Delta R)), which omits an O(Delta R) term. Independent root calculations give omitted residual/Delta R tending to2/3.',
  'Add the common linear term or replace the relative remainder by O(sqrt(Delta R)). The leading square-root fold itself remains valid.')
 add('R14','medium','Total memorisation need not be nonnegative',
  ['paper-neurips-revised.tex:288'],[],

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Calculate complete-ten-seed law sensitivity; never change paper/figure outputs."""
+from grokking_capacity.analysis.timescale_laws import normalise_timescale_laws
 from collections import Counter, defaultdict
 from pathlib import Path
 import csv
@@ -62,27 +63,27 @@ def extract():
 
 def fit(kind,points,prime_sample=None):
     if prime_sample is not None:points=[r for p in prime_sample for r in points if r['p']==p]
-    if kind=='mem':X=np.array([[1,r['f']] for r in points]);keys=['ln_b','gamma_original']
-    else:X=np.array([[1,math.log(r['p']),-math.log(r['P'])] for r in points]);keys=['lnA','a','beta']
+    if kind=='mem':X=np.array([[1,r['f']] for r in points]);keys=['ln_B','gamma_original']
+    else:X=np.array([[1,math.log(r['p']),-math.log(r['P'])] for r in points]);keys=['lnA','a','b']
     assert np.linalg.matrix_rank(X)==len(keys)
     coeff,r2,rss=_ols(X,np.log([r['t'] for r in points]))
     return {**dict(zip(keys,map(float,coeff))),'r2':float(r2),'n_observations':len(points)}
 
 
 def crossing(p,mem,gen,C):
-    beta=gen['beta'];q=mem['gamma_original']/C
-    rhs=gen['lnA']-mem['ln_b']+gen['a']*math.log(p)-beta*math.log(q*K(p))
-    if beta<=0 or q<=0 or rhs<beta*(1-math.log(beta)):return None
-    hi=max(100.,beta*2)
-    while hi-beta*math.log(hi)<rhs:hi*=2
-    x=brentq(lambda x:x-beta*math.log(x)-rhs,beta,hi)
+    b=gen['b'];q=mem['gamma_original']/C
+    rhs=gen['lnA']-mem['ln_B']+gen['a']*math.log(p)-b*math.log(q*K(p))
+    if b<=0 or q<=0 or rhs<b*(1-math.log(b)):return None
+    hi=max(100.,b*2)
+    while hi-b*math.log(hi)<rhs:hi*=2
+    x=brentq(lambda x:x-b*math.log(x)-rhs,b,hi)
     return q*K(p)/x
 
 
 def fold(mem,gen,C):
-    beta=gen['beta'];q=mem['gamma_original']/C
-    if beta<=0 or q<=0:return None
-    margin=lambda p:gen['lnA']-mem['ln_b']+gen['a']*math.log(p)-beta*math.log(q*K(p))-beta*(1-math.log(beta))
+    b=gen['b'];q=mem['gamma_original']/C
+    if b<=0 or q<=0:return None
+    margin=lambda p:gen['lnA']-mem['ln_B']+gen['a']*math.log(p)-b*math.log(q*K(p))-b*(1-math.log(b))
     if margin(2)*margin(10000)>=0:return None
     return float(brentq(margin,2,10000))
 
@@ -94,12 +95,12 @@ def main():
         ROOT/'docs/papers/2026 Grokking Capacity/paper-neurips-revised.tex',
         *[ROOT/'results/cone_ten_seeds_h100_20261106/figure'/('cone_seedmin_fixed'+ext) for ext in ['.pdf','.png']]]
     before={str(p.relative_to(ROOT)):sha(p) for p in protected}
-    historical=json.loads(protected[2].read_text());calibration=json.loads(protected[1].read_text())
+    historical=normalise_timescale_laws(json.loads(protected[2].read_text()));calibration=normalise_timescale_laws(json.loads(protected[1].read_text()))
     C,data,details=extract();fits={kind:{mode:fit(kind,data[kind][mode]) for mode in ['current','complete']} for kind in ['mem','gen']}
-    assert np.allclose([fits['mem']['current'][k] for k in ['ln_b','gamma_original']],
-                       [historical['mem_law'][k] for k in ['ln_b','gamma']],rtol=1e-12,atol=1e-12)
-    assert np.allclose([fits['gen']['current'][k] for k in ['lnA','a','beta']],
-                       [historical['gen_law'][k] for k in ['lnA','a','beta']],rtol=1e-12,atol=1e-12)
+    assert np.allclose([fits['mem']['current'][k] for k in ['ln_B','gamma_original']],
+                       [historical['mem_law'][k] for k in ['ln_B','gamma']],rtol=1e-12,atol=1e-12)
+    assert np.allclose([fits['gen']['current'][k] for k in ['lnA','a','b']],
+                       [historical['gen_law'][k] for k in ['lnA','a','b']],rtol=1e-12,atol=1e-12)
     comparisons={};prediction_rows=[]
     primes=sorted(set(CENTRAL_PRIMES)|{149,151,157,163,167,173,179,181,191,193,197,199,251})
     for name,mm,gg in [('current','current','current'),('complete_mem_only','complete','current'),
@@ -109,7 +110,7 @@ def main():
         delta=float(np.median([math.log10(historical['per_prime'][str(p)]['P_onset']/P)
                                for p,P in central_cross.items() if P is not None]))
         comp={'mem':{**mem,'gamma_current_C':mem['gamma_original']*calibration['C_convention']/C,
-                     'b':math.exp(mem['ln_b'])},'gen':gen,'divergence_prime':pstar,
+                     'B':math.exp(mem['ln_B'])},'gen':gen,'divergence_prime':pstar,
               'calibrated_delta_dex_same_historical_onsets':delta,'predictions':{}}
         for p in primes:
             P=crossing(p,mem,gen,C);L=None if P is None else math.log10(P)

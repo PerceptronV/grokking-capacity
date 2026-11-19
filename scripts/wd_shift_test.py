@@ -105,15 +105,15 @@ def main():
                         "n_speed": len(speed), "n_gen": len(gen)})
             continue
         f = np.array([s[0] for s in speed])
-        (lnb, gamma), r2m = ols(np.column_stack([np.ones_like(f), f]),
+        (lnB, gamma), r2m = ols(np.column_stack([np.ones_like(f), f]),
                                 np.array([s[1] for s in speed]))
         lp = np.log([g[0] for g in gen])
         lP = np.log([g[1] for g in gen])
         y = np.log([g[2] for g in gen])
         (lnA, a, nb), r2g = ols(np.column_stack([np.ones_like(lp), lp, lP]), y)
-        beta = -nb
-        mem = {"ln_b": float(lnb), "gamma": float(gamma)}
-        genl = {"lnA": float(lnA), "a": float(a), "beta": float(beta)}
+        b = -nb
+        mem = {"ln_B": float(lnB), "gamma": float(gamma)}
+        genl = {"lnA": float(lnA), "a": float(a), "b": float(b)}
         resid = []
         per_prime = {}
         for p, on in onsets.items():
@@ -124,13 +124,13 @@ def main():
             if on and L:
                 resid.append(math.log10(on) - L)
         out.append({
-            "lambda": lam, "gamma": float(gamma), "b": float(math.exp(lnb)),
-            "r2_mem": float(r2m), "beta": float(beta), "a": float(a),
+            "lambda": lam, "gamma": float(gamma), "B": float(math.exp(lnB)),
+            "r2_mem": float(r2m), "b": float(b), "a": float(a),
             "r2_gen": float(r2g), "n_speed": len(speed), "n_gen": len(gen),
             "median_resid_dex": (float(np.median(resid)) if resid else None),
             "n_crossings": len(resid), "per_prime": per_prime})
-        print(f"lambda={lam}: gamma={gamma:.1f} b={math.exp(lnb):.1f} "
-              f"(R2 {r2m:.2f})  beta={beta:.2f} a={a:.2f} (R2 {r2g:.2f})  "
+        print(f"lambda={lam}: gamma={gamma:.1f} B={math.exp(lnB):.1f} "
+              f"(R2 {r2m:.2f})  b={b:.2f} a={a:.2f} (R2 {r2g:.2f})  "
               f"crossings={len(resid)}  median resid="
               f"{np.median(resid) if resid else float('nan'):.3f} dex")
     os.makedirs("results/theory", exist_ok=True)

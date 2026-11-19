@@ -1,4 +1,5 @@
 """Explicit cohorts and first-passage/censoring rules for the cone figure."""
+from grokking_capacity.analysis.timescale_laws import normalise_timescale_laws
 from pathlib import Path
 from collections import defaultdict,Counter
 import concurrent.futures,csv,hashlib,json,math,sqlite3
@@ -96,14 +97,14 @@ def build(out=OUT,panels=(0,)):
 
 def law_coefficients():
     path=ROOT/'results/capacity_h100_matched_20261103/forecast_coefficients.json'
-    r=json.loads(path.read_text());historical=json.loads((ROOT/'results/theory/forecast_onset.json').read_text())
+    r=normalise_timescale_laws(json.loads(path.read_text()));historical=normalise_timescale_laws(json.loads((ROOT/'results/theory/forecast_onset.json').read_text()))
     assert np.isclose(r['mem_law']['gamma']/r['C_convention'],historical['mem_law']['gamma']/historical['C_convention'],rtol=1e-12)
     return r
 
 def law_onset(p,r):
     from scipy.optimize import brentq
-    g=r['mem_law']['gamma'];C=r['C_convention'];b=r['mem_law']['ln_b'];A=r['gen_law']['lnA'];a=r['gen_law']['a'];beta=r['gen_law']['beta'];K=p*(p-1)/2*math.log2(p+2)
-    rhs=A-b+a*math.log(p)-beta*math.log(g*K/C)
-    if rhs<beta*(1-math.log(beta)):return None
-    x=brentq(lambda x:x-beta*math.log(x)-rhs,beta,1000)
+    g=r['mem_law']['gamma'];C=r['C_convention'];lnB=r['mem_law']['ln_B'];A=r['gen_law']['lnA'];a=r['gen_law']['a'];b=r['gen_law']['b'];K=p*(p-1)/2*math.log2(p+2)
+    rhs=A-lnB+a*math.log(p)-b*math.log(g*K/C)
+    if rhs<b*(1-math.log(b)):return None
+    x=brentq(lambda x:x-b*math.log(x)-rhs,b,1000)
     return g*K/(C*x)

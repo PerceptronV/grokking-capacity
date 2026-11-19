@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Independent read-only numerical checks; outputs only to the current audit."""
+from grokking_capacity.analysis.timescale_laws import normalise_timescale_laws
 from pathlib import Path
 from collections import Counter,defaultdict
 from concurrent.futures import ThreadPoolExecutor
@@ -72,29 +73,29 @@ def laws():
   d=data[(data.kind==kind)&data.observed];X=np.column_stack([np.ones(len(d)),d.f_original]) if kind=='mem' else np.column_stack([np.ones(len(d)),np.log(d.p),-np.log(d.P)])
   y=np.log(d.event_epoch);coef=np.linalg.lstsq(X,y,rcond=None)[0];r2=1-sum((y-X@coef)**2)/sum((y-y.mean())**2)
   fitted[kind]={'coefficients':coef.tolist(),'r2':float(r2),'N':len(d),'censored':int(((data.kind==kind)&~data.observed).sum())}
- lb,gamma=fitted['mem']['coefficients'];la,a,beta=fitted['gen']['coefficients'];q=gamma/C
+ lb,gamma=fitted['mem']['coefficients'];la,a,b=fitted['gen']['coefficients'];q=gamma/C
  K=lambda p:p*(p-1)/2*math.log2(p+2)
- R=lambda p:la-lb+a*math.log(p)-beta*math.log(q*K(p))
- star=brentq(lambda p:R(p)-beta*(1-math.log(beta)),2,10000)
+ R=lambda p:la-lb+a*math.log(p)-b*math.log(q*K(p))
+ star=brentq(lambda p:R(p)-b*(1-math.log(b)),2,10000)
  capacity=json.loads((ROOT/'results/capacity_h100_matched_20261103/summary.json').read_text())['C']
  forecasts=[]
  for p in [97,101,103,107,109,113,127,131,137,139,149,151,157,163,167,173,179,181,191,193,197,199,251]:
-  if R(p)<beta*(1-math.log(beta)):lo=hi=None
+  if R(p)<b*(1-math.log(b)):lo=hi=None
   else:
-   xp=brentq(lambda x:x-beta*math.log(x)-R(p),beta,1000)
-   xm=brentq(lambda x:x-beta*math.log(x)-R(p),1e-14,beta)
+   xp=brentq(lambda x:x-b*math.log(x)-R(p),b,1000)
+   xm=brentq(lambda x:x-b*math.log(x)-R(p),1e-14,b)
    lo=q*K(p)/xp;hi=q*K(p)/xm
   forecasts.append({'p':p,'lower':lo,'upper':hi,'log10_lower':math.log10(lo) if lo else None})
  pd.DataFrame(forecasts).to_csv(OUT/'current_law_forecasts.csv',index=False)
- existing=json.loads((ROOT/'results/cone_observed_logtime_min_20261106/fit.json').read_text())['law']
- assert np.allclose(fitted['mem']['coefficients'],[existing['mem']['ln_b'],existing['mem']['gamma_original']])
- assert np.allclose(fitted['gen']['coefficients'],[existing['gen']['lnA'],existing['gen']['a'],existing['gen']['beta']])
- # Expansion at a fold: x=beta +/- sqrt(2 beta dR)+(2/3)dR+O(dR^1.5).
+ existing=normalise_timescale_laws(json.loads((ROOT/'results/cone_observed_logtime_min_20261106/fit.json').read_text()))['law']
+ assert np.allclose(fitted['mem']['coefficients'],[existing['mem']['ln_B'],existing['mem']['gamma_original']])
+ assert np.allclose(fitted['gen']['coefficients'],[existing['gen']['lnA'],existing['gen']['a'],existing['gen']['b']])
+ # Expansion at a fold: x=b +/- sqrt(2 b dR)+(2/3)dR+O(dR^1.5).
  expansion=[]
  for dr in [1e-3,1e-5,1e-7]:
-  xp=brentq(lambda x:x-beta*math.log(x)-(beta*(1-math.log(beta))+dr),beta,100)
-  expansion.append({'delta_R':dr,'residual_divided_by_delta_R':(xp-beta-math.sqrt(2*beta*dr))/dr})
- save('law_raw_verification.json',{'fresh_selection_matches_frozen_input':True,'eligible_runs':len(data),'trace_errors':[r for r in checked if r['errors']],'hardware':data.groupby(['kind','gpu_type']).size().to_dict().__str__(),'fits':fitted,'fold':star,'gamma_current':gamma*capacity/C,'fold_fraction':beta/(gamma*capacity/C),'fold_parameters':q*K(star)/beta,'fold_expansion_check':expansion,'claim_2200_nats_example':{'P':1e5,'f':.275,'C':capacity,'nats':capacity*.275*1e5*math.log(2)}})
+  xp=brentq(lambda x:x-b*math.log(x)-(b*(1-math.log(b))+dr),b,100)
+  expansion.append({'delta_R':dr,'residual_divided_by_delta_R':(xp-b-math.sqrt(2*b*dr))/dr})
+ save('law_raw_verification.json',{'fresh_selection_matches_frozen_input':True,'eligible_runs':len(data),'trace_errors':[r for r in checked if r['errors']],'hardware':data.groupby(['kind','gpu_type']).size().to_dict().__str__(),'fits':fitted,'fold':star,'gamma_current':gamma*capacity/C,'fold_fraction':b/(gamma*capacity/C),'fold_parameters':q*K(star)/b,'fold_expansion_check':expansion,'claim_2200_nats_example':{'P':1e5,'f':.275,'C':capacity,'nats':capacity*.275*1e5*math.log(2)}})
  print('LAW',fitted,'fold',star,flush=True)
 
 def mechanisms():
@@ -113,7 +114,7 @@ def mechanisms():
    events.append({**r,'T':t})
   df=pd.DataFrame(events);lam=df[df.dim==128].groupby('weight_decay').T if False else df[df.dim==128].groupby('weight_decay')['T'].mean()
   widths=df[df.weight_decay==1].groupby('total_parameters')['T'].mean()
-  nr[arm]={'lambda_slope':float(np.polyfit(np.log(lam.index),np.log(lam.values),1)[0]),'beta':float(-np.polyfit(np.log(widths.index),np.log(widths.values),1)[0]),'n':len(df),'hardware':sorted(df.gpu_type.unique())}
+  nr[arm]={'lambda_slope':float(np.polyfit(np.log(lam.index),np.log(lam.values),1)[0]),'b':float(-np.polyfit(np.log(widths.index),np.log(widths.values),1)[0]),'n':len(df),'hardware':sorted(df.gpu_type.unique())}
  wd=json.loads((ROOT/'results/weight_decay_matched_20261103/summary.json').read_text());con=sqlite3.connect((ROOT/'runs.db').as_uri()+'?mode=ro',uri=True);con.row_factory=sqlite3.Row
  prot=wd['protocol'];sql='select * from runs where '+' and '.join(k+'=?' for k in prot);rr=[dict(r) for r in con.execute(sql,list(prot.values())) if r['dim'] in wd['dims'] and r['weight_decay'] in wd['lambdas'] and r['seed'] in wd['seeds']];con.close()
  for r in rr:

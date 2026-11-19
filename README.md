@@ -1,6 +1,6 @@
 # Model Capacity Determines Grokking through Competing Memorisation and Generalisation Speeds
 
-Existing accounts of grokking explain the phenomena in terms of mechanistic frameworks such as circuit efficiency or lazy-to-rich transitions. However, despite a known dependence between grokking and model size, how model capacity shapes grokking remains an open question. We give an information-theoretic account of this relationship on the task of modular arithmetic, showing that grokking does not immediately occur when a model becomes large enough to memorise the training set, but rather emerges as the outcome of a competition between two measurable timescales: a memorisation speed $T_{\text{mem}}(P)$ and a generalisation speed $T_{\text{gen}}(P)$, both of which are functions of model parameter count $P$. Adapting the information capacity framework of Morris et al. (2025), we estimate $T_{\text{mem}}(P)$ on random-label data of equivalent complexity and $T_{\text{gen}}(P)$ on the modular task itself, and show that grokking emerges close to the parameter scale where these timescales intersect. The framework also suggests an empirical model for predicting memorisation speed given model capacity and dataset complexity, recovering the previously reported empirical observation that larger models memorise faster. Overall, we motivate the formalisation of different learning timescales as important abstractions to study when explaining how model capacity shapes grokking on algorithmic tasks.
+Existing accounts of grokking explain the phenomena in terms of mechanistic frameworks such as circuit efficiency or lazy-to-rich transitions. However, despite a known dependence between grokking and model size, how model capacity shapes grokking remains an open question. We give an information-theoretic account of this relationship on the task of modular arithmetic, showing that grokking does not immediately occur when a model becomes large enough to memorise the training set, but rather emerges as the outcome of a competition between two measurable timescales: a memorisation speed $T_{\text{mem}}(P,p)$ and a generalisation speed $T_{\text{gen}}(P,p)$, both of which are functions of model parameter count $P$. Adapting the information capacity framework of Morris et al. (2025), we estimate $T_{\text{mem}}(P,p)$ on random-label data of equivalent complexity and $T_{\text{gen}}(P,p)$ on the modular task itself, and show that grokking emerges close to the parameter scale where these timescales intersect. The framework also suggests an empirical model for predicting memorisation speed given model capacity and dataset complexity, recovering the previously reported empirical observation that larger models memorise faster. Overall, we motivate the formalisation of different learning timescales as important abstractions to study when explaining how model capacity shapes grokking on algorithmic tasks.
 
 ## Installation
 
@@ -79,6 +79,15 @@ for the configurable reducers and handling of unresolved outcomes. The older
 estimators for comparison; they do not generate the revised paper's results.
 One-off `update_*_paper.py` scripts preserve earlier revision steps and are not
 part of the current build.
+
+The timescale laws use `T_gen(P,p) = A * p**a * P**(-b)` and
+`T_mem(P,p) = B * exp(gamma * f)`. Saved generalisation fits use `b` for
+the parameter-count exponent; memorisation fits use `B` and `ln_B` for the
+prefactor. `alpha` remains the training fraction, and the paper writes batch
+size as `B_batch`. The loader in
+`src/grokking_capacity/analysis/timescale_laws.py` translates older saved law
+keys on reading; frozen inputs and older submissions retain their original
+notation and numerical values.
 
 ## License and Attribution
 

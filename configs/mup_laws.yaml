@@ -6,7 +6,7 @@ description: >
   lenient eval-mode one. Speed: random labels at n_equiv = p(p-1)/2 on the
   gc-speed clock (train-mode running accuracy >= 99 %). Groks: the task at
   the same primes and widths. Six window widths per prime, three seeds.
-  Only after this can gamma, b, beta, a under muP be compared with the
+  Only after this can gamma, B, b, a under muP be compared with the
   fixed-rate constants.
 
 defaults:

@@ -7,6 +7,7 @@ Canonical paper figures, coefficients, and the latest-cone pointer are read-only
 """
 from __future__ import annotations
 
+from grokking_capacity.analysis.timescale_laws import normalise_timescale_laws
 import argparse
 from collections import Counter
 import hashlib
@@ -77,19 +78,19 @@ def fit_clock_pair(data, metric, cohort):
     mem, gen = fit('mem', points['mem']), fit('gen', points['gen'])
     return {'cohort': cohort, 'metric': metric, 'mem': mem, 'gen': gen,
             'fold': fold(mem, gen, C_OLD),
-            'f_original_at_fold': gen['beta'] / mem['gamma_original']}, points
+            'f_original_at_fold': gen['b'] / mem['gamma_original']}, points
 
 
 def branches(p, law):
     """Solve both roots in log-parameter space, including a double root at fold."""
     m, g = law['mem'], law['gen']
     qk = m['gamma_original'] / C_OLD * K(p)
-    beta = g['beta']
-    if beta <= 0 or qk <= 0:
+    b = g['b']
+    if b <= 0 or qk <= 0:
         return None, None
-    pivot = math.log(qk / beta)
+    pivot = math.log(qk / b)
     def gap(logP):
-        return g['lnA'] + g['a'] * math.log(p) - beta * logP - m['ln_b'] - qk * math.exp(-logP)
+        return g['lnA'] + g['a'] * math.log(p) - b * logP - m['ln_B'] - qk * math.exp(-logP)
     maximum = gap(pivot)
     if maximum < -1e-10:
         return None, None
@@ -259,7 +260,7 @@ def write_report(out, summary, predictions, high_prime_rows):
         '',
         'METHOD AND SCOPE',
         'For statistic S, reduce times across seeds within each (prime, parameter-count) cell,',
-        'then fit ln S(T_mem) = ln b + gamma f and ln S(T_gen) = ln A + a ln p - beta ln P.',
+        'then fit ln S(T_mem) = ln B + gamma f and ln S(T_gen) = ln A + a ln p - b ln P.',
         'The reducer is applied BEFORE taking the logarithm. Both regressions give each cell',
         'equal weight. min, median and mean therefore use identical cells within each cohort.',
         'Exact fit primes: 97,101,103,107,109,113,127,131,137,139. The largest is139;',
@@ -282,12 +283,12 @@ def write_report(out, summary, predictions, high_prime_rows):
         'versus validation98 thresholds. Zero delay does not mean failed generalisation.',
         '',
         'FOLDS AND FITS',
-        'cohort/statistic | terminal prime [95% prime-cluster bootstrap] | mem R2 | gen R2 | beta',
+        'cohort/statistic | terminal prime [95% prime-cluster bootstrap] | mem R2 | gen R2 | b',
     ]
     for name, v in laws.items():
         ci = v['fold_prime_bootstrap_95']
         lines.append(f"{name} | {v['fold']:.3f} [{ci[0]:.3f}, {ci[1]:.3f}] | "
-                     f"{v['mem']['r2']:.4f} | {v['gen']['r2']:.4f} | {v['gen']['beta']:.6f}")
+                     f"{v['mem']['r2']:.4f} | {v['gen']['r2']:.4f} | {v['gen']['b']:.6f}")
     lines += ['', 'Bootstrap resamples the ten prime clusters with the same draws for every fit;',
               'eligibility is held fixed. Intervals exclude seed resampling, censoring-model',
               'uncertainty and uncertainty in the validity of the extrapolated functional form.',
@@ -298,13 +299,13 @@ def write_report(out, summary, predictions, high_prime_rows):
     lines += [
         '', 'CROSSING SHAPE',
         'Let q=gamma/C and K(p)=p(p-1)log2(p+2)/2. Setting the clocks equal gives',
-        'x - beta ln(x) = ln A - ln b + a ln p - beta ln(qK), where x=qK/P.',
-        'There are two roots before the terminal prime, one double root at x=beta, and no',
+        'x - b ln(x) = ln A - ln B + a ln p - b ln(qK), where x=qK/P.',
+        'There are two roots before the terminal prime, one double root at x=b, and no',
         'roots afterwards. The predicted positive clock gap lies BETWEEN the roots.',
         'The main comparison keeps the usual lower/onset branch. both_crossing_branches.pdf',
         'also displays the upper/re-entry branch, showing that it moves substantially.',
         '',
-        'At the fold, f=beta/gamma. These six values range from about 0.012 to 0.026 in the',
+        'At the fold, f=b/gamma. These six values range from about 0.012 to 0.026 in the',
         'original convention, all below the fitted lower bound 0.08. Every upper branch lies',
         'below that bound too. Curves beyond prime139 also extrapolate in prime. Measurements',
         'end at prime199; the complete-cohort terminal primes203–243 are not measured endpoints.',
@@ -417,8 +418,8 @@ def main():
         assert len(cc) == 1736 and all(c['n_seeds'] == 10 and c['seeds'] == list(range(42, 52)) for c in cc)
         assert sum(c['unresolved_seeds'] > 0 for c in cc) == 102
     cohorts = ['complete', 'observed'] if args.cohort == 'both' else [args.cohort]
-    prior = json.loads(PRIOR.read_text())['unified_cell_reducers']
-    C_current = json.loads((ROOT / 'results/capacity_h100_matched_20261103/forecast_coefficients.json').read_text())['C_convention']
+    prior = normalise_timescale_laws(json.loads(PRIOR.read_text()))['unified_cell_reducers']
+    C_current = normalise_timescale_laws(json.loads((ROOT / 'results/capacity_h100_matched_20261103/forecast_coefficients.json').read_text()))['C_convention']
     laws, points, prediction_rows, curve_rows, score_rows = {}, {}, [], [], []
     high_prime_rows = []
     max_root_residual = 0.
@@ -432,13 +433,13 @@ def main():
                 X = np.array([[1., r['f']] if kind == 'mem' else
                               [1., math.log(r['p']), -math.log(r['P'])] for r in rr])
                 coefficients = np.linalg.lstsq(X, np.log([r['t'] for r in rr]), rcond=None)[0]
-                keys = ('ln_b', 'gamma_original') if kind == 'mem' else ('lnA', 'a', 'beta')
+                keys = ('ln_B', 'gamma_original') if kind == 'mem' else ('lnA', 'a', 'b')
                 assert np.allclose(coefficients, [law[kind][k] for k in keys], rtol=1e-11, atol=1e-11)
             for prime in (149, 193, 197, 199):
                 cc = [c for c in variants[metric] if c['p'] == prime]
                 m, g = law['mem'], law['gen']
                 inside = [c for c in cc if g['lnA'] + g['a'] * math.log(prime)
-                          - g['beta'] * math.log(c['param_count']) - m['ln_b']
+                          - g['b'] * math.log(c['param_count']) - m['ln_B']
                           - m['gamma_original'] / C_OLD * K(prime) / c['param_count'] > 0]
                 counts = Counter(c['state'] for c in inside)
                 high_prime_rows.append({'fit': name, 'p': prime, 'cells': len(cc),
@@ -450,9 +451,9 @@ def main():
                     'max_exact_delay': max((c['aggregate_delay'] for c in cc
                                             if c['aggregate_delay'] is not None), default=None)})
             law['mem']['gamma_current_C'] = law['mem']['gamma_original'] * C_current / C_OLD
-            law['mem']['b'] = math.exp(law['mem']['ln_b'])
+            law['mem']['B'] = math.exp(law['mem']['ln_B'])
             if name in prior:
-                for kind, keys in [('mem', ('ln_b', 'gamma_original')), ('gen', ('lnA', 'a', 'beta'))]:
+                for kind, keys in [('mem', ('ln_B', 'gamma_original')), ('gen', ('lnA', 'a', 'b'))]:
                     for key in keys:
                         assert np.isclose(law[kind][key], prior[name][kind][key], rtol=1e-12, atol=1e-12)
                 assert np.isclose(law['fold'], prior[name]['fold'], rtol=1e-12)
@@ -474,7 +475,7 @@ def main():
                 if p < law['fold'] - 1e-6:
                     assert np.isclose(lo, crossing(p, law['mem'], law['gen'], C_OLD), rtol=1e-9)
                 for P in (lo, hi):
-                    residual = law['gen']['lnA'] + law['gen']['a'] * math.log(p) - law['gen']['beta'] * math.log(P) - law['mem']['ln_b'] - law['mem']['gamma_original'] / C_OLD * K(p) / P
+                    residual = law['gen']['lnA'] + law['gen']['a'] * math.log(p) - law['gen']['b'] * math.log(P) - law['mem']['ln_B'] - law['mem']['gamma_original'] / C_OLD * K(p) / P
                     max_root_residual = max(max_root_residual, abs(residual))
                 curve_rows.append({'cohort': cohort, 'metric': metric, 'p': p, 'lower_P': lo, 'upper_P': hi,
                                    'within_fit_prime_range': p <= 139})

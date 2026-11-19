@@ -8,20 +8,20 @@ Implements, verbatim, the pre-committed procedure of
 ``docs/papers/2026 Grokking Capacity/theory/theory-trunk.md`` §0 (written and mtime-stamped before this
 module existed):
 
-  * memorisation law  ln T_mem = ln b + γ·f,  f = K/(C·P), pooled OLS over
+  * memorisation law  ln T_mem = ln B + γ·f,  f = K/(C·P), pooled OLS over
     the ten central primes' uncensored speed runs; run-level bootstrap CI;
     AIC comparison vs power-law / stretched-exp / critical forms; quadratic
     curvature check;
-  * generalisation law  ln T_gen = ln A + a·ln p − β·ln P, pooled and
-    per-prime (β_p spread + drift-in-p check); window: uncensored seed-mean
+  * generalisation law  ln T_gen = ln A + a·ln p − b·ln P, pooled and
+    per-prime (b_p spread + drift-in-p check); window: uncensored seed-mean
     cells with P ≥ K/C and dim ≤ max_dim;
-  * implicit crossing  γK/(C·P) + β·ln P = ln(A p^a / b), solved per prime,
+  * implicit crossing  γK/(C·P) + b·ln P = ln(A p^a / B), solved per prime,
     calibration offset Δ̂ = median log10(P_onset/P_cross) over the ten
     primes; forecasts for p ∈ {149 (held-out), 197, 251} as
     log10 P_onset = log10 P_cross + Δ̂;
   * uncertainty: prime-level bootstrap of the whole pipeline (fit band) ⊕
     seed-subsample (8-of-10) bootstrap of the empirical-onset estimator
-    (noise floor), in quadrature; β-sensitivity and window-sensitivity
+    (noise floor), in quadrature; b-sensitivity and window-sensitivity
     reported separately;
   * epoch-budget pre-check for the planned p=197 width grid.
 
@@ -55,7 +55,7 @@ SEED_SUBSAMPLE_M = 8          # m-of-n subsample for the onset noise floor
 N_SEED_DRAWS = 500
 N_PRIME_BOOT = 2000
 N_RUN_BOOT = 4000
-BETA_PERTURB = 0.1
+GEN_B_PERTURB = 0.1
 BAND_GATE_DEX = 0.30          # pre-registration gate on the total 95% band
 EPOCH_CAP = 5000
 PROXY_RATIO = 0.70            # measured T_mem/E_train at depth 2 (p02 log)
@@ -200,10 +200,10 @@ def fit_mem_law(pts: list[dict], primes: Iterable[int], *,
     ones = np.ones_like(f)
 
     coef, r2, rss = _ols(np.vstack([ones, f]).T, y)
-    lnb, gamma = float(coef[0]), float(coef[1])
+    lnB, gamma = float(coef[0]), float(coef[1])
     n = len(y)
     if light:
-        return {"gamma": gamma, "ln_b": lnb, "b": float(math.exp(lnb)),
+        return {"gamma": gamma, "ln_B": lnB, "B": float(math.exp(lnB)),
                 "r2": r2, "n_runs": n}
 
     forms = {
@@ -234,7 +234,7 @@ def fit_mem_law(pts: list[dict], primes: Iterable[int], *,
 
     span = float(np.exp(y.max()) / np.exp(y.min()))
     return {"gamma": gamma, "gamma_ci95": [float(g_lo), float(g_hi)],
-            "ln_b": lnb, "b": float(math.exp(lnb)), "r2": r2, "n_runs": n,
+            "ln_B": lnB, "B": float(math.exp(lnB)), "r2": r2, "n_runs": n,
             "f_range": [float(f.min()), float(f.max())],
             "t_mem_span": span, "form_comparison": comparison,
             "curvature_q": float(cq[2]), "curvature_q_ci95": [float(q_lo), float(q_hi)]}
@@ -255,7 +255,7 @@ def fit_gen_law(cells: list[dict], primes: Iterable[int], *,
     ones = np.ones_like(y)
 
     coef, r2, _ = _ols(np.vstack([ones, lp, lP]).T, y)
-    lnA, a, beta = float(coef[0]), float(coef[1]), float(-coef[2])
+    lnA, a, b = float(coef[0]), float(coef[1]), float(-coef[2])
 
     per_prime = {}
     for p in sorted(pset):
@@ -270,19 +270,19 @@ def fit_gen_law(cells: list[dict], primes: Iterable[int], *,
         xtx = np.linalg.inv(np.vstack([np.ones_like(x), x]).T.T @
                             np.vstack([np.ones_like(x), x]).T)
         se = float(np.sqrt(sig2 * xtx[1, 1]))
-        per_prime[p] = {"beta": float(-cf[1]), "se": se, "r2": r2p, "n": len(pc)}
+        per_prime[p] = {"b": float(-cf[1]), "se": se, "r2": r2p, "n": len(pc)}
 
     drift = None
     if len(per_prime) >= 3:
-        bp = np.array([v["beta"] for v in per_prime.values()])
+        bp = np.array([v["b"] for v in per_prime.values()])
         lpp = np.log10(np.array(sorted(per_prime.keys()), dtype=float))
         cd, _, rssd = _ols(np.vstack([np.ones_like(lpp), lpp]).T, bp)
         dfd = len(bp) - 2
         sig2 = rssd / dfd if dfd > 0 else float("nan")
         X = np.vstack([np.ones_like(lpp), lpp]).T
         se_d = float(np.sqrt(sig2 * np.linalg.inv(X.T @ X)[1, 1]))
-        drift = {"slope_beta_per_dex_p": float(cd[1]), "se": se_d,
-                 "beta_spread_sd": float(bp.std(ddof=1))}
+        drift = {"slope_b_per_dex_p": float(cd[1]), "se": se_d,
+                 "b_spread_sd": float(bp.std(ddof=1))}
 
     # Steps-unit consistency check: steps/epoch = ceil(n_train/BATCH) with
     # n_train = K/log2(p+2) = 0.5·p·(p−1)·tf; a_steps should sit near
@@ -290,23 +290,23 @@ def fit_gen_law(cells: list[dict], primes: Iterable[int], *,
     p_arr = np.array([c["p"] for c in sel], dtype=float)
     spe = np.ceil(0.5 * p_arr * (p_arr - 1) / BATCH)
     coef_s, r2_s, _ = _ols(np.vstack([ones, lp, lP]).T, y + np.log(spe))
-    steps_check = {"a_steps": float(coef_s[1]), "beta_steps": float(-coef_s[2]),
+    steps_check = {"a_steps": float(coef_s[1]), "b_steps": float(-coef_s[2]),
                    "r2": r2_s}
 
-    return {"lnA": lnA, "a": a, "beta": beta, "r2": r2, "n_cells": len(sel),
+    return {"lnA": lnA, "a": a, "b": b, "r2": r2, "n_cells": len(sel),
             "window_f": [GEN_F_LO, GEN_F_HI],
-            "per_prime_beta": per_prime, "beta_drift": drift,
+            "per_prime_b": per_prime, "b_drift": drift,
             "steps_unit_check": steps_check}
 
 
-def fit_gen_law_fixed_beta(cells, primes, beta_fixed: float) -> dict[str, Any]:
+def fit_gen_law_fixed_b(cells, primes, b_fixed: float) -> dict[str, Any]:
     pset = set(primes)
     sel = [c for c in cells if c["p"] in pset and c["in_window"]]
     lp = np.log(np.array([c["p"] for c in sel], dtype=float))
     lP = np.log(np.array([c["param_count"] for c in sel]))
-    y = np.log(np.array([c["t_gen"] for c in sel])) + beta_fixed * lP
+    y = np.log(np.array([c["t_gen"] for c in sel])) + b_fixed * lP
     coef, _, _ = _ols(np.vstack([np.ones_like(y), lp]).T, y)
-    return {"lnA": float(coef[0]), "a": float(coef[1]), "beta": beta_fixed}
+    return {"lnA": float(coef[0]), "a": float(coef[1]), "b": b_fixed}
 
 
 # --------------------------------------------------------------------------- #
@@ -315,18 +315,18 @@ def fit_gen_law_fixed_beta(cells, primes, beta_fixed: float) -> dict[str, Any]:
 
 def solve_crossing(p: int, K: float, C: float, mem: dict, gen: dict
                    ) -> Optional[float]:
-    """First root (in log10 P) of ln T_mem(P) = ln T_gen(P)."""
-    lnb, gamma = mem["ln_b"], mem["gamma"]
-    lnA, a, beta = gen["lnA"], gen["a"], gen["beta"]
+    """First root (in log10 P) of ln T_mem(P,p) = ln T_gen(P,p)."""
+    lnB, gamma = mem["ln_B"], mem["gamma"]
+    lnA, a, b = gen["lnA"], gen["a"], gen["b"]
 
     def h(L: float) -> float:
         P = 10.0 ** L
-        return (lnb + gamma * K / (C * P)) - (lnA + a * math.log(p) - beta * math.log(P))
+        return (lnB + gamma * K / (C * P)) - (lnA + a * math.log(p) - b * math.log(P))
 
     grid = np.arange(3.0, 9.0, 0.01)
     Pg = 10.0 ** grid
-    vals = (lnb + gamma * K / (C * Pg)) - (lnA + a * math.log(p)
-                                           - beta * np.log(Pg))
+    vals = (lnB + gamma * K / (C * Pg)) - (lnA + a * math.log(p)
+                                           - b * np.log(Pg))
     sign_change = np.where((vals[:-1] > 0) & (vals[1:] <= 0))[0]
     if sign_change.size == 0:
         return None
@@ -384,7 +384,7 @@ def prime_bootstrap(data: dict, forecast_ps: tuple) -> dict[str, Any]:
     rng = np.random.default_rng(1)
     primes = np.array(CENTRAL_PRIMES)
     draws: dict[int, list[float]] = {p: [] for p in forecast_ps}
-    beta_draws, gamma_draws, delta_draws = [], [], []
+    b_draws, gamma_draws, delta_draws = [], [], []
     n_degenerate = 0
     for _ in range(N_PRIME_BOOT):
         sample = tuple(rng.choice(primes, size=len(primes), replace=True))
@@ -395,14 +395,14 @@ def prime_bootstrap(data: dict, forecast_ps: tuple) -> dict[str, Any]:
         for p in forecast_ps:
             if res["forecast_log10"][p] is not None:
                 draws[p].append(res["forecast_log10"][p])
-        beta_draws.append(res["gen"]["beta"])
+        b_draws.append(res["gen"]["b"])
         gamma_draws.append(res["mem"]["gamma"])
         delta_draws.append(res["delta_hat"])
     def _pct(vals):
         return list(np.percentile(vals, [2.5, 97.5])) if len(vals) else None
 
     out = {"n_boot": N_PRIME_BOOT, "n_degenerate": n_degenerate,
-           "beta_ci95": _pct(beta_draws),
+           "b_ci95": _pct(b_draws),
            "gamma_ci95": _pct(gamma_draws),
            "delta_hat_ci95": _pct(delta_draws)}
     for p in forecast_ps:
@@ -463,8 +463,8 @@ def epoch_budget_check(p: int, dims: list[int], mem: dict, gen: dict,
     rows = []
     for d, P in pcs.items():
         t_gen = math.exp(gen["lnA"] + gen["a"] * math.log(p)
-                         - gen["beta"] * math.log(P))
-        t_mem = math.exp(mem["ln_b"] + mem["gamma"] * K / (C * P))
+                         - gen["b"] * math.log(P))
+        t_mem = math.exp(mem["ln_B"] + mem["gamma"] * K / (C * P))
         e_train = t_mem / PROXY_RATIO
         sub_onset = math.log10(P) < pred_onset_log10
         binding = t_gen if sub_onset else e_train
@@ -491,12 +491,12 @@ def run(config: str, db: str, out_dir: Path) -> dict[str, Any]:
     if point is None:
         raise RuntimeError("point estimate pipeline returned degenerate result")
 
-    # Window sensitivity + β sensitivity (pre-committed reporting).
+    # Window sensitivity + b sensitivity (pre-committed reporting).
     gen_nowin = fit_gen_law(data["tgen_cells"], CENTRAL_PRIMES, windowed=False)
     sens = {}
     for sign in (+1, -1):
-        beta_p = point["gen"]["beta"] + sign * BETA_PERTURB
-        gen_p = fit_gen_law_fixed_beta(data["tgen_cells"], CENTRAL_PRIMES, beta_p)
+        b_p = point["gen"]["b"] + sign * GEN_B_PERTURB
+        gen_p = fit_gen_law_fixed_b(data["tgen_cells"], CENTRAL_PRIMES, b_p)
         resid = []
         for p in CENTRAL_PRIMES:
             Lc = solve_crossing(p, data["K_of"](p), data["C"], point["mem"], gen_p)
@@ -506,14 +506,14 @@ def run(config: str, db: str, out_dir: Path) -> dict[str, Any]:
                 resid.append(math.log10(Pon) - Lc)
         dh = float(np.median(resid))
         L197 = solve_crossing(197, data["K_of"](197), data["C"], point["mem"], gen_p)
-        sens[f"beta_{'+' if sign > 0 else '-'}{BETA_PERTURB}"] = (
+        sens[f"b_{'+' if sign > 0 else '-'}{GEN_B_PERTURB}"] = (
             None if L197 is None else L197 + dh)
     base197 = point["forecast_log10"][197]  # None ⇒ predicted divergence
-    beta_sensitivity = {
-        "d_log10P197_per_+0.1beta": (None if sens.get("beta_+0.1") is None
-                                     else sens["beta_+0.1"] - base197),
-        "d_log10P197_per_-0.1beta": (None if sens.get("beta_-0.1") is None
-                                     else sens["beta_-0.1"] - base197),
+    b_sensitivity = {
+        "d_log10P197_per_+0.1b": (None if sens.get("b_+0.1") is None
+                                     else sens["b_+0.1"] - base197),
+        "d_log10P197_per_-0.1b": (None if sens.get("b_-0.1") is None
+                                     else sens["b_-0.1"] - base197),
         "raw": sens}
 
     boot = prime_bootstrap(data, (HELD_OUT_PRIME,) + FORECAST_PRIMES)
@@ -528,8 +528,8 @@ def run(config: str, db: str, out_dir: Path) -> dict[str, Any]:
             K = data["K_of"](int(round(pp)))
             L = np.arange(3.5, 8.5, 0.01)
             P = 10.0 ** L
-            h = (mem["ln_b"] + mem["gamma"] * K / (data["C"] * P)) \
-                - (gen["lnA"] + gen["a"] * math.log(pp) - gen["beta"] * np.log(P))
+            h = (mem["ln_B"] + mem["gamma"] * K / (data["C"] * P)) \
+                - (gen["lnA"] + gen["a"] * math.log(pp) - gen["b"] * np.log(P))
             return float(h.min())
         from scipy.optimize import brentq
         lo, hi = 140.0, 600.0
@@ -659,12 +659,12 @@ def run(config: str, db: str, out_dir: Path) -> dict[str, Any]:
         "mem_law_full_range": mem_full,
         "gen_law": point["gen"],
         "gen_law_no_window": {k: gen_nowin[k] for k in
-                              ("lnA", "a", "beta", "r2", "n_cells")},
+                              ("lnA", "a", "b", "r2", "n_cells")},
         "delta_hat_dex": point["delta_hat"],
         "per_prime": point["per_prime"],
         "crosscheck_pipeline_vs_fitted": crosscheck,
         "forecast_log10": point["forecast_log10"],
-        "beta_sensitivity": beta_sensitivity,
+        "b_sensitivity": b_sensitivity,
         "prime_bootstrap": boot,
         "seed_noise_floor": noise,
         "divergence": divergence,
@@ -690,9 +690,9 @@ def main(argv: Optional[list[str]] = None) -> None:
     print(f"gamma = {m['gamma']:.2f} [{m['gamma_ci95'][0]:.2f}, "
           f"{m['gamma_ci95'][1]:.2f}] (C={res['C_convention']});  "
           f"gamma/C = {res['gamma_per_bit_per_param']:.2f} nat/bpp;  "
-          f"b = {m['b']:.1f};  R² = {m['r2']:.3f}")
-    print(f"beta = {g['beta']:.3f};  a = {g['a']:.2f};  R² = {g['r2']:.3f};  "
-          f"drift = {g['beta_drift']}")
+          f"B = {m['B']:.1f};  R² = {m['r2']:.3f}")
+    print(f"b = {g['b']:.3f};  a = {g['a']:.2f};  R² = {g['r2']:.3f};  "
+          f"drift = {g['b_drift']}")
     print(f"delta_hat = {res['delta_hat_dex']:.3f} dex")
     d = res["divergence"]
     print(f"p* = {d['p_star_point']} ci95 {d['p_star_ci95']}  "

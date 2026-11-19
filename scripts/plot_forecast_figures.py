@@ -11,6 +11,7 @@ Reads results/theory/forecast_onset.json and the registry.
 from __future__ import annotations
 
 import json
+from grokking_capacity.analysis.timescale_laws import normalise_timescale_laws
 import math
 from pathlib import Path
 
@@ -25,7 +26,7 @@ from grokking_capacity.analysis.config_view import ConfigView
 OUT = Path("results/theory/figures")
 OUT.mkdir(parents=True, exist_ok=True)
 
-res = json.load(open("results/theory/forecast_onset.json"))
+res = normalise_timescale_laws(json.load(open("results/theory/forecast_onset.json")))
 view = ConfigView.from_yaml("configs/central.yaml", db_path="runs.db")
 data = fo.collect(view)
 C = data["C"]
@@ -42,13 +43,13 @@ fig, ax = plt.subplots(figsize=(6.0, 4.2))
 sc = ax.scatter(f, t, c=pp, cmap="viridis", s=10, alpha=0.5, lw=0)
 plt.colorbar(sc, label="prime $p$")
 xs = np.linspace(f.min(), f.max(), 300)
-ax.plot(xs, memf["b"] * np.exp(memf["gamma"] * xs), "k-", lw=1.8,
-        label=(r"full range: $\gamma=%.1f$, $b=%.1f$ ($R^2=%.2f$)"
-               % (memf["gamma"], memf["b"], memf["r2"])))
+ax.plot(xs, memf["B"] * np.exp(memf["gamma"] * xs), "k-", lw=1.8,
+        label=(r"full range: $\gamma=%.1f$, $B=%.1f$ ($R^2=%.2f$)"
+               % (memf["gamma"], memf["B"], memf["r2"])))
 xw = np.linspace(fo.MEM_F_LO, f.max(), 100)
-ax.plot(xw, mem["b"] * np.exp(mem["gamma"] * xw), "r--", lw=1.8,
-        label=(r"window $f\geq %.2f$: $\gamma=%.1f$, $b=%.1f$"
-               % (fo.MEM_F_LO, mem["gamma"], mem["b"])))
+ax.plot(xw, mem["B"] * np.exp(mem["gamma"] * xw), "r--", lw=1.8,
+        label=(r"window $f\geq %.2f$: $\gamma=%.1f$, $B=%.1f$"
+               % (fo.MEM_F_LO, mem["gamma"], mem["B"])))
 ax.axvspan(fo.MEM_F_LO, f.max(), color="0.85", alpha=0.4, lw=0)
 ax.set_yscale("log")
 ax.set_xlabel(r"capacity fraction  $f = K/(C\,P)$   ($C=2.16$)")

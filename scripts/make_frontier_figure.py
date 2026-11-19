@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Regenerate the cone figure with the apex-band data (cone-fill.md).
 Writes figures/theory/frontier.pdf and syncs to the paper media dir."""
+from grokking_capacity.analysis.timescale_laws import normalise_timescale_laws
 import json, math, shutil
 import numpy as np
 import matplotlib; matplotlib.use("Agg")
@@ -8,18 +9,18 @@ import matplotlib.pyplot as plt
 from grokking_capacity.analysis import forecast_onset as fo
 
 BLUE, ORANGE, AQUA, INK, MUTED, RED = "#2a78d6", "#eb6834", "#1baf7a", "#0b0b0b", "#52514e", "#c23b3b"
-R = json.load(open("results/theory/forecast_onset.json"))
+R = normalise_timescale_laws(json.load(open("results/theory/forecast_onset.json")))
 mem, gen = R["mem_law"], R["gen_law"]
 C = 2.16
 K = lambda p: 0.5 * p * (p - 1) * math.log2(p + 2)
 
 def roots(pp):
-    Rp = (gen["lnA"] + gen["a"]*math.log(pp) - mem["ln_b"]) - gen["beta"]*math.log(mem["gamma"]*K(pp)/C)
-    Rs = gen["beta"]*(1 - math.log(gen["beta"]))
+    Rp = (gen["lnA"] + gen["a"]*math.log(pp) - mem["ln_B"]) - gen["b"]*math.log(mem["gamma"]*K(pp)/C)
+    Rs = gen["b"]*(1 - math.log(gen["b"]))
     if Rp < Rs: return None
     from scipy.optimize import brentq
-    F = lambda x: x - gen["beta"]*math.log(x) - Rp
-    return brentq(F, gen["beta"], 1e3), brentq(F, 1e-9, gen["beta"])
+    F = lambda x: x - gen["b"]*math.log(x) - Rp
+    return brentq(F, gen["b"], 1e3), brentq(F, 1e-9, gen["b"])
 
 fig, ax = plt.subplots(figsize=(7.2, 5.2))
 pg = np.linspace(96, 167.4, 250)

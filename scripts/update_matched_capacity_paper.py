@@ -2,6 +2,7 @@
 """Analyze fresh matched H100 capacity and apply numerical-only paper changes.
 Historical inputs are preserved. The before/ snapshot makes this idempotent.
 """
+from grokking_capacity.analysis.timescale_laws import normalise_timescale_laws
 from pathlib import Path
 from collections import defaultdict
 import ast, copy, hashlib, json, math, os, re, shutil, sqlite3, sys
@@ -73,14 +74,14 @@ def plots(summary,raw,*,write_manifest=True):
    for label in ax.texts:label.set_text(label.get_text().replace(f'C = {C:.2f} bits/param',f'C = {C:.3f} bits/param'))
   save_paper_figure(fig,media/'saturation_time_vs_capacity_fraction_all_primes.pdf')
  plt.close(fig)
- frozen=json.loads((ROOT/'results/theory/forecast_onset.json').read_text())['mem_law_full_range']
+ frozen=normalise_timescale_laws(json.loads((ROOT/'results/theory/forecast_onset.json').read_text()))['mem_law_full_range']
  assert len(rows)==frozen['n_runs'] and np.isclose(fitnew[0]/r,frozen['gamma'],rtol=1e-9), 'Canonical speed cohort changed'
- if write_manifest:save('plot_manifest.json',dict(speed_rows=len(rows),speed_uuids=[x['uuid'] for x in rows],speed_fit_gamma=fitnew[0],speed_fit_b=fitnew[1],speed_fit_r2=fitnew[2],C=C,regenerated=['capacity_curves.pdf','capacity_estimation.pdf','saturation_epochs_vs_inverse_capacity_all_primes.pdf','saturation_time_vs_capacity_fraction_all_primes.pdf']))
+ if write_manifest:save('plot_manifest.json',dict(speed_rows=len(rows),speed_uuids=[x['uuid'] for x in rows],speed_fit_gamma=fitnew[0],speed_fit_B=fitnew[1],speed_fit_r2=fitnew[2],C=C,regenerated=['capacity_curves.pdf','capacity_estimation.pdf','saturation_epochs_vs_inverse_capacity_all_primes.pdf','saturation_time_vs_capacity_fraction_all_primes.pdf']))
 
 def check_invariance(C):
- F=json.loads((ROOT/'results/theory/forecast_onset.json').read_text());g=F['mem_law']['gamma'];beta=F['gen_law']['beta'];a=F['gen_law']['a'];lnb=F['mem_law']['ln_b'];lnA=F['gen_law']['lnA'];r=C/2.16
+ F=normalise_timescale_laws(json.loads((ROOT/'results/theory/forecast_onset.json').read_text()));g=F['mem_law']['gamma'];b=F['gen_law']['b'];a=F['gen_law']['a'];lnB=F['mem_law']['ln_B'];lnA=F['gen_law']['lnA'];r=C/2.16
  K=lambda p:.5*p*(p-1)*math.log2(p+2)
- def fold(c,gamma):return brentq(lambda p:lnA-lnb+a*math.log(p)-beta*math.log(gamma*K(p)/c)-beta*(1-math.log(beta)),2,300)
+ def fold(c,gamma):return brentq(lambda p:lnA-lnB+a*math.log(p)-b*math.log(gamma*K(p)/c)-b*(1-math.log(b)),2,300)
  audit=json.loads((PAPER/'review-audit.json').read_text());central=audit['central'];fresh=json.loads((OUT/'main-test-recheck.json').read_text());assert fresh['central']==central;assert fresh['crossing']==audit['crossing'];diff=[]
  for p in range(97,168):
   for P in np.geomspace(10000,1e7,20):diff.append(abs(g*K(p)/(2.16*P)-(g*r)*K(p)/(C*P)))

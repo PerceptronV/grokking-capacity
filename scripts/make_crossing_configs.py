@@ -8,13 +8,14 @@ law-derived crossing per prime (onset root) from the calibration-window
 constants in results/theory/forecast_onset.json; for muP, the grid only
 (no muP law is fitted on the canonical clock).
 """
+from grokking_capacity.analysis.timescale_laws import normalise_timescale_laws
 import json, math, yaml, numpy as np
 from scipy.optimize import brentq
 from grokking_capacity.models import TransformerTorch
 
-R = json.load(open("results/theory/forecast_onset.json"))
-g, lnb = R["mem_law"]["gamma"], R["mem_law"]["ln_b"]
-lnA, a, beta = R["gen_law"]["lnA"], R["gen_law"]["a"], R["gen_law"]["beta"]
+R = normalise_timescale_laws(json.load(open("results/theory/forecast_onset.json")))
+g, lnB = R["mem_law"]["gamma"], R["mem_law"]["ln_B"]
+lnA, a, b = R["gen_law"]["lnA"], R["gen_law"]["a"], R["gen_law"]["b"]
 C = 2.16
 K = lambda p: (p * (p - 1) // 2) * math.log2(p + 2)
 _pc = {}
@@ -24,7 +25,7 @@ def P(p, d):
         _pc[(p, d)] = sum(x.numel() for x in m.parameters())
     return _pc[(p, d)]
 def law_gap(p, d):  # ln T_mem - ln T_gen at width d
-    PP = P(p, d); return (lnb + g * K(p) / (C * PP)) - (lnA + a * math.log(p) - beta * math.log(PP))
+    PP = P(p, d); return (lnB + g * K(p) / (C * PP)) - (lnA + a * math.log(p) - b * math.log(PP))
 def law_crossing(p):
     ds = np.arange(40, 1001, 4); gaps = [law_gap(p, int(d)) for d in ds]
     for i in range(len(ds) - 1):

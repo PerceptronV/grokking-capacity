@@ -5,6 +5,7 @@ One equally weighted regression point per contributing (clock, prime, width)
 cell. Keep ten-seed minimum delay for the cone. Export separate PDF/PNG previews
 and numerical comparisons; historical and publication artifacts are preserved.
 """
+from grokking_capacity.analysis.timescale_laws import normalise_timescale_laws
 import argparse
 from collections import Counter
 import json
@@ -55,7 +56,7 @@ def main():
 
     fitted, points = fit_clock_pair(data, 'mean', 'observed')
     law = {key: fitted[key] for key in ('mem', 'gen', 'fold')}
-    current_C = json.loads((ROOT / 'results/capacity_h100_matched_20261103/forecast_coefficients.json').read_text())['C_convention']
+    current_C = normalise_timescale_laws(json.loads((ROOT / 'results/capacity_h100_matched_20261103/forecast_coefficients.json').read_text()))['C_convention']
     law['mem']['gamma_current_C'] = law['mem']['gamma_original'] * current_C / C_OLD
     counts, cell_rows = {}, []
     for kind in ('mem', 'gen'):
@@ -70,7 +71,7 @@ def main():
         assert list(grouped.size()) == [r['n_observed'] for r in rows]
         X = np.array([[1, r['f']] if kind == 'mem' else [1, math.log(r['p']), -math.log(r['P'])] for r in rows])
         coef = np.linalg.lstsq(X, np.log(means.to_numpy()), rcond=None)[0]
-        keys = ['ln_b', 'gamma_original'] if kind == 'mem' else ['lnA', 'a', 'beta']
+        keys = ['ln_B', 'gamma_original'] if kind == 'mem' else ['lnA', 'a', 'b']
         np.testing.assert_allclose(coef, [law[kind][k] for k in keys], rtol=1e-11, atol=1e-11)
         counts[kind] = {
             'included_runs': len(dd),
@@ -91,13 +92,13 @@ def main():
             })
     clock_cells = pd.DataFrame(cell_rows)
     clock_cells.to_csv(out / 'clock_cells.csv', index=False)
-    historical = json.loads((ROOT / 'results/theory/forecast_onset.json').read_text())
-    for k in ('lnA', 'a', 'beta'):
+    historical = normalise_timescale_laws(json.loads((ROOT / 'results/theory/forecast_onset.json').read_text()))
+    for k in ('lnA', 'a', 'b'):
         assert np.isclose(law['gen'][k], historical['gen_law'][k], rtol=1e-12, atol=1e-12)
-    individual = json.loads((prior_dirs[1] / 'fit.json').read_text())['law']
+    individual = normalise_timescale_laws(json.loads((prior_dirs[1] / 'fit.json').read_text()))['law']
     original = {
-        'mem': {'ln_b': historical['mem_law']['ln_b'], 'gamma_original': historical['mem_law']['gamma']},
-        'gen': {k: historical['gen_law'][k] for k in ('lnA', 'a', 'beta')},
+        'mem': {'ln_B': historical['mem_law']['ln_B'], 'gamma_original': historical['mem_law']['gamma']},
+        'gen': {k: historical['gen_law'][k] for k in ('lnA', 'a', 'b')},
     }
     from check_law_complete_ten_seeds import fold
     original['fold'] = fold(original['mem'], original['gen'], C_OLD)
@@ -131,7 +132,7 @@ def main():
         lo, hi = branches(p, law)
         for P in (lo, hi):
             k = p * (p - 1) / 2 * math.log2(p + 2)
-            gap = law['gen']['lnA'] + law['gen']['a'] * math.log(p) - law['gen']['beta'] * math.log(P) - law['mem']['ln_b'] - law['mem']['gamma_original'] * k / (C_OLD * P)
+            gap = law['gen']['lnA'] + law['gen']['a'] * math.log(p) - law['gen']['b'] * math.log(P) - law['mem']['ln_B'] - law['mem']['gamma_original'] * k / (C_OLD * P)
             max_error = max(max_error, abs(gap))
         curves.append({'p': p, 'lower_P': lo, 'upper_P': hi})
     assert max_error < 1e-8

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Winner-rate vs α and vs width — the drive-vs-SNR discriminator
-(principled/gen-snr-escape proposal; also attacks β at the rate level for
+(principled/gen-snr-escape proposal; also attacks b at the rate level for
 gen-solvable-circuit).
 
 Discriminator: the drive-side channel predicts winner amplitude growth

@@ -16,8 +16,8 @@ def model_hashes(state):
 def fit_metrics(times,parameters):
     lam_slope=float(np.polyfit(np.log([.1,.3,1.]),np.log(times[:3].mean(axis=1)),1)[0])
     indices=[3,2,4]
-    beta=-float(np.polyfit(np.log([parameters[i] for i in indices]),np.log(times[indices].mean(axis=1)),1)[0])
-    return lam_slope,beta
+    b=-float(np.polyfit(np.log([parameters[i] for i in indices]),np.log(times[indices].mean(axis=1)),1)[0])
+    return lam_slope,b
 
 def analyse(campaign=DEFAULT_CAMPAIGN,verify_checkpoints=True):
     campaign=Path(campaign);manifest=json.loads((campaign/'manifest.json').read_text())
@@ -63,9 +63,9 @@ def analyse(campaign=DEFAULT_CAMPAIGN,verify_checkpoints=True):
         for arm in times:boot[arm].append(values[arm])
         delta.append(np.asarray(values['frozen'])-np.asarray(values['unfrozen']))
     for arm,t in times.items():
-        lam,beta=fit_metrics(t,params)
-        result[arm]={'lambda_slope_d128':lam,'beta_lambda1':beta,'seed_bootstrap_CI95':np.quantile(np.array(boot[arm]),[.025,.975],axis=0).T.tolist(),'cells':{f'd{d}_wd{w:g}':{'n':3,'mean_T':float(t[i].mean()),'T':t[i].tolist(),'total_parameters':params[i]} for i,(d,w) in enumerate(SETTINGS)},'runs':rows[arm]}
-    result['paired_effect']={'lambda_slope_difference':result['frozen']['lambda_slope_d128']-result['unfrozen']['lambda_slope_d128'],'beta_difference':result['frozen']['beta_lambda1']-result['unfrozen']['beta_lambda1'],'seed_bootstrap_CI95':np.quantile(np.array(delta),[.025,.975],axis=0).T.tolist()}
+        lam,b=fit_metrics(t,params)
+        result[arm]={'lambda_slope_d128':lam,'b_lambda1':b,'seed_bootstrap_CI95':np.quantile(np.array(boot[arm]),[.025,.975],axis=0).T.tolist(),'cells':{f'd{d}_wd{w:g}':{'n':3,'mean_T':float(t[i].mean()),'T':t[i].tolist(),'total_parameters':params[i]} for i,(d,w) in enumerate(SETTINGS)},'runs':rows[arm]}
+    result['paired_effect']={'lambda_slope_difference':result['frozen']['lambda_slope_d128']-result['unfrozen']['lambda_slope_d128'],'b_difference':result['frozen']['b_lambda1']-result['unfrozen']['b_lambda1'],'seed_bootstrap_CI95':np.quantile(np.array(delta),[.025,.975],axis=0).T.tolist()}
     result['unfrozen_baseline']=result['unfrozen']  # preserve the published result schema
     (campaign/'analysis.json').write_text(json.dumps(result,indent=2)+'\n');plot(result,campaign);return result
 
@@ -104,7 +104,7 @@ def plot(result,out):
         for s in range(3):axs[0].plot(ls,[cells[f'd128_wd{w:g}']['T'][s] for w in ls],color=col,alpha=.3,lw=.8)
         axs[0].plot(ls,[cells[f'd128_wd{w:g}']['mean_T'] for w in ls],'o-',color=col,label=f"{arm}: slope {res['lambda_slope_d128']:.2f}")
         ds=[64,128,256];ps=[cells[f'd{d}_wd1']['total_parameters'] for d in ds]
-        axs[1].plot(ps,[cells[f'd{d}_wd1']['mean_T'] for d in ds],'o-',color=col,label=f"{arm}: beta {res['beta_lambda1']:.2f}")
+        axs[1].plot(ps,[cells[f'd{d}_wd1']['mean_T'] for d in ds],'o-',color=col,label=f"{arm}: b {res['b_lambda1']:.2f}")
     axs[0].set(xscale='log',yscale='log',xlabel='Weight decay',ylabel='First validation-99% epoch',title='Width 128: paired seeds on one H100')
     axs[1].set(xscale='log',yscale='log',xlabel='Total architecture parameters',ylabel='First validation-99% epoch',title='Weight decay 1: same three seeds')
     from matplotlib.ticker import NullFormatter

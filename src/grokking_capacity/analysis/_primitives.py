@@ -340,7 +340,7 @@ def plot_saturation_time_vs_capacity_fraction(
 ) -> Tuple[float, float, float]:
     """Image #3(b): epochs to saturation vs capacity fraction f = S/(C·P).
 
-    Returns (b, a, r²) for the global fit `epochs = a · exp(b · f)`.
+    Returns (gamma, B, r²) for the global fit `epochs = B · exp(gamma · f)`.
     """
     if not by_dim:
         return 0.0, 0.0, 0.0
@@ -370,9 +370,9 @@ def plot_saturation_time_vs_capacity_fraction(
     dims_arr = np.array(dims)
 
     log_e = np.log(epochs_arr)
-    b, log_a = np.polyfit(f_arr, log_e, 1)
-    a = float(np.exp(log_a))
-    pred = b * f_arr + log_a
+    gamma, log_B = np.polyfit(f_arr, log_e, 1)
+    B = float(np.exp(log_B))
+    pred = gamma * f_arr + log_B
     ss_res = float(np.sum((log_e - pred) ** 2))
     ss_tot = float(np.sum((log_e - log_e.mean()) ** 2))
     r_squared = 1 - ss_res / ss_tot if ss_tot > 0 else 0.0
@@ -385,14 +385,14 @@ def plot_saturation_time_vs_capacity_fraction(
             mask = primes_arr == p
             label = f"p={p}"
             if mask.sum() >= 2:
-                bp, log_ap = np.polyfit(f_arr[mask], np.log(epochs_arr[mask]), 1)
-                pred_p = bp * f_arr[mask] + log_ap
+                gamma_p, log_Bp = np.polyfit(f_arr[mask], np.log(epochs_arr[mask]), 1)
+                pred_p = gamma_p * f_arr[mask] + log_Bp
                 ssr = float(np.sum((np.log(epochs_arr[mask]) - pred_p) ** 2))
                 sst = float(np.sum((np.log(epochs_arr[mask]) - np.log(epochs_arr[mask]).mean()) ** 2))
                 r2_p = 1 - ssr / sst if sst > 0 else 0.0
                 label = f"p={p} (R²={r2_p:.3f})"
                 xfit = np.linspace(f_arr[mask].min() * 0.95, f_arr[mask].max() * 1.05, 100)
-                ax.plot(xfit, np.exp(log_ap) * np.exp(bp * xfit), "--", color=color,
+                ax.plot(xfit, np.exp(log_Bp) * np.exp(gamma_p * xfit), "--", color=color,
                         linewidth=2, alpha=0.8)
             ax.scatter(f_arr[mask], epochs_arr[mask], c=[color], s=100, alpha=0.7,
                        edgecolors="black", linewidths=1, label=label)
@@ -404,8 +404,8 @@ def plot_saturation_time_vs_capacity_fraction(
             ax.scatter(f_arr[mask], epochs_arr[mask], c=[color], s=100, alpha=0.7,
                        edgecolors="black", linewidths=1, label=f"dim={d}")
         xfit = np.linspace(f_arr.min() * 0.95, f_arr.max() * 1.05, 100)
-        ax.plot(xfit, a * np.exp(b * xfit), "--", color="red", linewidth=2, alpha=0.7,
-                label=f"Fit: epochs = {a:.1f} × exp({b:.2f} × f)")
+        ax.plot(xfit, B * np.exp(gamma * xfit), "--", color="red", linewidth=2, alpha=0.7,
+                label=f"Fit: epochs = {B:.1f} × exp({gamma:.2f} × f)")
 
     ax.set_xlabel("Capacity fraction", fontsize=14)
     ax.set_ylabel("Epochs to saturation", fontsize=14)
@@ -414,8 +414,8 @@ def plot_saturation_time_vs_capacity_fraction(
     ax.grid(True, alpha=0.3, which="both")
     ax.text(
         0.05, 0.95,
-        f"Overall fit: epochs = {a:.1f} × exp({b:.2f} × f)\n"
-        f"Exponent: {b:.2f}\nR²: {r_squared:.3f}\nC = {C:.2f} bits/param",
+        f"Overall fit: epochs = {B:.1f} × exp({gamma:.2f} × f)\n"
+        f"Exponent: {gamma:.2f}\nR²: {r_squared:.3f}\nC = {C:.2f} bits/param",
         transform=ax.transAxes, fontsize=11, verticalalignment="top",
         bbox=dict(boxstyle="round", facecolor="wheat", alpha=0.8),
     )
@@ -426,4 +426,4 @@ def plot_saturation_time_vs_capacity_fraction(
         plt.show()
     else:
         plt.close()
-    return float(b), float(a), float(r_squared)
+    return float(gamma), float(B), float(r_squared)

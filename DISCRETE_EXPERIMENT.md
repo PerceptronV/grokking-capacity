@@ -3605,14 +3605,14 @@ reported separately:
 | B40 / 407 | 35,310 | 95.25% | 96.80% |
 | B40 / 410 | 48,240 | 97.21% | 98.17% |
 
-The scaling fit t_gen proportional to K_hat^beta includes an intercept in log
-space. The six common fully observed points are pairs 4-9, with C capacity
+The scaling fit t_gen proportional to K_hat^s includes an intercept in log
+space. Here s is the signed log–log slope (s = -b in the timescale-law notation). The six common fully observed points are pairs 4-9, with C capacity
 targets 60,861-117,951 bits. All ten seeds are retained at each point. The
 additional arithmetic-mean analysis was recorded before pair selection and
 confirmation; the originally registered per-seed log-slope analysis is also
 reported. Intervals use 10,000 paired seed bootstrap draws, seed 9001.
 
-| Analysis | C beta [95% interval] | B beta [95% interval] | B minus C [95% interval] |
+| Analysis | C slope s [95% interval] | B slope s [95% interval] | B minus C [95% interval] |
 | --- | ---: | ---: | ---: |
 | Mean t_gen, six fully observed sizes | -0.509 [-0.707, -0.302] | -1.043 [-1.714, -0.374] | -0.534 [-1.300, 0.256] |
 | Per-seed log t_gen, same six sizes | -0.483 [-0.673, -0.293] | -0.781 [-1.314, -0.361] | -0.298 [-0.916, 0.242] |

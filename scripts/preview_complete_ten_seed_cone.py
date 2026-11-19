@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Preview the complete-ten-observed-seed law on unchanged cone observations."""
+from grokking_capacity.analysis.timescale_laws import normalise_timescale_laws
 from pathlib import Path
 from collections import Counter
 import csv
@@ -29,10 +30,10 @@ def main():
     protected=json.loads((BASE/'validation.json').read_text())['protected_artifacts_unchanged']
     for rel,digest in protected.items():assert sha(ROOT/rel)==digest
     data_hash=sha(DATA);fit_hash=sha(BASE/'comparison.json')
-    cells=json.loads(DATA.read_text());sensitivity=json.loads((BASE/'comparison.json').read_text())
+    cells=json.loads(DATA.read_text());sensitivity=normalise_timescale_laws(json.loads((BASE/'comparison.json').read_text()))
     fit=sensitivity['comparisons']['complete_both'];fold=fit['divergence_prime']
     coeff={'C_convention':sensitivity['C_current'],
-           'mem_law':{'gamma':fit['mem']['gamma_current_C'],'ln_b':fit['mem']['ln_b']},
+           'mem_law':{'gamma':fit['mem']['gamma_current_C'],'ln_B':fit['mem']['ln_B']},
            'gen_law':fit['gen']}
     assert len(cells)==1736
     assert all(c['n_seeds']==10 and c['seeds']==list(range(42,52)) for c in cells)

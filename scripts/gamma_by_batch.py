@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Batch-sweep adjudication: gamma per batch size (theory-trunk §3, C3).
 
-Fits ln T_mem = ln b + gamma_B * f separately per batch size B on the
+Fits ln T_mem = ln B + gamma_B * f separately per batch size B on the
 pre-registered window f in [0.08, 1.0], in the pre-specified adjudication
 unit (optimiser STEPS: T_steps = T_epochs * ceil(n/B)) and in epochs
 alongside. Censored cells (saturated = False) are excluded from the OLS
@@ -47,18 +47,18 @@ def fit(f, y):
 
 
 def tobit_fit(f, y, censored, n_boot=800):
-    """Right-censored Tobit MLE of y = ln_b + gamma*f + N(0, sigma^2).
+    """Right-censored Tobit MLE of y = ln_B + gamma*f + N(0, sigma^2).
 
     For censored rows, y is the censoring level (ln of the epoch-cap
     time) and the likelihood term is P(Y > y). Returns gamma, its
-    bootstrap 95% CI, ln_b, sigma, n_obs, n_cens.
+    bootstrap 95% CI, ln_B, sigma, n_obs, n_cens.
     """
     f, y, censored = map(np.asarray, (f, y, censored))
 
     def nll(theta, f, y, cens):
-        lnb, g, lnsig = theta
+        lnB, g, lnsig = theta
         sig = math.exp(lnsig)
-        mu = lnb + g * f
+        mu = lnB + g * f
         z = (y - mu) / sig
         ll = np.where(cens, norm.logsf(z), norm.logpdf(z) - lnsig)
         return -ll.sum()
@@ -79,7 +79,7 @@ def tobit_fit(f, y, censored, n_boot=800):
                 best = r
         return best.x
 
-    lnb, g, lnsig = solve(f, y, censored)
+    lnB, g, lnsig = solve(f, y, censored)
     rng = np.random.default_rng(0)
     n = len(y)
     boots = []
@@ -90,7 +90,7 @@ def tobit_fit(f, y, censored, n_boot=800):
         boots.append(solve(f[s], y[s], censored[s])[1])
     lo, hi = np.percentile(boots, [2.5, 97.5])
     return {"gamma": float(g), "ci95": [float(lo), float(hi)],
-            "ln_b": float(lnb), "sigma": float(math.exp(lnsig)),
+            "ln_B": float(lnB), "sigma": float(math.exp(lnsig)),
             "n_obs": int((~censored).sum()), "n_cens": int(censored.sum())}
 
 
@@ -131,9 +131,9 @@ def main():
         else:
             f_u = np.array([s[0] for s in sel])
             for unit, idx in (("epochs", 1), ("steps", 2)):
-                g, lo, hi, lnb, r2, n = fit(
+                g, lo, hi, lnB, r2, n = fit(
                     f_u, np.array([s[idx] for s in sel]))
-                res[unit] = {"gamma": g, "ci95": [lo, hi], "ln_b": lnb,
+                res[unit] = {"gamma": g, "ci95": [lo, hi], "ln_B": lnB,
                              "r2": r2, "n": n}
             print(f"B={B}: n={res['steps']['n']}  "
                   f"gamma_steps={res['steps']['gamma']:.1f} "

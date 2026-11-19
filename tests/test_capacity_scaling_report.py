@@ -18,10 +18,10 @@ def test_censored_times_keep_full_sample_and_valid_median_bounds():
 def test_paired_bootstrap_recovers_known_slopes_and_difference():
     rows=[];seeds=list(range(401,411))
     for i in range(4):
-        for role,beta in [('C',-.5),('B',-1.)]:
+        for role,slope in [('C',-.5),('B',-1.)]:
             for seed in seeds:
                 x=1000*2**i
-                rows.append(dict(pair_index=i,role=role,seed=seed,estimated_capacity_bits=x,t_gen_updates=(seed-300)*1e5*x**beta))
+                rows.append(dict(pair_index=i,role=role,seed=seed,estimated_capacity_bits=x,t_gen_updates=(seed-300)*1e5*x**slope))
     fit=slopes(rows,list(range(4)),seeds)
     assert fit['roles']['C']['mean_slope']==pytest.approx(-.5)
     assert fit['roles']['B']['mean_slope']==pytest.approx(-1.)

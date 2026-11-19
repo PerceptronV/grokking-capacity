@@ -5,6 +5,7 @@ Run from the repo root:  python scripts/verify_derivations.py
 Reads the frozen fits (results/theory/forecast_onset.json) and the registry.
 Each block prints the derived quantity next to its independent numerical check.
 """
+from grokking_capacity.analysis.timescale_laws import normalise_timescale_laws
 import json
 import math
 
@@ -13,10 +14,10 @@ from scipy import integrate
 from scipy.optimize import brentq
 from scipy.stats import norm
 
-RES = json.load(open("results/theory/forecast_onset.json"))
+RES = normalise_timescale_laws(json.load(open("results/theory/forecast_onset.json")))
 MEM, GEN = RES["mem_law"], RES["gen_law"]
-G, LNB = MEM["gamma"], MEM["ln_b"]
-LNA, A_EXP, BETA = GEN["lnA"], GEN["a"], GEN["beta"]
+G, LN_B = MEM["gamma"], MEM["ln_B"]
+LNA, A_EXP, GEN_B = GEN["lnA"], GEN["a"], GEN["b"]
 C = 2.16
 
 
@@ -25,7 +26,7 @@ def K(p):
 
 
 def R(p):
-    return (LNA + A_EXP * math.log(p) - LNB) - BETA * math.log(G * K(p) / C)
+    return (LNA + A_EXP * math.log(p) - LN_B) - GEN_B * math.log(G * K(p) / C)
 
 
 def kappa(p, h=1e-4):
@@ -34,22 +35,22 @@ def kappa(p, h=1e-4):
 
 def x_roots(p):
     Rp = R(p)
-    Rstar = BETA * (1 - math.log(BETA))
+    Rstar = GEN_B * (1 - math.log(GEN_B))
     if Rp < Rstar:
         return None
-    F = lambda x: x - BETA * math.log(x) - Rp
-    return brentq(F, BETA, 1e3), brentq(F, 1e-9, BETA)
+    F = lambda x: x - GEN_B * math.log(x) - Rp
+    return brentq(F, GEN_B, 1e3), brentq(F, 1e-9, GEN_B)
 
 
 def main():
-    Rstar = BETA * (1 - math.log(BETA))
+    Rstar = GEN_B * (1 - math.log(GEN_B))
 
     print("== Prop 2 (fold): closed-form p* vs pipeline ==")
     pstar = brentq(lambda p: R(p) - Rstar, 100, 400)
     print(f"  p* = {pstar:.3f}   (pipeline grid search: "
           f"{RES['divergence']['p_star_point']:.3f})")
-    print(f"  f_fold = beta/gamma = {BETA/G:.4f}   "
-          f"P_fold = {G*K(pstar)/(C*BETA):.3e}")
+    print(f"  f_fold = b/gamma = {GEN_B/G:.4f}   "
+          f"P_fold = {G*K(pstar)/(C*GEN_B):.3e}")
 
     print("== Prop 1 (normal form): analytic roots vs pipeline crossings ==")
     for p in (97, 101, 103, 107, 109, 113, 127, 131, 137, 139):
@@ -65,7 +66,7 @@ def main():
         return None if r is None else math.log(G * K(p) / (C * r[0]))
     for p in (105, 113, 125, 139, 155, 163):
         xp, _ = x_roots(p)
-        s = kappa(p) + (BETA * kappa(p) - A_EXP) / (xp - BETA)
+        s = kappa(p) + (GEN_B * kappa(p) - A_EXP) / (xp - GEN_B)
         h = 0.005
         s_num = (lnP_on(p * math.exp(h)) - lnP_on(p * math.exp(-h))) / (2 * h)
         print(f"  p={p}: s_eff formula {s:.3f}  finite-diff {s_num:.3f}")
@@ -77,8 +78,8 @@ def main():
     print("== Eq (sqrt-scaling) near the fold ==")
     for p in (160, 165, 167):
         xp, _ = x_roots(p)
-        approx = math.sqrt(2 * BETA * (R(p) - Rstar))
-        print(f"  p={p}: x+ - beta = {xp-BETA:.4f}  sqrt approx = {approx:.4f}")
+        approx = math.sqrt(2 * GEN_B * (R(p) - Rstar))
+        print(f"  p={p}: x+ - b = {xp-GEN_B:.4f}  sqrt approx = {approx:.4f}")
 
     print("== Prop 4 (Gardner RS entropy = counting bound at small load) ==")
     def s_rs(alpha):

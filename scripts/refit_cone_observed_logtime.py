@@ -4,6 +4,7 @@
 Ordinary least squares in log time, with equal weight per observed run.
 No seed aggregation, censoring likelihood, or uncertainty model is fitted.
 """
+from grokking_capacity.analysis.timescale_laws import normalise_timescale_laws
 from collections import Counter
 import argparse
 import json
@@ -79,12 +80,12 @@ def clock_figure(law, included, current_C, *, cell_means=False):
     ff = mem.f_original.to_numpy() * C_OLD / current_C
     axes[0].scatter(ff, mem.event_epoch, c=mem.p, cmap=cmap, norm=norm, s=10, alpha=.4, linewidths=0)
     grid = np.linspace(ff.min(), ff.max(), 300)
-    axes[0].plot(grid, np.exp(m['ln_b'] + m['gamma_current_C'] * grid), color='#c7353b', lw=1.8)
+    axes[0].plot(grid, np.exp(m['ln_B'] + m['gamma_current_C'] * grid), color='#c7353b', lw=1.8)
     axes[0].set(yscale='log', xlabel='Capacity fraction $f$ (current $C$)', ylabel='Memorisation time (epochs)')
     yy = gen.event_epoch.to_numpy() / gen.p.to_numpy() ** g['a']
     axes[1].scatter(gen.P, yy, c=gen.p, cmap=cmap, norm=norm, s=10, alpha=.3, linewidths=0)
     pp = np.geomspace(gen.P.min(), gen.P.max(), 300)
-    axes[1].plot(pp, np.exp(g['lnA']) * pp ** -g['beta'], color='#c7353b', lw=1.8)
+    axes[1].plot(pp, np.exp(g['lnA']) * pp ** -g['b'], color='#c7353b', lw=1.8)
     axes[1].set(xscale='log', yscale='log', xlabel='Parameters $P$', ylabel=r'Generalisation time / $p^a$ (epochs)')
     axes[1].set_xticks([2e4, 5e4, 1e5, 2e5, 4e5], ['20k', '50k', '100k', '200k', '400k'])
     axes[1].xaxis.set_minor_formatter(NullFormatter())
@@ -96,8 +97,8 @@ def clock_figure(law, included, current_C, *, cell_means=False):
     notes = [
         ('Every point is one arithmetic cell mean. Both fits use equal cell weights in log time; censored seeds are excluded.'
          if cell_means else 'Every point is one observed seed. Both fits minimise squared residuals in log time; censored runs are excluded.'),
-        f'Memorisation: ln T = {m["ln_b"]:.6f} + {m["gamma_current_C"]:.6f} f; N = {m["n_observations"]} {"cells" if cell_means else "runs"}; log-space R² = {m["r2"]:.4f}.',
-        f'Generalisation: ln T = {g["lnA"]:.6f} {g["a"]:+.6f} ln p − {g["beta"]:.6f} ln P; N = {g["n_observations"]} {"cells" if cell_means else "runs"}; log-space R² = {g["r2"]:.4f}.',
+        f'Memorisation: ln T = {m["ln_B"]:.6f} + {m["gamma_current_C"]:.6f} f; N = {m["n_observations"]} {"cells" if cell_means else "runs"}; log-space R² = {m["r2"]:.4f}.',
+        f'Generalisation: ln T = {g["lnA"]:.6f} {g["a"]:+.6f} ln p − {g["b"]:.6f} ln P; N = {g["n_observations"]} {"cells" if cell_means else "runs"}; log-space R² = {g["r2"]:.4f}.',
         'The right panel removes the fitted prime dependence to display the parameter scaling. No minima or cell medians enter either regression.',
     ]
     save_paper_figure(fig, OUT / 'clock_fits.pdf', notes=[fig.text(0, 0, s, fontsize=8.5) for s in notes])
@@ -114,7 +115,7 @@ def main():
     metric = args.delay_aggregation
     OUT = (args.out or ROOT / f'results/cone_observed_logtime_{metric}_20261106').resolve()
     assert OUT != BASELINE.resolve(), 'Preserve the earlier median comparison in its original directory'
-    baseline_fit = json.loads((BASELINE / 'fit.json').read_text())
+    baseline_fit = normalise_timescale_laws(json.loads((BASELINE / 'fit.json').read_text()))
     baseline_hashes = {str(p.relative_to(ROOT)): sha(p) for p in BASELINE.iterdir() if p.is_file()}
     OUT.mkdir(parents=True, exist_ok=True)
     protected_paths = json.loads((ROOT / 'results/seed_aggregation_sensitivity_20261106/protected_before.json').read_text())
@@ -135,14 +136,14 @@ def main():
         points = [{'p': r.p, 'P': r.P, 'f': r.f_original, 't': r.event_epoch} for r in dd.itertuples()]
         clocks[kind] = fit(kind, points)
         X = np.array([[1, r['f']] if kind == 'mem' else [1, math.log(r['p']), -math.log(r['P'])] for r in points])
-        beta = np.linalg.lstsq(X, np.log(dd.event_epoch.to_numpy()), rcond=None)[0]
-        keys = ['ln_b', 'gamma_original'] if kind == 'mem' else ['lnA', 'a', 'beta']
-        assert np.allclose(beta, [clocks[kind][k] for k in keys], rtol=1e-11, atol=1e-11)
+        coefficients = np.linalg.lstsq(X, np.log(dd.event_epoch.to_numpy()), rcond=None)[0]
+        keys = ['ln_B', 'gamma_original'] if kind == 'mem' else ['lnA', 'a', 'b']
+        assert np.allclose(coefficients, [clocks[kind][k] for k in keys], rtol=1e-11, atol=1e-11)
         counts[kind] = {'included_runs': len(dd), 'excluded_censored_runs': int(((data.kind == kind) & ~data.observed).sum()),
                         'contributing_cells': dd.groupby(['p', 'P']).ngroups}
-    historical = json.loads((ROOT / 'results/theory/forecast_onset.json').read_text())
+    historical = normalise_timescale_laws(json.loads((ROOT / 'results/theory/forecast_onset.json').read_text()))
     assert np.isclose(clocks['mem']['gamma_original'], historical['mem_law']['gamma'])
-    current_C = json.loads((ROOT / 'results/capacity_h100_matched_20261103/forecast_coefficients.json').read_text())['C_convention']
+    current_C = normalise_timescale_laws(json.loads((ROOT / 'results/capacity_h100_matched_20261103/forecast_coefficients.json').read_text()))['C_convention']
     clocks['mem']['gamma_current_C'] = clocks['mem']['gamma_original'] * current_C / C_OLD
     law = {**clocks, 'fold': fold(clocks['mem'], clocks['gen'], C_OLD)}
     cells = aggregate(json.loads(RUNS.read_text()), metric)
@@ -179,7 +180,7 @@ def main():
         lo, hi = branches(p, law)
         for P in (lo, hi):
             k = p * (p - 1) / 2 * math.log2(p + 2)
-            gap = law['gen']['lnA'] + law['gen']['a'] * math.log(p) - law['gen']['beta'] * math.log(P) - law['mem']['ln_b'] - law['mem']['gamma_original'] * k / (C_OLD * P)
+            gap = law['gen']['lnA'] + law['gen']['a'] * math.log(p) - law['gen']['b'] * math.log(P) - law['mem']['ln_B'] - law['mem']['gamma_original'] * k / (C_OLD * P)
             max_error = max(max_error, abs(gap))
         curves.append({'p': p, 'lower_P': lo, 'upper_P': hi})
     assert max_error < 1e-8
