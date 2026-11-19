@@ -8,7 +8,7 @@ where K_mem is the dataset memorisation load in bits
 (`matching.compute_n_equiv`), C is the capacity constant in bits/param
 (`consts.C`), and P_onset is the empirical grokking-onset parameter count —
 located exactly the way `stats._empirical_onset` does (configured seed aggregate,
-smallest grid point past the last zero-delay one). If grokking onset is set
+smallest positive-delay grid point, with all smaller minima resolved). If grokking onset is set
 by the model's capacity relative to the dataset, f_onset should be a
 dimensionless constant f* — flat in p, flat in train fraction alpha, and
 (up to the small K ratio) flat across operations.
@@ -750,7 +750,7 @@ def format_summary_markdown(results: dict[str, Any]) -> str:
     L.append("")
     L.append("C = 2.16 bits/param (`consts.C`); P_onset located as in "
              "`stats._empirical_onset` (configured seed aggregate, first grid "
-             "point past the last zero-delay one, dim ≤ 256, thresholds "
+             "positive-delay point with smaller minima resolved, dim ≤ 256, thresholds "
              "train 99 / val 98); P_cross from `stats._predicted_onset`.")
     L.append("")
 

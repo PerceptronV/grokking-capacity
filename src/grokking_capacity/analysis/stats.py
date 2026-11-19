@@ -4,7 +4,7 @@ predict where grokking onset happens empirically?
 Per (ArchGroup × slice value) cell, for each declared intersection figure,
 we compute:
   - predicted_onset_x: x-coordinate of the speed/groks intersection
-  - empirical_onset_x: smallest x past the last zero-delay run, with
+  - empirical_onset_x: smallest x with positive delay and no unresolved smaller size, with
     the configured delay aggregation (minimum by default), preserving
     unresolved seed outcomes
 And report log-ratio = log10(empirical / predicted) — zero is perfect, the
@@ -46,7 +46,7 @@ from .plots import (
 def _empirical_onset_details(group: ArchGroup, figure: IntersectionFigure, slice_value) -> dict:
     records = _delay_records_for_slice(group, figure, slice_value)
     if not records:
-        return {"value": None, "status": "empty", "n_unresolved_cells": 0, "n_unresolved_seeds": 0}
+        return {**aggregate.onset_summary({}), "n_unresolved_cells": 0, "n_unresolved_seeds": 0}
     pairs = [(r["x"], r["delay"]) for r in records]
     # Records are already reduced: aggregating their aggregates would be wrong.
     by_x = {}
@@ -147,6 +147,10 @@ def compute_predictiveness(view: ConfigView, figure: IntersectionFigure) -> pd.D
                 figure.slice_field: sv,
                 "empirical_onset_x": empirical,
                 "empirical_onset_status": onset['status'],
+                "onset_rule": onset['rule'],
+                "onset_first_confirmed": onset['first_confirmed'],
+                "onset_earliest_possible": onset['earliest'],
+                "onset_earlier_unresolved": onset['earlier_unresolved'],
                 "n_unresolved_delay_cells": onset['n_unresolved_cells'],
                 "n_unresolved_delay_seeds": onset['n_unresolved_seeds'],
                 "log_ratio": log_ratio,
@@ -200,7 +204,7 @@ def plot_predicted_vs_empirical(df: pd.DataFrame, save_path: Path) -> Optional[P
     ax.xaxis.set_minor_formatter(plt.matplotlib.ticker.NullFormatter())
     ax.yaxis.set_minor_formatter(plt.matplotlib.ticker.NullFormatter())
     ax.set_xlabel(f"Predicted onset (intersection {x_field})", fontsize=13)
-    ax.set_ylabel(f"Empirical onset (positive-delay tail, {x_field})", fontsize=13)
+    ax.set_ylabel(f"Empirical onset (first grokking model, {x_field})", fontsize=13)
     ax.text(
         0.05, 0.95,
         f"N = {len(x)}\nR² (log-log vs y=x) = {r2:.3f}\nMAE (log10) = {mae_log:.3f}",

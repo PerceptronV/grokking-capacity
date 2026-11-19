@@ -39,12 +39,32 @@ def test_quantile_and_custom_reducers():
     with pytest.raises(ValueError):a.reduce_values([1,np.nan],'mean')
 
 
-def test_onset_retains_uncertain_widths_and_labels_boundaries():
-    assert a.onset_summary({10:0,20:None,30:2})['status']=='unresolved'
-    assert a.find_grokking_onset({10:None,20:0,30:2})==30
-    assert a.onset_summary({10:1,20:2})['status']=='left_censored'
-    assert a.onset_summary({10:1,20:0})['status']=='no_positive_tail'
+def test_first_onset_requires_smaller_minima_to_be_resolved():
+    r=a.onset_summary({10:0,20:None,30:2,40:0})
+    assert r['value'] is None and r['status']=='unresolved'
+    assert r['earliest']==20 and r['latest']==30 and r['first_confirmed']==30
+    assert r['earlier_unresolved_coordinates']==[20]
+    assert a.find_grokking_onset({10:None,20:0,30:2}) is None
+    assert a.onset_summary({10:1,20:0})['status']=='left_censored'
+    assert a.onset_summary({10:0,20:0})['status']=='no_positive_observed'
+    assert a.onset_summary({10:0,20:None})['status']=='unresolved'
+    assert a.onset_summary({})['status']=='empty'
     assert a.find_grokking_onset({10:0,20:1,30:2},threshold=1)==30
+
+
+def test_first_onset_survives_later_zero_and_unresolved_sizes():
+    r=a.onset_summary({10:0,20:2,30:0,40:None})
+    assert r['value']==20 and r['status']=='observed'
+    assert r['earlier_unresolved']==0
+    assert a.sustained_onset_summary({10:0,20:2,30:0})['value'] is None
+
+
+def test_missing_seed_cannot_establish_a_first_onset():
+    curve={10:a.summarize_delays([1,2,None],'min')['value'],
+           20:a.summarize_delays([0,2,None],'min')['value'],
+           30:a.summarize_delays([1,2,3],'min')['value']}
+    assert a.onset_summary(curve)['status']=='unresolved'
+    assert a.onset_summary(curve)['value'] is None
 
 
 def test_censoring_default_is_unknown_and_validation_first_is_zero():

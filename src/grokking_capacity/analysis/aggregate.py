@@ -149,6 +149,37 @@ def min_delay_curve(delays: Iterable[tuple[float, Optional[float]]]
 
 
 def onset_summary(curve: dict[float, Optional[float]], *, threshold: float = 0.) -> dict:
+    """First positive sampled aggregate, only when no smaller size is unresolved.
+
+    Later zeros or unresolved sizes do not invalidate an identified first onset.
+    An earlier unknown aggregate leaves the onset unresolved, even if a larger
+    size is confirmed positive. Bounds and the first confirmed size are retained
+    as metadata, never substituted for an identified onset in point statistics.
+    """
+    if not np.isfinite(threshold) or threshold < 0:
+        raise ValueError("delay threshold must be finite and non-negative")
+    if any(v is not None and (not np.isfinite(v) or v < 0) for v in curve.values()):
+        raise ValueError("onset curve values must be non-negative finite delays or None")
+    items = sorted(curve.items())
+    confirmed = next((x for x, v in items if v is not None and v > threshold), None)
+    possible = next((x for x, v in items if v is None or v > threshold), None)
+    earlier = [x for x, v in items if v is None and (confirmed is None or x < confirmed)]
+    if not items:
+        status = "empty"
+    elif earlier:
+        status = "unresolved"
+    elif confirmed is None:
+        status = "no_positive_observed"
+    else:
+        status = "left_censored" if confirmed == items[0][0] else "observed"
+    return {"value": confirmed if status in ("observed", "left_censored") else None,
+            "status": status, "earliest": possible, "latest": confirmed,
+            "first_confirmed": confirmed, "earlier_unresolved": len(earlier),
+            "earlier_unresolved_coordinates": earlier,
+            "rule": "first_positive_with_smaller_sizes_resolved"}
+
+
+def sustained_onset_summary(curve: dict[float, Optional[float]], *, threshold: float = 0.) -> dict:
     """Last-zero onset on a fixed grid, with uncertainty and edge status explicit.
 
     This is a sustained-positive-tail rule, NOT the first positive cell. Unknown
@@ -180,7 +211,7 @@ def onset_summary(curve: dict[float, Optional[float]], *, threshold: float = 0.)
 
 def find_grokking_onset(delay: dict[float, Optional[float]], *, threshold: float = 0.
                        ) -> Optional[float]:
-    """Compatibility scalar for the fixed-grid last-zero rule; see onset_summary."""
+    """First identified positive point on the sampled grid; see onset_summary."""
     return onset_summary(delay, threshold=threshold)["value"]
 
 
