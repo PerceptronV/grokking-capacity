@@ -154,6 +154,8 @@ def render_intersection(
     *,
     show_unresolved: bool = True,
     legend_inside: bool = False,
+    colour_limits: Optional[tuple[float, float]] = None,
+    show_colourbar: bool = True,
 ) -> list[Path]:
     """One PDF per slice value. Skips slices with no groks/speed overlap."""
     if figure is None:
@@ -208,6 +210,8 @@ def render_intersection(
             crossing_direction="decreasing" if figure.x_field == "param_count" else "any",
             show_unresolved=show_unresolved,
             legend_inside=legend_inside,
+            colour_limits=colour_limits,
+            show_colourbar=show_colourbar,
         )
         out.append(path)
     return out

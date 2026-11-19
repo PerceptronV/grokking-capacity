@@ -55,6 +55,8 @@ def plot_generalisation_delay_with_speed(
     crossing_direction: str = "any",
     show_unresolved: bool = True,
     legend_inside: bool = False,
+    colour_limits: Optional[Tuple[float, float]] = None,
+    show_colourbar: bool = True,
 ) -> Optional[Tuple[float, float]]:
     """The intersection plot (Image #1).
 
@@ -76,8 +78,10 @@ def plot_generalisation_delay_with_speed(
             differ from the curve thresholds.
 
     show_unresolved=False omits flagged cells from the delay scatter only.
-    Clock curves and their intersection always use the supplied full curves.
+    Timescale curves and their intersection always use the supplied full curves.
     legend_inside=True places the legend at the upper right of the axes.
+    colour_limits fixes the colour mapping across panels; show_colourbar=False
+    omits the redundant scale from panels that share another panel's colourbar.
 
     Returns the intersection (x, epochs) or None.
     """
@@ -89,29 +93,34 @@ def plot_generalisation_delay_with_speed(
     colours = np.array([r["colour"] for r in delay_records], dtype=float)
     delays = np.array([r["delay"] for r in delay_records], dtype=float)
 
-    fig, ax1 = plt.subplots(figsize=(8, 6.2) if legend_inside else (7, 6.2))
+    width = (8 if show_colourbar else 6.8) if legend_inside else 7
+    fig, ax1 = plt.subplots(figsize=(width, 6.2))
 
     crest = sns.color_palette("crest", as_cmap=True)
     incomplete = np.array([r.get("n_unresolved", 0) > 0 for r in delay_records])
     visible = np.ones(len(delay_records), dtype=bool) if show_unresolved else ~incomplete
-    colour_limits = {} if show_unresolved else {"vmin": colours.min(), "vmax": colours.max()}
+    if colour_limits is None:
+        colour_limits = (float(colours.min()), float(colours.max()))
     scatter = ax1.scatter(
         xs[visible], delays[visible], c=colours[visible], cmap=crest,
-        **colour_limits, s=55, alpha=0.7, edgecolors="none",
+        vmin=colour_limits[0], vmax=colour_limits[1],
+        s=55, alpha=0.7, edgecolors="none",
         label=f"Generalisation delay (val≥{threshold_val:.0f}% − train≥{threshold_train:.0f}%)",
     )
     if show_unresolved and incomplete.any():
         ax1.scatter(xs[incomplete], np.full(incomplete.sum(), .04),
                     transform=ax1.get_xaxis_transform(), marker="x", color="#b86b14",
                     s=35, linewidths=1, label="Unresolved seed outcome (marks along axis)")
-    ax1.set_xlabel(x_label, fontsize=17)
-    ax1.set_ylabel("Generalisation delay (epochs)", fontsize=17, color="#1b7a3d")
+    ax1.set_xlabel(x_label, fontsize=17, color="black")
+    ax1.set_ylabel("Generalisation delay (epochs)", fontsize=17, color="black")
     ax1.set_xscale("log")
-    ax1.tick_params(axis="y", labelcolor="#1b7a3d", labelsize=14); ax1.tick_params(axis="x", labelsize=14)
+    ax1.tick_params(axis="both", colors="black", labelsize=14)
     ax1.axhline(y=0, color="gray", linestyle="--", alpha=0.5, linewidth=1)
     ax1.grid(True, alpha=0.3)
-    cbar = plt.colorbar(scatter, ax=ax1, label=colour_label, pad=0.12)
-    cbar.ax.tick_params(labelsize=13)
+    if show_colourbar:
+        cbar = plt.colorbar(scatter, ax=ax1, label=colour_label, pad=0.12)
+        cbar.ax.tick_params(colors="black", labelsize=13)
+        cbar.ax.yaxis.label.set_color("black")
 
     ax2 = ax1.twinx()
     speed_x = np.array(sorted(speed_curve.keys()), dtype=float)
@@ -126,9 +135,9 @@ def plot_generalisation_delay_with_speed(
         speed_x, speed_y, "-", color="#7570b3", linewidth=2, alpha=0.85,
         label=f"Epochs to memorise (train≥{mem_curve_threshold:.0f}%)",
     )
-    ax2.set_ylabel("Epochs", fontsize=17, color="#d95f02")
+    ax2.set_ylabel("Epochs", fontsize=17, color="black")
     ax2.set_yscale("log")
-    ax2.tick_params(axis="y", labelcolor="#d95f02", labelsize=14)
+    ax2.tick_params(axis="y", colors="black", labelsize=14)
 
     intersection = find_intersection(speed_curve, groks_curve, direction=crossing_direction)
     if intersection is not None:
