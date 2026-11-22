@@ -9,6 +9,7 @@ from __future__ import annotations
 import itertools
 from typing import Iterator
 
+from .. import consts
 from ..analysis.matching import compute_n_equiv, find_dims_for_param_targets
 
 _NON_GRID_KEYS = {
@@ -17,20 +18,18 @@ _NON_GRID_KEYS = {
 }
 
 _TYPE_DEFAULTS = {
-    # weight_decay / dropout / max_epochs differ per experiment type.
-    'capacity': {'weight_decay': 0.01, 'dropout': 0.0, 'max_epochs': 5000},
-    'speed':    {'weight_decay': 0.01, 'dropout': 0.2, 'max_epochs': 5000},
-    'groks':    {'weight_decay': 1.0,  'dropout': 0.2, 'max_epochs': 200},
+    name: {key: values[key] for key in ('weight_decay', 'dropout', 'max_epochs')}
+    for name, values in {
+        'capacity': consts.CAPACITY_DEFAULTS,
+        'speed': consts.SPEED_DEFAULTS,
+        'groks': consts.GROKKING_DEFAULTS,
+    }.items()
 }
-
-
-def _merge(defaults: dict, spec: dict) -> dict:
-    return {**defaults, **spec}
 
 
 def expand_experiment(exp_spec: dict, defaults: dict) -> list[dict]:
     """Cartesian-product all list-valued keys (excluding _NON_GRID_KEYS)."""
-    merged = _merge(defaults, exp_spec)
+    merged = {**defaults, **exp_spec}
     grid_keys = [k for k, v in merged.items()
                  if isinstance(v, list) and k not in _NON_GRID_KEYS]
     scalar = {k: v for k, v in merged.items() if k not in grid_keys}
@@ -90,23 +89,13 @@ def expand_runs(spec: dict) -> Iterator[dict]:
     defaults = spec.get('defaults', {})
     experiments = spec.get('experiments', {})
 
-    ordered = ['capacity', 'speed', 'groks']
-    order = []
-    for t in ordered:
-        for name, esp in experiments.items():
-            if esp.get('type', name) == t and name not in order:
-                order.append(name)
-    for name in experiments:
-        if name not in order:
-            order.append(name)
-
-    for exp_name in order:
-        if exp_name not in experiments:
-            continue
-        exp_spec = experiments[exp_name]
+    priority = {'capacity': 0, 'speed': 1, 'groks': 2}
+    ordered = sorted(experiments.items(),
+                     key=lambda item: priority.get(item[1].get('type', item[0]), 3))
+    for exp_name, exp_spec in ordered:
         exp_type = exp_spec.get('type', exp_name)
         type_defaults = _TYPE_DEFAULTS.get(exp_type, {})
-        configs = expand_experiment(exp_spec, _merge(type_defaults, defaults))
+        configs = expand_experiment(exp_spec, {**type_defaults, **defaults})
 
         for cfg in configs:
             primes = cfg.get('primes', defaults.get('primes', [113]))
@@ -124,33 +113,25 @@ def expand_runs(spec: dict) -> Iterator[dict]:
                     continue
 
                 if exp_type == 'capacity':
-                    n_samples_list = _iter_list(cfg, 'n_samples')
-                    op_raw = cfg.get('operation', 'random')
-                    for seed in seeds:
-                        for dim in dims:
-                            for n in n_samples_list:
-                                yield _build_capacity_dict(cfg, p=p, seed=seed, dim=dim,
-                                                            n_samples=n, op_raw=op_raw, exp_name=exp_name)
+                    sizes = _iter_list(cfg, 'n_samples')
                 elif exp_type == 'speed':
-                    # 'auto' / scalar → one dataset size; a list sweeps N (the
-                    # orthogonal capacity-fraction axis), like capacity does.
+                    # Only speed resolves 'auto' to task-equivalent size.
                     raw = cfg.get('n_samples')
                     if isinstance(raw, list):
-                        n_list = list(raw)
+                        sizes = raw
                     else:
                         n = resolve_n_samples(cfg, p)
-                        n_list = [n] if n is not None else []
-                    for seed in seeds:
-                        for dim in dims:
-                            for n in n_list:
-                                yield _build_speed_dict(cfg, p=p, seed=seed, dim=dim,
-                                                         n_samples=n, exp_name=exp_name)
+                        sizes = [n] if n is not None else []
                 elif exp_type == 'groks':
-                    for seed in seeds:
-                        for dim in dims:
-                            yield _build_groks_dict(cfg, p=p, seed=seed, dim=dim, exp_name=exp_name)
+                    # Its sample count is derived by build_identifying.
+                    sizes = [None]
                 else:
                     raise ValueError(f"unknown experiment type {exp_type!r}")
+
+                for seed, dim, n in itertools.product(seeds, dims, sizes):
+                    yield _build_run_dict(cfg, experiment_type=exp_type, p=p,
+                                          seed=seed, dim=dim, n_samples=n,
+                                          exp_name=exp_name)
 
 
 def _common_hparams(cfg: dict) -> dict:
@@ -169,51 +150,29 @@ def _common_hparams(cfg: dict) -> dict:
     }
 
 
-def _build_capacity_dict(cfg: dict, *, p: int, seed: int, dim: int, n_samples: int,
-                          op_raw: str, exp_name: str) -> dict:
-    if op_raw == 'random':
-        dataset_type, operation = 'random', '/'
-    else:
-        dataset_type, operation = 'modular', op_raw
-    return {
-        'experiment_type': 'capacity',
-        '_exp_name': exp_name,
-        '_op_raw': op_raw,
-        'p': p, 'seed': seed, 'dim': dim, 'n_samples': n_samples,
-        'operation': operation, 'train_fraction': 0.5, 'split_type': 'random',
-        'dataset_type': dataset_type,
-        **_common_hparams(cfg),
-    }
-
-
-def _build_speed_dict(cfg: dict, *, p: int, seed: int, dim: int, n_samples: int,
-                       exp_name: str) -> dict:
-    return {
-        'experiment_type': 'speed',
-        '_exp_name': exp_name,
-        'p': p, 'seed': seed, 'dim': dim, 'n_samples': n_samples,
-        'operation': cfg.get('operation', '/'),
-        'train_fraction': cfg.get('train_fraction', 0.5),
-        'split_type': cfg.get('split_type', 'random'),
-        'dataset_type': 'random',
-        **_common_hparams(cfg),
-    }
-
-
-def _build_groks_dict(cfg: dict, *, p: int, seed: int, dim: int, exp_name: str) -> dict:
-    d = {
-        'experiment_type': 'groks',
+def _build_run_dict(cfg: dict, *, experiment_type: str, p: int, seed: int,
+                    dim: int, n_samples: int | None, exp_name: str) -> dict:
+    run = {
+        'experiment_type': experiment_type,
         '_exp_name': exp_name,
         'p': p, 'seed': seed, 'dim': dim,
         'operation': cfg.get('operation', '/'),
         'train_fraction': cfg.get('train_fraction', 0.5),
         'split_type': cfg.get('split_type', 'random'),
-        'dataset_type': 'modular',
+        'dataset_type': 'modular' if experiment_type == 'groks' else 'random',
         **_common_hparams(cfg),
     }
-    # Optional norm-contraction knobs (non-identifying; forwarded to gc-groks
-    # when present). Absent in most configs → the gc-groks CLI defaults apply.
-    for k in ('norm_log_every', 'post_grok_epochs'):
-        if cfg.get(k) is not None:
-            d[k] = cfg[k]
-    return d
+    if experiment_type != 'groks':
+        run['n_samples'] = n_samples
+    if experiment_type == 'capacity':
+        operation = cfg.get('operation', 'random')
+        run.update(_op_raw=operation,
+                   operation='/' if operation == 'random' else operation,
+                   dataset_type='random' if operation == 'random' else 'modular',
+                   train_fraction=0.5, split_type='random')
+    if experiment_type == 'groks':
+        # Optional, non-identifying diagnostics use worker defaults when absent.
+        for key in ('norm_log_every', 'post_grok_epochs'):
+            if cfg.get(key) is not None:
+                run[key] = cfg[key]
+    return run
