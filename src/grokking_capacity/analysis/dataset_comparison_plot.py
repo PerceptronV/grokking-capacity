@@ -4,8 +4,8 @@
 The frozen statistical report and original figures remain unchanged. These
 presentation figures use the same saved numbers and include their own hashes.
 """
+
 import argparse
-import hashlib
 import json
 from pathlib import Path
 import matplotlib
@@ -14,8 +14,8 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import NullLocator
 import numpy as np
 
+from grokking_capacity.utils.artifacts import sha
 
-def sha(path):return hashlib.sha256(path.read_bytes()).hexdigest()
 
 def render(report, out):
     report, OUT = Path(report), Path(out)

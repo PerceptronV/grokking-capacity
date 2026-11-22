@@ -1,27 +1,22 @@
 #!/usr/bin/env python3
 """Paired mean curves, censoring bounds, and bootstrap crossing diagnostics."""
-from grokking_capacity.experiments.registered import verify_sources as verify_registered_sources
-
 import argparse
-import csv
 import json
 import math
 from pathlib import Path
 import shutil
-import sys
+
 import numpy as np
 import yaml
-ROOT = Path(__file__).resolve().parents[3]
-from grokking_capacity.experiments.registered import read, sha, atomic_json
+
+from grokking_capacity.experiments.registered import (
+    atomic_json,
+    read,
+    sha,
+    verify_sources as verify_registered_sources,
+)
+from grokking_capacity.utils.artifacts import write_csv as csv_write
 from .paired import summarize, crossing_brackets, analyze
-
-
-
-def csv_write(path,rows):
-    with path.open('w',newline='') as handle:
-        writer=csv.DictWriter(handle,fieldnames=list(dict.fromkeys(k for r in rows for k in r)),lineterminator='\n')
-        writer.writeheader();writer.writerows(rows)
-
 
 
 def plot(summary, rows, out):

@@ -6,7 +6,7 @@ These routines do not select runs or write manuscript artifacts.
 import math
 import numpy as np
 from scipy.optimize import brentq
-from .forecast_onset import _ols
+from .numerics import ols as _ols
 
 
 def K(p):return p*(p-1)/2*math.log2(p+2)

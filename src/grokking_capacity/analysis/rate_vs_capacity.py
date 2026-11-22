@@ -27,6 +27,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 
+from .numerics import (
+    normalise_accuracy as _norm_acc,
+    first_crossing,
+    r_squared as _r2,
+    linear_fit as _linfit,
+    permutation_slope_pvalue,
+)
 from .config_view import ConfigView, load_npz
 from .error_decay import analyze_run, collect_random_runs, _capacity_fraction
 from ._cli import CONFIGS_DIR, RESULTS_DIR, analysis_parser, config_jobs
@@ -40,42 +47,12 @@ GOOD_R2 = 0.50            # both fits must clear this for a confident verdict
 N_PERMUTATIONS = 10_000
 
 
-def _norm_acc(arr: np.ndarray) -> np.ndarray:
-    a = np.asarray(arr, dtype=float)
-    return a / 100.0 if a.size and a.max() > 1.5 else a
-
-
 def _t_mem_epochs(train_acc: np.ndarray) -> Optional[int]:
-    """1-indexed epoch where train_acc first reaches MEM_ACC, else None."""
-    acc = _norm_acc(train_acc)
-    above = np.where(acc >= MEM_ACC)[0]
-    return int(above[0]) + 1 if above.size else None
-
-
-def _r2(y: np.ndarray, yhat: np.ndarray) -> float:
-    ss_res = float(np.sum((y - yhat) ** 2))
-    ss_tot = float(np.sum((y - y.mean()) ** 2))
-    return 1.0 - ss_res / ss_tot if ss_tot > 0 else float("nan")
-
-
-def _linfit(x: np.ndarray, y: np.ndarray):
-    """OLS ``y = slope·x + intercept``. Returns ``(slope, intercept, r2)``."""
-    A = np.vstack([np.asarray(x, float), np.ones_like(x, dtype=float)]).T
-    (slope, intercept), *_ = np.linalg.lstsq(A, np.asarray(y, float), rcond=None)
-    return float(slope), float(intercept), _r2(np.asarray(y, float), A @ [slope, intercept])
+    return first_crossing(_norm_acc(train_acc), MEM_ACC, index_base=1)
 
 
 def _perm_pvalue(x: np.ndarray, y: np.ndarray, slope_obs: float) -> float:
-    """Two-sided permutation p-value for the slope (shuffle y against x)."""
-    rng = np.random.default_rng(0)
-    x = np.asarray(x, float)
-    y = np.asarray(y, float)
-    count = 0
-    for _ in range(N_PERMUTATIONS):
-        s, _, _ = _linfit(x, rng.permutation(y))
-        if abs(s) >= abs(slope_obs):
-            count += 1
-    return (count + 1) / (N_PERMUTATIONS + 1)
+    return permutation_slope_pvalue(x, y, slope_obs, resamples=N_PERMUTATIONS)
 
 
 # --------------------------------------------------------------------------- #

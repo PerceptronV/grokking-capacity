@@ -43,7 +43,8 @@ def protocol_sources(name):
     if name == "dataset_scaling":
         paths += ["src/grokking_capacity/experiments/discrete_workflow/report_p97_dataset_scaling.py",
                   "src/grokking_capacity/analysis/dataset_comparison.py",
-                  "src/grokking_capacity/analysis/paired.py"]
+                  "src/grokking_capacity/analysis/paired.py",
+                  "src/grokking_capacity/utils/artifacts.py"]
     return list(dict.fromkeys(paths))
 
 

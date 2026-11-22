@@ -21,3 +21,20 @@ def clean(value):
 
 def save_json(path, value):
     path.write_text(json.dumps(clean(value), indent=2, allow_nan=False) + '\n')
+
+
+def read_json(path):
+    return json.loads(Path(path).read_text())
+
+
+def write_csv(path, rows):
+    """Write a stable union of record keys; an empty collection creates no file."""
+    import csv
+    rows = list(rows)
+    if not rows:
+        return
+    keys = list(dict.fromkeys(key for row in rows for key in row))
+    with Path(path).open('w', newline='') as handle:
+        writer = csv.DictWriter(handle, fieldnames=keys, lineterminator='\n')
+        writer.writeheader()
+        writer.writerows(rows)

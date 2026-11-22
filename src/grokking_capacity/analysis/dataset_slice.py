@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Descriptive comparison of a fully observed dataset-size slice."""
+
 import argparse
 import math
-import csv
-import hashlib
 import json
 from pathlib import Path
 import statistics
@@ -12,10 +11,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 
-
-
-def sha(path):return hashlib.sha256(path.read_bytes()).hexdigest()
-def read(path):return json.loads(path.read_text())
+from grokking_capacity.utils.artifacts import read_json as read, sha, write_csv
 
 
 def analyze_slice(report, run, size, out):
@@ -84,8 +80,7 @@ def analyze_slice(report, run, size, out):
         delay_definition='max(0, first held-out98 updates minus first training99 updates); online accuracy covers the preceding recorded dropout-active evaluation window, eval accuracy evaluates all training examples without dropout.',
         interpretation='Descriptive follow-up to the completed dataset-size sweep. Close observed update counts do not establish statistical equivalence. Capacity predictions at both widths extrapolate below the calibration range.')
     (OUT/'summary.json').write_text(json.dumps(result,indent=2)+'\n')
-    with (OUT/'seeds.csv').open('w',newline='') as f:
-        w=csv.DictWriter(f,fieldnames=list(rows[0]),lineterminator='\n');w.writeheader();w.writerows(rows)
+    write_csv(OUT/'seeds.csv', rows)
     fig,(a,b)=plt.subplots(1,2,figsize=(11,4.8),constrained_layout=True)
     colors={'C':'#2467ae','B':'#cb6131'}
     for seed in seeds:

@@ -34,6 +34,11 @@ import numpy as np
 import seaborn as sns
 from scipy.optimize import curve_fit
 
+from .numerics import (
+    normalise_accuracy as _norm_acc,
+    first_crossing as _first_cross,
+    r_squared as _r2,
+)
 from .config_view import ConfigView, load_npz
 from ._cli import CONFIGS_DIR, RESULTS_DIR, analysis_parser, config_jobs
 
@@ -71,16 +76,6 @@ def collect_groks_runs(view: ConfigView) -> list[dict[str, Any]]:
 # --------------------------------------------------------------------------- #
 # Small helpers
 # --------------------------------------------------------------------------- #
-def _norm_acc(arr: np.ndarray) -> np.ndarray:
-    """Accuracy trace as a fraction in [0,1] (groks stores it in %)."""
-    a = np.asarray(arr, dtype=float)
-    return a / 100.0 if a.size and a.max() > 1.5 else a
-
-
-def _first_cross(acc: np.ndarray, thr: float) -> Optional[int]:
-    """0-based epoch index where ``acc`` first reaches ``thr``, else ``None``."""
-    above = np.where(acc >= thr)[0]
-    return int(above[0]) if above.size else None
 
 
 def _v_at_step(steps: np.ndarray, vals: np.ndarray, target: float) -> float:
@@ -88,12 +83,6 @@ def _v_at_step(steps: np.ndarray, vals: np.ndarray, target: float) -> float:
     if steps.size == 0:
         return float("nan")
     return float(np.exp(np.interp(target, steps, np.log(vals))))
-
-
-def _r2(y: np.ndarray, yhat: np.ndarray) -> float:
-    ss_res = float(np.sum((y - yhat) ** 2))
-    ss_tot = float(np.sum((y - y.mean()) ** 2))
-    return 1.0 - ss_res / ss_tot if ss_tot > 0 else float("nan")
 
 
 # --------------------------------------------------------------------------- #

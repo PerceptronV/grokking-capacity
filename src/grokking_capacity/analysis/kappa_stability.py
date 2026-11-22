@@ -26,6 +26,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 
+from .numerics import linear_fit as _linfit, permutation_slope_pvalue
 from .config_view import ConfigView, load_npz
 from .contraction import analyze_run, collect_groks_runs
 from ._cli import CONFIGS_DIR, RESULTS_DIR, analysis_parser, config_jobs
@@ -46,31 +47,10 @@ def _cv(x: np.ndarray) -> float:
     return float(np.std(x) / m) if m else float("nan")
 
 
-def _linfit(x: np.ndarray, y: np.ndarray):
-    """OLS ``y = slope·x + intercept``. Returns ``(slope, intercept, r2)``."""
-    x = np.asarray(x, float)
-    y = np.asarray(y, float)
-    A = np.vstack([x, np.ones_like(x)]).T
-    (slope, intercept), *_ = np.linalg.lstsq(A, y, rcond=None)
-    yhat = A @ np.array([slope, intercept])
-    ss_res = float(np.sum((y - yhat) ** 2))
-    ss_tot = float(np.sum((y - y.mean()) ** 2))
-    r2 = 1.0 - ss_res / ss_tot if ss_tot > 0 else float("nan")
-    return float(slope), float(intercept), r2
-
-
 def _perm_pvalue(x: np.ndarray, y: np.ndarray, slope_obs: float) -> float:
-    rng = np.random.default_rng(0)
-    x = np.asarray(x, float)
-    y = np.asarray(y, float)
-    if x.size < 3:
-        return float("nan")
-    count = 0
-    for _ in range(N_PERMUTATIONS):
-        s, _, _ = _linfit(x, rng.permutation(y))
-        if abs(s) >= abs(slope_obs):
-            count += 1
-    return (count + 1) / (N_PERMUTATIONS + 1)
+    return permutation_slope_pvalue(
+        x, y, slope_obs, resamples=N_PERMUTATIONS, min_samples=3
+    )
 
 
 # --------------------------------------------------------------------------- #

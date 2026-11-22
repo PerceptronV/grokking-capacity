@@ -19,7 +19,8 @@ Arguments are forwarded unchanged. Listing commands does not execute them.
 | `capacity` | `experiments/capacity_workflow/` | Capacity calibration and hardware comparisons |
 | `cone` | `experiments/cone_workflow/` | Cone experiments, aggregation, and verification |
 | `discrete` | `experiments/discrete_workflow/` and `experiments/campaigns/` | Discrete experiments, reports, and audits |
-| `mechanisms` | `analysis/mechanisms/` | Mechanism experiments and analyses |
+| `mechanisms` | `analysis/mechanisms/` and `experiments/character.py` | Mechanism experiments and analyses |
+| `comparison` | `analysis/dataset_comparison.py` and related modules | Registered dataset-size comparisons |
 | `sensitivity` | `analysis/law_sensitivity/` | Timescale fits and estimator sensitivity |
 
 Paths are relative to `src/grokking_capacity/`. The catalogue is

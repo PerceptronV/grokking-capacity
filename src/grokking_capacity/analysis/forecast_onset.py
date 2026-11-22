@@ -42,6 +42,7 @@ from typing import Any, Iterable, Optional
 
 import numpy as np
 
+from .numerics import ols as _ols
 from . import aggregate
 from .config_view import ConfigView, load_npz
 from .matching import compute_n_equiv
@@ -174,14 +175,6 @@ def collect(view: ConfigView) -> dict[str, Any]:
 # --------------------------------------------------------------------------- #
 # Fits
 # --------------------------------------------------------------------------- #
-
-def _ols(X: np.ndarray, y: np.ndarray):
-    coef, *_ = np.linalg.lstsq(X, y, rcond=None)
-    resid = y - X @ coef
-    rss = float(resid @ resid)
-    tss = float(np.sum((y - y.mean()) ** 2))
-    r2 = 1 - rss / tss if tss > 0 else float("nan")
-    return coef, r2, rss
 
 
 def _aic(rss: float, n: int, k: int) -> float:

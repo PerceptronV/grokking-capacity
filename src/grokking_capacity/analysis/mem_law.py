@@ -25,6 +25,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 
+from .numerics import normalise_accuracy as _norm_acc, first_crossing
 from .config_view import ConfigView, load_npz
 from .error_decay import collect_random_runs, _capacity_fraction
 from ._cli import CONFIGS_DIR, RESULTS_DIR, analysis_parser, config_jobs
@@ -39,15 +40,8 @@ DELTA_AIC = 2.0         # exp must beat rivals by this much in AIC to "win"
 COLLINEAR_R = 0.98      # |corr(f, logP)| above this ⇒ collapse test underpowered
 
 
-def _norm_acc(arr: np.ndarray) -> np.ndarray:
-    a = np.asarray(arr, dtype=float)
-    return a / 100.0 if a.size and a.max() > 1.5 else a
-
-
 def _t_mem(train_acc: np.ndarray) -> Optional[int]:
-    acc = _norm_acc(train_acc)
-    above = np.where(acc >= MEM_ACC)[0]
-    return int(above[0]) + 1 if above.size else None
+    return first_crossing(_norm_acc(train_acc), MEM_ACC, index_base=1)
 
 
 def _ols(X: np.ndarray, y: np.ndarray):

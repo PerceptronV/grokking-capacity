@@ -330,19 +330,19 @@
   "mechanisms": {
     "character_ablation": {
       "path": "src/grokking_capacity/analysis/mechanisms/character_ablation.py",
-      "description": "Causal character-ablation test (restricted/excluded loss transposed to"
+      "description": "Measure the effect of removing selected multiplicative characters."
     },
     "character_alpha_width": {
       "path": "src/grokking_capacity/analysis/mechanisms/character_alpha_width.py",
-      "description": "Winner-rate vs \u03b1 and vs width \u2014 the drive-vs-SNR discriminator"
+      "description": "Compare character growth across configured training fractions and model widths."
     },
     "character_growth": {
       "path": "src/grokking_capacity/experiments/character.py",
-      "description": "Track multiplicative-character amplitudes through training (p=113, d=128,"
+      "description": "Train and record multiplicative-character amplitudes for a chosen prime and model width."
     },
     "character_lambda_sweep": {
       "path": "src/grokking_capacity/analysis/mechanisms/character_lambda_sweep.py",
-      "description": "\u03bb-sweep analysis of character traces (todo item 7, 2026-07-29)."
+      "description": "Compare character growth and contraction across configured weight-decay traces."
     },
     "gamma_by_batch": {
       "path": "src/grokking_capacity/analysis/mechanisms/gamma_by_batch.py",

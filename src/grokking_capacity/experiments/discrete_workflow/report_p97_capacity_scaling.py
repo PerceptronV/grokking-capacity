@@ -1,30 +1,24 @@
 #!/usr/bin/env python3
 """Audit and report the capacity-constant matched C/B size sweep."""
-from grokking_capacity.experiments.registered import verify_sources as verify_registered_sources
-
-from grokking_capacity.analysis.paired import summarize
 import argparse
-import csv
 import json
 from pathlib import Path
 import statistics
-import sys
+
 import numpy as np
 import yaml
-ROOT=Path(__file__).resolve().parents[4]
-sys.path.insert(0,str(ROOT/'src'))
+
+from grokking_capacity.experiments.registered import verify_sources as verify_registered_sources
+from grokking_capacity.analysis.paired import summarize
+from grokking_capacity.utils.artifacts import write_csv as csv_write
 from grokking_capacity.experiments.capacity_scaling import RUN,read,sha,source_hashes,fit_constant,match_pairs,parameter_count
 from grokking_capacity.experiments.categorical_groks import independent_metrics
 from grokking_capacity.experiments.multilevel_dropout import atomic_json,late_drift
+
+
+ROOT=Path(__file__).resolve().parents[4]
 OUT=ROOT/'reports/p97_capacity_scaling'
 LIMIT=50000
-
-
-def csv_write(path,rows):
-    if not rows:return
-    with path.open('w',newline='') as f:
-        w=csv.DictWriter(f,fieldnames=list(dict.fromkeys(k for r in rows for k in r)),lineterminator='\n')
-        w.writeheader();w.writerows(rows)
 
 
 def time_summary(values,limit=LIMIT):
@@ -63,7 +57,6 @@ def slopes(rows,indices,seeds,capped=False):
         interpretation='Per-seed log(t) on log(estimated capacity), with intercept. Negative slope means faster generalisation as capacity increases.',
         scope='All-size capped-time sensitivity' if capped else 'Conditional on common sizes with all twenty observed times',
         seed_bootstrap_resamples=10000,bootstrap_seed=9001)
-
 
 
 def mean_time_slopes(rows,indices,seeds,capped=False):

@@ -16,4 +16,3 @@ def independent_metrics(trace):
         a,b=result[f'{key}_99_epoch'],result['val_acc_98_epoch']
         result[f'{label}_delay_epochs']=None if a is None or b is None else max(0,b-a)
     return result
-

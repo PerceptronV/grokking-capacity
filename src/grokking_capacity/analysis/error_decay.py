@@ -26,6 +26,7 @@ import numpy as np
 import seaborn as sns
 from scipy.optimize import curve_fit
 
+from .numerics import r_squared as _r2
 from ..consts import C as DEFAULT_C
 from .config_view import ConfigView, load_npz
 from ._cli import CONFIGS_DIR, RESULTS_DIR, analysis_parser, config_jobs
@@ -86,12 +87,6 @@ def _error_window(train_acc: np.ndarray, n_samples: int):
     E = np.arange(start, end, dtype=float)
     eps = np.clip(1.0 - acc[start:end], floor, None)
     return E, eps
-
-
-def _r2(y: np.ndarray, yhat: np.ndarray) -> float:
-    ss_res = float(np.sum((y - yhat) ** 2))
-    ss_tot = float(np.sum((y - y.mean()) ** 2))
-    return 1.0 - ss_res / ss_tot if ss_tot > 0 else float("nan")
 
 
 def fit_exponential(E: np.ndarray, eps: np.ndarray):
