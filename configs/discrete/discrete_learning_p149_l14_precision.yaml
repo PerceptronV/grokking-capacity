@@ -1,0 +1,24 @@
+# Precision follow-up for near-99% arithmetic instability at 14 coordinates.
+defaults:
+  task: modular
+  p: 149
+  operation: /
+  train_fraction: 0.5
+  depth: 2
+  heads: 1
+  dropout: 0.0
+  dim: 96
+  latent_dim: 14
+  seed: 42
+  lr: 0.001
+  weight_decay: 1.0
+  batch_size: 512
+  max_steps: 60000
+  eval_every: 100
+  checkpoint_every: 2000
+  sustained_evals: 3
+  stop_on_success: true
+runs:
+- name: B_l14_q128_p149_s42
+  model: discrete
+  levels: 128

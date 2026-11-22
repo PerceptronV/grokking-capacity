@@ -1,0 +1,25 @@
+defaults:
+  task: modular
+  p: 149
+  operation: /
+  train_fraction: 0.5
+  depth: 2
+  heads: 1
+  dropout: 0.0
+  dim: 80
+  seed: 42
+  lr: 0.001
+  weight_decay: 1.0
+  batch_size: 512
+  max_steps: 120000
+  eval_every: 100
+  checkpoint_every: 2000
+  sustained_evals: 3
+  stop_on_success: true
+  mlp_dim: 320
+runs:
+- name: B_quantized_d80_ff320_q4_rms_s42
+  model: quantized
+  levels: 4
+  quantizer_clip: 1.0
+  quantizer_surrogate: rms_clipped

@@ -1,0 +1,27 @@
+defaults:
+  task: random
+  p: 149
+  operation: /
+  train_fraction: 0.5
+  depth: 2
+  heads: 1
+  dropout: 0.0
+  dim: 80
+  seed: 61
+  lr: 0.001
+  weight_decay: 1.0
+  batch_size: 512
+  max_steps: 10000
+  eval_every: 100
+  checkpoint_every: 1000
+  sustained_evals: 3
+  stop_on_success: false
+  mlp_dim: 320
+  model: quantized
+  levels: 2
+  quantizer_clip: 1.0
+  quantizer_surrogate: rms_clipped
+  purpose: learning_validation
+  n_samples: 2048
+runs:
+- name: B_quantized_d80_ff320_q2_rms_random_learning_n2048_s61

@@ -1,0 +1,37 @@
+defaults:
+  task: random
+  p: 97
+  operation: /
+  train_fraction: 0.5
+  depth: 2
+  heads: 1
+  dropout: 0.0
+  lr: 0.001
+  weight_decay: 1.0
+  beta1: 0.9
+  beta2: 0.98
+  batch_size: 512
+  max_steps: 120000
+  eval_every: 200
+  checkpoint_every: 2000
+  sustained_evals: 3
+  stop_on_success: false
+  model: quantized
+  dim: 64
+  mlp_dim: 128
+  levels: 2
+  quantizer_clip: 1.0
+  quantizer_surrogate: rms_clipped
+runs:
+- name: B_quantized_d64_ff128_q2_rms_n8192_s61
+  n_samples: 8192
+  seed: 61
+- name: B_quantized_d64_ff128_q2_rms_n16384_s61
+  n_samples: 16384
+  seed: 61
+- name: B_quantized_d64_ff128_q2_rms_n8192_s62
+  n_samples: 8192
+  seed: 62
+- name: B_quantized_d64_ff128_q2_rms_n16384_s62
+  n_samples: 16384
+  seed: 62

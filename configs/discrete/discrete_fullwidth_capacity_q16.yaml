@@ -1,0 +1,33 @@
+defaults:
+  task: random
+  p: 149
+  operation: /
+  train_fraction: 0.5
+  depth: 2
+  heads: 1
+  dropout: 0.0
+  lr: 0.001
+  weight_decay: 1.0
+  batch_size: 512
+  max_steps: 60000
+  eval_every: 200
+  checkpoint_every: 2000
+  sustained_evals: 3
+  stop_on_success: false
+runs:
+- name: B_q16_d96_n16384_s61
+  model: quantized
+  dim: 96
+  levels: 16
+  quantizer_clip: 1.0
+  quantizer_surrogate: clipped
+  seed: 61
+  n_samples: 16384
+- name: B_q16_d96_n32768_s61
+  model: quantized
+  dim: 96
+  levels: 16
+  quantizer_clip: 1.0
+  quantizer_surrogate: clipped
+  seed: 61
+  n_samples: 32768

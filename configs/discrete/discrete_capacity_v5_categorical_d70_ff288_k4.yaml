@@ -1,0 +1,36 @@
+defaults:
+  task: random
+  p: 149
+  operation: /
+  train_fraction: 0.5
+  depth: 2
+  heads: 1
+  dropout: 0.0
+  dim: 70
+  lr: 0.001
+  weight_decay: 1.0
+  batch_size: 512
+  max_steps: 120000
+  eval_every: 200
+  checkpoint_every: 2000
+  sustained_evals: 3
+  stop_on_success: false
+  model: categorical
+  alphabet: 4
+  categorical_temperature: 0.1
+  categorical_normalization: rms
+  categorical_evaluation: hard_mode
+  mlp_dim: 288
+runs:
+- name: B_categorical_d70_ff288_k4_rms_t01_mode_n16384_s61
+  seed: 61
+  n_samples: 16384
+- name: B_categorical_d70_ff288_k4_rms_t01_mode_n32768_s61
+  seed: 61
+  n_samples: 32768
+- name: B_categorical_d70_ff288_k4_rms_t01_mode_n16384_s62
+  seed: 62
+  n_samples: 16384
+- name: B_categorical_d70_ff288_k4_rms_t01_mode_n32768_s62
+  seed: 62
+  n_samples: 32768

@@ -1,0 +1,410 @@
+{
+  "discrete": {
+    "advance_p97_multilevel": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/advance_p97_multilevel.py",
+      "description": "Advance registered learning gates/calibration without bypassing dataset-first selection."
+    },
+    "analyse_discrete": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/analysis.py",
+      "description": "Summarise discrete experiment traces, retaining incomplete/censored runs."
+    },
+    "analyse_discrete_capacity": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/analyse_discrete_capacity.py",
+      "description": "Describe random-label calibration without mistaking interpolation for capacity."
+    },
+    "analyze_p97_dataset_scaling_n2952": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/analyze_p97_dataset_scaling_n2952.py",
+      "description": "Descriptive N=2,952 follow-up; no new training or changed primary analysis."
+    },
+    "analyze_p97_dropout_match": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/analyze_p97_dropout_match.py",
+      "description": "Read-only scientific audit/report for the registered p97 dropout experiment."
+    },
+    "assess_discrete_match": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/capacity.py",
+      "description": "Assess a fixed-dataset, finite-budget A/B capacity match from saved runs."
+    },
+    "audit_discrete": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/audit_discrete.py",
+      "description": "Independently reload and verify a completed modular arithmetic checkpoint."
+    },
+    "audit_discrete_capacity": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/audit_discrete_capacity.py",
+      "description": "Reload random-label checkpoints, including early above-target rejections."
+    },
+    "confirm_discrete": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/confirmation.py",
+      "description": "Freeze and run paired modular confirmation only after the capacity match passes."
+    },
+    "confirm_discrete_unrestricted": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/unrestricted.py",
+      "description": "Amend C to an ordinary wide transformer, preserving the frozen A/B experiment."
+    },
+    "discrete_status": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/status.py",
+      "description": "Read experiment status from terminal artifacts and live PID/start identities."
+    },
+    "extend_discrete": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/extend_discrete.py",
+      "description": "Fork a completed fixed-rate run into an auditable longer-budget continuation."
+    },
+    "extend_p97_dropout_capacity": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/extend_p97_dropout_capacity.py",
+      "description": "Resolve a flagged capacity plateau by exact replay and continued optimization."
+    },
+    "fill_p97_control_slots": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/fill_p97_control_slots.py",
+      "description": "Fill free GPU slots with already-authorized C calibration cells only."
+    },
+    "finish_discrete_confirmation": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/finish_discrete_confirmation.py",
+      "description": "Audit completed checkpoints while training finishes, then export final evidence."
+    },
+    "finish_p97_dataset_scaling": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/finish_p97_dataset_scaling.py",
+      "description": "Generate and independently verify the report after the frozen campaign ends."
+    },
+    "freeze_p97_dropout_selection": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/freeze_p97_dropout_selection.py",
+      "description": "Freeze validated architecture selection before the ten confirmation seeds."
+    },
+    "launch_p97_dropout_confirmation": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/launch_p97_dropout_confirmation.py",
+      "description": "Launch the already frozen ten-seed A/B/C comparison on both GPUs."
+    },
+    "manage_p97_multilevel": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/manage_p97_multilevel.py",
+      "description": "Gate-aware planning and immutable A/B selection; C is constructed afterward."
+    },
+    "plot_discrete_comparison": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/plot_discrete_comparison.py",
+      "description": "Overlay saved train/held-out curves for explicitly selected models."
+    },
+    "plot_fullwidth_development": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/plot_fullwidth_development.py",
+      "description": "Plot audited development evidence without implying a matched comparison."
+    },
+    "plot_p97_dataset_scaling_final": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/plot_p97_dataset_scaling_final.py",
+      "description": "Render the completed sweep without overlapping logarithmic minor labels."
+    },
+    "plot_p97_multilevel": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/plot_p97_multilevel.py",
+      "description": "Standalone complete-result speed and capacity figures for both families."
+    },
+    "report_discrete": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/report.py",
+      "description": "Validate and export the completed, frozen prime-modulus comparison and compact evidence."
+    },
+    "report_fullwidth_development": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/report_fullwidth_development.py",
+      "description": "Export all full-width development evidence without implying a matched result."
+    },
+    "report_p97_capacity_scaling": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/report_p97_capacity_scaling.py",
+      "description": "Audit and report the capacity-constant matched C/B size sweep."
+    },
+    "report_p97_categorical_groks": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/report_p97_categorical_groks.py",
+      "description": "Complete audited C-first categorical comparison and equal-complexity timing."
+    },
+    "report_p97_dataset_scaling": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/report_p97_dataset_scaling.py",
+      "description": "Paired mean curves, censoring bounds, and bootstrap crossing diagnostics."
+    },
+    "report_p97_dropout_followup": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/report_p97_dropout_followup.py",
+      "description": "Recompute the registered follow-up, preserving censoring and source provenance."
+    },
+    "report_p97_multilevel": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/report_p97_multilevel.py",
+      "description": "Audit and compare the two fixed-p97 matched discrete families."
+    },
+    "resume_p97_capacity_scaling_audit": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/resume_p97_capacity_scaling_audit.py",
+      "description": "Resume after a completed calibration stage stopped during CPU-only audit."
+    },
+    "run_discrete_replication": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/run_discrete_replication.py",
+      "description": "Complete one registered A/B/C candidate after its arithmetic gate passes."
+    },
+    "run_p97_capacity_scaling": {
+      "path": "src/grokking_capacity/experiments/campaigns/run_p97_capacity_scaling.py",
+      "description": "Calibrate two constants, freeze ten pairs, and complete 200 paired runs."
+    },
+    "run_p97_categorical_groks": {
+      "path": "src/grokking_capacity/experiments/campaigns/run_p97_categorical_groks.py",
+      "description": "Durable C-first search; B starts only after two ten-seed C groups grok."
+    },
+    "run_p97_dataset_scaling": {
+      "path": "src/grokking_capacity/experiments/campaigns/run_p97_dataset_scaling.py",
+      "description": "Freeze and execute 200 nested dataset-size confirmations; audit all checkpoints."
+    },
+    "run_p97_dropout_followup": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/run_p97_dropout_followup.py",
+      "description": "Run the registered A/dropout follow-up and capacity confirmation in isolation."
+    },
+    "run_p97_dropout_match": {
+      "path": "src/grokking_capacity/experiments/campaigns/run_p97_dropout_match.py",
+      "description": "Launch one immutable stage of the registered dropout matching experiment."
+    },
+    "run_p97_multilevel_stage": {
+      "path": "src/grokking_capacity/experiments/campaigns/run_p97_multilevel_stage.py",
+      "description": "Launch one immutable stage of the registered dropout matching experiment."
+    },
+    "status_p97_capacity_scaling": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/status_p97_capacity_scaling.py",
+      "description": "Read-only compact status for the durable capacity/scaling campaign."
+    },
+    "status_p97_dataset_scaling": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/status_p97_dataset_scaling.py",
+      "description": "Read-only live status for the dataset-matched capacity sweep."
+    },
+    "verify_discrete_source_equivalence": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/verify_discrete_source_equivalence.py",
+      "description": "Verify the narrowly scoped v4/v5 equivalence of baseline random training."
+    },
+    "verify_p97_capacity_scaling": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/verify_p97_capacity_scaling.py",
+      "description": "Independent scalar/CSV verification and final provenance for the size sweep."
+    },
+    "verify_p97_dataset_scaling": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/verify_p97_dataset_scaling.py",
+      "description": "Independent parameter, data, trace, selection, stopping and reporting checks."
+    },
+    "verify_p97_dropout_results": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/verify_p97_dropout_results.py",
+      "description": "Independent NumPy threshold/count verification; no imports from the runner."
+    },
+    "verify_p97_multilevel_order": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/verify_p97_multilevel_order.py",
+      "description": "Independently verify the user's dataset -> matched A/B -> continuous C order."
+    },
+    "verify_scalar_normalization_equivalence": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/verify_scalar_normalization_equivalence.py",
+      "description": "Prove that adding scalar RMS quantization leaves baseline training unchanged."
+    },
+    "confirm_frozen": {
+      "path": "src/grokking_capacity/experiments/discrete_workflow/frozen/__main__.py",
+      "description": "Replay an exact archived confirmation controller."
+    }
+  },
+  "cone": {
+    "analyse_cone_h100_boundary": {
+      "path": "src/grokking_capacity/experiments/cone_workflow/analyse_cone_h100_boundary.py",
+      "description": "Compare every preselected H100 replication against its archived A100 pair."
+    },
+    "analyse_cone_p199": {
+      "path": "src/grokking_capacity/experiments/cone_workflow/analyse_cone_p199.py",
+      "description": "Append the complete preselected p199 cohort to the audited cone."
+    },
+    "analyse_cone_ten_seeds": {
+      "path": "src/grokking_capacity/experiments/cone_workflow/analyse_cone_ten_seeds.py",
+      "description": "Build the uniform ten-seed cone, preserving censored observations explicitly."
+    },
+    "complete_cone_neighbour_seeds": {
+      "path": "src/grokking_capacity/experiments/cone_workflow/complete_cone_neighbour_seeds.py",
+      "description": "Fill ten structural seed gaps in two preselected neighbour cells on GPU0."
+    },
+    "plot_cone_aggregate": {
+      "path": "src/grokking_capacity/experiments/cone_workflow/plot_cone_aggregate.py",
+      "description": "Render an alternative cone aggregate into an explicitly chosen output directory."
+    },
+    "plot_cone_seedmin": {
+      "path": "src/grokking_capacity/experiments/cone_workflow/plot_cone_seedmin.py",
+      "description": "Render the cone from explicit hardware cohorts, unique seeds and censored clocks."
+    },
+    "run_cone_h100_boundary": {
+      "path": "src/grokking_capacity/experiments/cone_workflow/run_cone_h100_boundary.py",
+      "description": "Preselected 225-run cone boundary replication, two workers on one H100."
+    },
+    "run_cone_p199": {
+      "path": "src/grokking_capacity/experiments/cone_workflow/run_cone_p199.py",
+      "description": "Preselected p199 extension: the18 registered p197 widths plus316, ten seeds."
+    },
+    "run_cone_ten_seeds": {
+      "path": "src/grokking_capacity/experiments/cone_workflow/run_cone_ten_seeds.py",
+      "description": "Complete every published cone cell to seeds42--51, using both H100s."
+    },
+    "schedule_cone_ten_seeds_mps": {
+      "path": "src/grokking_capacity/experiments/cone_workflow/schedule_cone_ten_seeds_mps.py",
+      "description": "Adopt live cone workers and use validated MPS scheduling for queued jobs."
+    },
+    "verify_cone_h100_boundary": {
+      "path": "src/grokking_capacity/experiments/cone_workflow/verify_cone_h100_boundary.py",
+      "description": "Independently validate completed boundary runs on CPU while training continues."
+    },
+    "verify_cone_p199": {
+      "path": "src/grokking_capacity/experiments/cone_workflow/verify_cone_p199.py",
+      "description": "Verify every p199 run against its raw trace, initialization, data and CPU evaluation."
+    },
+    "verify_cone_ten_seeds": {
+      "path": "src/grokking_capacity/experiments/cone_workflow/verify_cone_ten_seeds.py",
+      "description": "Independently verify all new ten-seed completion runs on CPU."
+    }
+  },
+  "capacity": {
+    "analyse_matched_capacity": {
+      "path": "src/grokking_capacity/experiments/capacity_workflow/analyse_matched_capacity.py",
+      "description": "Recompute the matched H100 capacity estimate and optional figure assets."
+    },
+    "plot_a100_h100_agreement": {
+      "path": "src/grokking_capacity/experiments/capacity_workflow/plot_a100_h100_agreement.py",
+      "description": "Display all paired seed classifications from the preselected hardware check."
+    },
+    "run_a100_h100_agreement": {
+      "path": "src/grokking_capacity/experiments/capacity_workflow/run_a100_h100_agreement.py",
+      "description": "Preselected paired A100-to-H100 grokking-outcome replication."
+    },
+    "run_capacity_h100_matched": {
+      "path": "src/grokking_capacity/experiments/capacity_workflow/run_capacity_h100_matched.py",
+      "description": "Fresh six-width matched-protocol capacity campaign; resumable, GPU 0 only."
+    },
+    "verify_matched_capacity_checkpoints": {
+      "path": "src/grokking_capacity/experiments/capacity_workflow/verify_matched_capacity_checkpoints.py",
+      "description": "Independent CPU evaluation of the twelve selected capacity checkpoints."
+    }
+  },
+  "sensitivity": {
+    "analyse_seed_aggregation": {
+      "path": "src/grokking_capacity/analysis/law_sensitivity/analyse_seed_aggregation.py",
+      "description": "Isolated aggregation sensitivity; no training, publication, or coefficient writes."
+    },
+    "analyse_seed_aggregation_crossings": {
+      "path": "src/grokking_capacity/analysis/law_sensitivity/analyse_seed_aggregation_crossings.py",
+      "description": "Registered crossing cohorts: aggregation sensitivity with cap use explicit."
+    },
+    "check_law_complete_ten_seeds": {
+      "path": "src/grokking_capacity/analysis/law_sensitivity/check_law_complete_ten_seeds.py",
+      "description": "Calculate complete-ten-seed law sensitivity; never change paper/figure outputs."
+    },
+    "crossing_analysis": {
+      "path": "src/grokking_capacity/analysis/law_sensitivity/crossing_analysis.py",
+      "description": "Historical crossing analysis (local protocol and later amendments)."
+    },
+    "make_crossing_configs": {
+      "path": "src/grokking_capacity/analysis/law_sensitivity/make_crossing_configs.py",
+      "description": "Crossing programme (registered 2026-09-23): per prime, ten log-spaced"
+    },
+    "plot_complete_ten_seed_grid": {
+      "path": "src/grokking_capacity/analysis/law_sensitivity/plot_complete_ten_seed_grid.py",
+      "description": "Show complete observed-ten-seed cells used by the isolated law sensitivity fit."
+    },
+    "plot_cone_matched_aggregations": {
+      "path": "src/grokking_capacity/analysis/law_sensitivity/plot_cone_matched_aggregations.py",
+      "description": "Refit BOTH clocks for each seed reducer and draw isolated cone comparisons."
+    },
+    "plot_forecast_figures": {
+      "path": "src/grokking_capacity/analysis/law_sensitivity/plot_forecast_figures.py",
+      "description": "Figures for the theory comments / revision, from the frozen Day-0 fits."
+    },
+    "plot_p197_verdict": {
+      "path": "src/grokking_capacity/analysis/law_sensitivity/plot_p197_verdict.py",
+      "description": "p=197 verdict artefacts (todo item 5, 2026-07-29)."
+    },
+    "refit_cone_cellmeans": {
+      "path": "src/grokking_capacity/analysis/law_sensitivity/refit_cone_cellmeans.py",
+      "description": "Fit both clocks to log arithmetic cell means, excluding censored seed times."
+    },
+    "refit_cone_observed_logtime": {
+      "path": "src/grokking_capacity/analysis/law_sensitivity/refit_cone_observed_logtime.py",
+      "description": "Fit both clocks to all uncensored individual seeds; plot the selected delay aggregate."
+    },
+    "report_seed_aggregation": {
+      "path": "src/grokking_capacity/analysis/law_sensitivity/report_seed_aggregation.py",
+      "description": "Write the scientific assessment without editing paper prose or outputs."
+    },
+    "summarise_seed_aggregation": {
+      "path": "src/grokking_capacity/analysis/law_sensitivity/summarise_seed_aggregation.py",
+      "description": "Matched-cohort diagnostics, calibration sensitivity and review report inputs."
+    },
+    "verify_derivations": {
+      "path": "src/grokking_capacity/analysis/law_sensitivity/verify_derivations.py",
+      "description": "Numerical verification of every claim in consequences.tex (n\u00e9 derivations.tex)."
+    },
+    "verify_seed_aggregation": {
+      "path": "src/grokking_capacity/analysis/law_sensitivity/verify_seed_aggregation.py",
+      "description": "Independent arithmetic and artifact-preservation checks for the sensitivity audit."
+    }
+  },
+  "mechanisms": {
+    "character_ablation": {
+      "path": "src/grokking_capacity/analysis/mechanisms/character_ablation.py",
+      "description": "Measure the effect of removing selected multiplicative characters."
+    },
+    "character_alpha_width": {
+      "path": "src/grokking_capacity/analysis/mechanisms/character_alpha_width.py",
+      "description": "Compare character growth across configured training fractions and model widths."
+    },
+    "character_growth": {
+      "path": "src/grokking_capacity/experiments/character.py",
+      "description": "Train and record multiplicative-character amplitudes for a chosen prime and model width."
+    },
+    "character_lambda_sweep": {
+      "path": "src/grokking_capacity/analysis/mechanisms/character_lambda_sweep.py",
+      "description": "Compare character growth and contraction across configured weight-decay traces."
+    },
+    "gamma_by_batch": {
+      "path": "src/grokking_capacity/analysis/mechanisms/gamma_by_batch.py",
+      "description": "Batch-sweep adjudication: gamma per batch size (theory-trunk \u00a73, C3)."
+    },
+    "make_frontier_figure": {
+      "path": "src/grokking_capacity/analysis/mechanisms/make_frontier_figure.py",
+      "description": "Regenerate the cone figure with the apex-band data (cone-fill.md)."
+    },
+    "make_theory_figures": {
+      "path": "src/grokking_capacity/analysis/mechanisms/make_theory_figures.py",
+      "description": "Visual explainer for the theory program -> figures/theory/*.pdf"
+    },
+    "mup_depth_analysis": {
+      "path": "src/grokking_capacity/analysis/mechanisms/mup_depth_analysis.py",
+      "description": "Matched-protocol muP depth series (configs/mup_depth_series.yaml)."
+    },
+    "mup_laws_analysis": {
+      "path": "src/grokking_capacity/analysis/mechanisms/mup_laws_analysis.py",
+      "description": "Matched-protocol muP laws (configs/mup_laws.yaml, registry"
+    },
+    "mup_seeds_analysis": {
+      "path": "src/grokking_capacity/analysis/mechanisms/mup_seeds_analysis.py",
+      "description": "R2: per-seed canonical delay distribution at muP wide cells beyond p~250"
+    },
+    "normfrozen_analysis": {
+      "path": "src/grokking_capacity/analysis/mechanisms/normfrozen_analysis.py",
+      "description": "Analyse explicitly paired frozen/unfrozen runs from one H100 campaign."
+    },
+    "plot_trace_example": {
+      "path": "src/grokking_capacity/analysis/mechanisms/plot_trace_example.py",
+      "description": "Per-epoch accuracy traces for two muP cells from the crossing programme:"
+    },
+    "race_map_registry": {
+      "path": "src/grokking_capacity/analysis/mechanisms/race_map_registry.py",
+      "description": "Fixed-rate race map on the canonical protocol (registry rows only)."
+    },
+    "run_normfrozen_h100_paired": {
+      "path": "src/grokking_capacity/analysis/mechanisms/run_normfrozen_h100_paired.py",
+      "description": "Thirty paired norm-gain runs on GPU 0, with immutable source/data provenance."
+    },
+    "wd_shift_test": {
+      "path": "src/grokking_capacity/analysis/mechanisms/wd_shift_test.py",
+      "description": "Angle E discriminator on archived data: does the crossing algebra track"
+    },
+    "weight_decay_scaling": {
+      "path": "src/grokking_capacity/analysis/mechanisms/weight_decay_scaling.py",
+      "description": "Matched A100 decay-law analysis, with common seeds and explicit censoring."
+    }
+  },
+  "comparison": {
+    "dataset": {
+      "path": "src/grokking_capacity/analysis/dataset_comparison.py",
+      "description": "Audit and compare a registered dataset-size sweep at any prime."
+    },
+    "plot": {
+      "path": "src/grokking_capacity/analysis/dataset_comparison_plot.py",
+      "description": "Render dataset comparisons using report metadata."
+    },
+    "slice": {
+      "path": "src/grokking_capacity/analysis/dataset_slice.py",
+      "description": "Compare a fully observed dataset-size slice using its registered seeds and widths."
+    }
+  }
+}

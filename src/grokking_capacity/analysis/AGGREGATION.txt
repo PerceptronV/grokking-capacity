@@ -1,0 +1,76 @@
+Seed aggregation and incomplete outcomes
+
+Use aggregate.reduce_values(values, metric) for a complete finite vector.
+Metrics: min, max, mean, median, geometric_mean (strictly positive inputs),
+quantile:<q>, or a Python callable returning one finite scalar. Callable
+reducers are useful for exploratory summaries; their scientific interpretation
+must be specified independently. A dispersion statistic is not a delay clock.
+
+For generalisation delays use summarize_delays(values, metric). Supply None
+for a seed whose validation crossing has not been observed. Never delete that
+seed or supply the epoch cap as an exact observed delay. Built-in monotone
+reducers propagate unknown outcomes in [0, infinity]. The returned value is
+None unless the aggregate is exactly determined. The separate sign field may
+be determined without the value; it does not certify eventual validation in
+unresolved seeds. n_unresolved is retained even when the minimum or median is
+known. Custom callables are evaluated only on fully observed cells.
+
+mean_over_seeds and min_delay_curve remain compatibility wrappers. New code
+should use aggregate_over_seeds(..., metric=...) for observed timescale
+summaries, or delay_curve(..., metric=...) for censored delay observations.
+Observed-only timescale aggregation is conditional on observed crossings; it
+is not a censoring correction and is not necessarily a full-cohort mean.
+
+IntersectionFigure / YAML fields:
+  delay_aggregation: median       # default min
+  timescale_aggregation: mean     # default mean; distinct scientific target
+  delay_censoring: unresolved     # safe default
+  delay_positive_threshold: 0    # strictly greater than this delay, in epochs
+
+The production plot, onset and predictiveness pipelines share these fields.
+Stats CSVs identify the selected metrics, censoring policy, onset status and
+unresolved delay counts. Positive at the narrowest sampled width is marked
+left_censored. find_grokking_onset remains a compatibility scalar; use
+onset_summary when bounds/status matter. The rule is the first sampled parameter count with a positive aggregate,
+provided every smaller sampled aggregate is resolved. Later zeros do not
+invalidate that first onset. Unknown widths must stay on the grid. The old
+positive-tail rule remains available separately as sustained_onset_summary.
+
+For reproducing historical outputs only, compute_delays(...,
+censoring='legacy_lower_bound') drops unobserved training crossings and uses
+elapsed follow-up for unfinished validation. This is deliberately named and
+never the default of the core API. The registered crossing script retains its
+legacy default for historical reproducibility; alternative analyses should
+pass --censoring unresolved and an isolated --out directory.
+
+Examples:
+  gc-workflow cone plot_cone_aggregate --metric median \
+    --out results/my_median_preview
+  gc-workflow cone plot_cone_aggregate --metric quantile:0.25 \
+    --out results/my_quantile_preview
+  gc-workflow sensitivity crossing_analysis fixed --delay-aggregation median \
+    --censoring unresolved --out results/my_crossing_preview
+
+A new metric is applied to per-seed delays, never to already reduced cell
+values. The current paper cone uses the minimum for both occupancy and colour.
+Non-minimum previews use their named aggregate for both.
+
+The current paper fits both timescales to the log of arithmetic observed-event
+means within cells, weighting each cell equally. The entry point is
+docs/papers/2026 Grokking Capacity/code/build_revised_paper.py; censored runs are excluded before averaging.
+
+Legacy forecast law fitting is a separate estimator choice: that earlier fit uses
+per-run log OLS for memorisation and log arithmetic observed-seed means for
+generalisation. The forecast calibration and seed resampling now accept the
+configured delay metric. Setting timescale_aggregation in an intersection
+figure changes measured curves; it does NOT silently redefine those law fits.
+The forecast collector rejects a non-mean timescale setting. For unified
+mean/median law fits, use gc-workflow sensitivity analyse_seed_aggregation laws, which
+reports both observed-crossing and complete-ten-seed eligibility separately.
+
+Historical report/publisher scripts and archived fields named minimum_delay,
+seedmin_delay_by_width, etc. retain their literal meaning. Do not globally
+replace 'min' strings: many are mathematical minima of a crossing equation,
+plot extents, historical measurements, or preregistered estimands. The audit
+at results/seed_aggregation_sensitivity_20261106/code_audit.csv lists these
+remaining consumers and their migration status.

@@ -1,0 +1,57 @@
+name: p97_categorical_from_grokking_continuous_control
+registered: '2026-10-26'
+branch: idea/discrete
+purpose: Find an ordinary continuous C with positive minimum paper-style delay across ten seeds, then train its categorical B equivalent and compare delay and matched-size memorisation speed.
+common:
+  p: 97
+  depth: 2
+  heads: 1
+  dropout: 0.2
+  lr: 0.001
+  weight_decay: 1.0
+  beta1: 0.9
+  beta2: 0.98
+  batch_size: 512
+  epochs: 5000
+fixed_dataset:
+  operation: modular_division
+  training_fraction: 0.5
+  training_examples: 4656
+  label_information_bits: 30866.284423090663
+categorical:
+  alphabet: 8
+  categorical_temperature: 1.0
+  categorical_normalization: slot_layernorm
+  categorical_training_sampling: false
+  interface: L=d full-width slots at every block boundary; hard argmax one-hot forward, normalized-softmax STE, learned sum of slot-symbol embeddings; no continuous bypass.
+search:
+  widths: [60, 72, 96, 120]
+  continuous_ff_ratio: 9.333333333333334
+  exact_rule: C_ff = 4*d + 2*alphabet*d/3; selected widths divisible by three.
+  seeds: [301, 302, 303, 304, 305, 306, 307, 308, 309, 310]
+  validation_seeds: [321, 322, 323, 324, 325, 326, 327, 328, 329, 330]
+  acceptance: Every seed must successfully generalise and have defined paper-style delay strictly greater than zero in both the search and fresh validation groups.
+  ordering: Evaluate widths sequentially. First run ten C search seeds. Only a passing candidate receives ten fresh C validation seeds. Freeze the first candidate passing both groups before any B training. No B outcome affects C selection.
+  interpretation: This is conditional selection of a grokking control, not an unbiased estimate of how often an arbitrary C groks. Retain all C candidates and all seeds.
+B:
+  construction: At the selected C residual width and depth, set B_ff=C_ff-2*alphabet*d/3=4*d and insert the normalized eight-symbol categorical interfaces. Require exact equality of total parameters. Parameter allocation and full initial weight shapes differ.
+  seeds: [321, 322, 323, 324, 325, 326, 327, 328, 329, 330]
+  no_capacity_match_claim: This C-first mechanistic test replaces the previous dataset-capacity-matched ABC selection question. There is no A, and B is not asserted to match dataset capacity.
+arithmetic:
+  stopping: Three consecutive held-out99% epochs and current dropout-active training99%, otherwise5000 epochs.
+  paper_delay: max(0, first held-out98 epoch minus first dropout-active online training99 epoch). Report all ten delays, minimum, and positive/zero/undefined counts.
+  secondary_delay: Same first-passage rule using dropout-free training99; do not substitute it for the paper criterion.
+  paper_generalisation_time: First held-out99 epoch; average across all ten seeds only when all crossings observed.
+  sustained_speed: First of three consecutive held-out95/99 epochs, separately labelled.
+  units: Ten optimizer updates per epoch for arithmetic and matched random-label training.
+memorisation:
+  n_samples: 4656
+  seeds: [321, 322, 323, 324, 325, 326, 327, 328, 329, 330]
+  dataset: Original random_target_data_torch, uniform random inputs and labels over99 symbols, length4.
+  stopping: First epoch with dropout-active online training accuracy>=99%, otherwise5000 epochs. No loss-patience stopping.
+  prerequisites: C must pass its arithmetic validation first. B random-label jobs require at least one same-recipe successful B arithmetic checkpoint. B arithmetic failures remain reported and never establish successful grokking avoidance.
+  implementation: Preserve original CapacityTrainer updates, shuffling, optimizer state and RNG; run one epoch per call and stop at the first training99 crossing.
+  reporting: Report each first-passage time and censor missing crossings. Report all-seed means only with complete observations; otherwise lower bounds and observed counts.
+resources:
+  devices: [cuda:0, cuda:0, cuda:0, cuda:0, cuda:1, cuda:1, cuda:1, cuda:1]
+  note: Both H100 devices were idle at registration. Preserve unrelated jobs; wall time is descriptive only.

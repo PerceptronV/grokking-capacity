@@ -1,0 +1,45 @@
+# Candidate pair selected from calibration only; modular confirmation seeds remain unseen.
+defaults:
+  task: random
+  p: 97
+  operation: /
+  depth: 2
+  heads: 1
+  dropout: 0.0
+  lr: 0.001
+  weight_decay: 1.0
+  batch_size: 512
+  max_steps: 60000
+  eval_every: 200
+  checkpoint_every: 2000
+  stop_on_success: false
+runs:
+- name: A_d32_n8192_s61
+  model: baseline
+  dim: 32
+  n_samples: 8192
+  seed: 61
+- name: A_d32_n8192_s62
+  model: baseline
+  dim: 32
+  n_samples: 8192
+  seed: 62
+- name: A_d32_n16384_s62
+  model: baseline
+  dim: 32
+  n_samples: 16384
+  seed: 62
+- name: B_l8_q16_n8192_s62
+  model: discrete
+  dim: 96
+  latent_dim: 8
+  levels: 16
+  n_samples: 8192
+  seed: 62
+- name: B_l8_q16_n16384_s62
+  model: discrete
+  dim: 96
+  latent_dim: 8
+  levels: 16
+  n_samples: 16384
+  seed: 62

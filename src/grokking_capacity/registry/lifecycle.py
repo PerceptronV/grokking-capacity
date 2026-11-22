@@ -1,186 +1,104 @@
-"""High-level claim/finalise helpers for an experiment worker.
+"""Project-specific worker lifecycle, layered on ``wallow.contrib.lifecycle``.
 
-Encapsulates the four wallow `register()` calls that wrap a training run
-(claim → start → success/failure) so the experiment scripts focus on training.
+wallow v0.2.0 ships a generic claim → run → finalise/fail context manager
+(:func:`wallow.contrib.lifecycle.run_lifecycle`). This module wraps it with the
+two things that are specific to grokking_capacity:
+
+  * **provenance** — host / gpu / git info, collected once and written as the
+    run's ``start_annotating`` (so it lands on the 'running' record);
+  * **artefact paths** — resolved from the run's native ``uuid`` via
+    ``Store.artefacts_dir`` (layout ``{experiment_type}/{uuid}`` in wallow.toml),
+    surfaced on the handle as ``.artefacts_dir`` / ``.npz_path``.
+
+Experiment workers keep their previous call shape: ``with run_lifecycle(...)
+as h``, write to ``h.npz_path`` / ``h.artefacts_dir``, then
+``h.finalise(results={...})``. The uuid is no longer plumbed in by the
+dispatcher — wallow generates it at INSERT and the worker reads it back off its
+claim.
 """
 from __future__ import annotations
 
-import datetime as _dt
-import os
-import traceback
-import uuid as _uuid
 from contextlib import contextmanager
-from time import perf_counter
 from typing import Any, Iterator
 
-from wallow import register
+from wallow.contrib.lifecycle import AlreadyCompleted, run_lifecycle as _wallow_lifecycle
 
-from .paths import artefacts_dir_for, npz_path_for
 from .provenance import collect_provenance
 from .store import get_store
 
-
-class AlreadyCompleted(Exception):
-    """Raised when a worker finds its row already marked completed and --force was not set."""
-
-    def __init__(self, run, run_uuid: str):
-        super().__init__(f"run {run_uuid} already completed")
-        self.run = run
-        self.run_uuid = run_uuid
+__all__ = ["AlreadyCompleted", "WorkerHandle", "run_lifecycle"]
 
 
 class WorkerHandle:
-    """Mutable state for one worker run between claim and finalise."""
+    """Wraps a :class:`wallow.contrib.lifecycle.WorkerHandle` with artefact paths."""
 
-    __slots__ = ("identifying", "run_uuid", "artefacts_dir", "npz_path", "_t0", "_db_path", "_device")
+    __slots__ = ("_inner", "artefacts_dir", "npz_path")
 
-    def __init__(
-        self,
-        identifying: dict[str, Any],
-        run_uuid: str,
-        artefacts_dir: str,
-        npz_path: str,
-        db_path: str | None,
-        device: str | None,
-    ):
-        self.identifying = identifying
-        self.run_uuid = run_uuid
+    def __init__(self, inner: Any, *, artefacts_dir: str, npz_path: str):
+        self._inner = inner
         self.artefacts_dir = artefacts_dir
         self.npz_path = npz_path
-        self._t0 = perf_counter()
-        self._db_path = db_path
-        self._device = device
 
-    def store(self):
-        return get_store(self._db_path)
+    @property
+    def run(self) -> Any:
+        return self._inner.run
+
+    @property
+    def uuid(self) -> str:
+        return self._inner.uuid
 
     def elapsed(self) -> float:
-        return perf_counter() - self._t0
+        return self._inner.elapsed()
 
     def finalise(self, *, results: dict[str, Any]) -> None:
-        """Mark the run completed, recording results + npz_path + wallclock."""
-        store = self.store()
-        annotating = {
-            "status": "completed",
-            "completed_at": _dt.datetime.now(_dt.timezone.utc),
-            "wallclock_seconds": float(self.elapsed()),
-            "npz_path": self.npz_path,
-            "artefacts_dir": self.artefacts_dir,
-            **results,
-        }
-        register(
-            store,
-            identifying=self.identifying,
-            annotating=annotating,
-            on_duplicate="overwrite",
-        )
-
-    def fail(self, exc: BaseException) -> None:
-        store = self.store()
-        excerpt = "".join(traceback.format_exception_only(type(exc), exc)).strip()[:1000]
-        register(
-            store,
-            identifying=self.identifying,
+        """Mark the run completed, recording results + artefact paths."""
+        self._inner.finalise(
             annotating={
-                "status": "failed",
-                "completed_at": _dt.datetime.now(_dt.timezone.utc),
-                "wallclock_seconds": float(self.elapsed()),
-                "error_excerpt": excerpt,
-            },
-            on_duplicate="overwrite",
+                "npz_path": self.npz_path,
+                "artefacts_dir": self.artefacts_dir,
+                **results,
+            }
         )
-
-
-def claim(
-    identifying: dict[str, Any],
-    *,
-    run_uuid: str | None = None,
-    force: bool = False,
-    db_path: str | None = None,
-    device: str | None = None,
-    node_rank: int | None = None,
-    extra_annotating: dict[str, Any] | None = None,
-) -> WorkerHandle:
-    """Claim a row for execution. Raises AlreadyCompleted if status=completed and not force.
-
-    On first call (no existing row): inserts a new row with the supplied (or
-    freshly generated) `run_uuid`, marks it `running`. Idempotent on retry.
-    """
-    store = get_store(db_path)
-    chosen_uuid = run_uuid or _uuid.uuid4().hex[:12]
-
-    # Step 1 — claim the slot or read back the existing row.
-    pre = register(
-        store,
-        identifying=identifying,
-        annotating={
-            "status": "pending",
-            "run_uuid": chosen_uuid,
-        },
-        on_duplicate="return_existing",
-    )
-    run = pre.run
-    if not pre.was_inserted:
-        # Row already existed; reuse its run_uuid (don't overwrite with our fresh one).
-        if run.status == "completed" and not force:
-            raise AlreadyCompleted(run, run.run_uuid)
-        chosen_uuid = run.run_uuid or chosen_uuid
-
-    # Step 2 — annotate as running with provenance + paths.
-    artefacts_dir = str(artefacts_dir_for(identifying["experiment_type"], chosen_uuid))
-    os.makedirs(artefacts_dir, exist_ok=True)
-    npz_path = str(npz_path_for(identifying["experiment_type"], chosen_uuid))
-
-    annotating = {
-        "status": "running",
-        "run_uuid": chosen_uuid,
-        "started_at": _dt.datetime.now(_dt.timezone.utc),
-        "artefacts_dir": artefacts_dir,
-        "npz_path": npz_path,
-        **collect_provenance(device=device, node_rank=node_rank),
-    }
-    if extra_annotating:
-        annotating.update(extra_annotating)
-    register(
-        store,
-        identifying=identifying,
-        annotating=annotating,
-        on_duplicate="overwrite",
-    )
-    return WorkerHandle(
-        identifying=identifying,
-        run_uuid=chosen_uuid,
-        artefacts_dir=artefacts_dir,
-        npz_path=npz_path,
-        db_path=db_path,
-        device=device,
-    )
 
 
 @contextmanager
 def run_lifecycle(
     identifying: dict[str, Any],
     *,
-    run_uuid: str | None = None,
     force: bool = False,
     db_path: str | None = None,
     device: str | None = None,
     node_rank: int | None = None,
     extra_annotating: dict[str, Any] | None = None,
 ) -> Iterator[WorkerHandle]:
-    """Context manager: claim on entry, mark failed on exception. Caller calls
-    handle.finalise(results=...) on success."""
-    handle = claim(
+    """Claim the row, yield a :class:`WorkerHandle`, finalise/fail on exit.
+
+    Raises :class:`wallow.contrib.lifecycle.AlreadyCompleted` (carrying the
+    existing ``run``) when the row is already completed and ``force`` is False.
+    On any other exception the underlying wallow lifecycle records
+    ``status='failed'`` with a traceback excerpt before re-raising.
+    """
+    store = get_store(db_path)
+    start_annotating = collect_provenance(device=device, node_rank=node_rank)
+    if extra_annotating:
+        start_annotating.update(extra_annotating)
+
+    with _wallow_lifecycle(
+        store,
         identifying=identifying,
-        run_uuid=run_uuid,
         force=force,
-        db_path=db_path,
-        device=device,
-        node_rank=node_rank,
-        extra_annotating=extra_annotating,
-    )
-    try:
+        start_annotating=start_annotating,
+    ) as inner:
+        artefacts_dir = store.artefacts_dir(inner.run, mkdir=True)
+        npz_path = artefacts_dir / "trace.npz"
+        handle = WorkerHandle(
+            inner,
+            artefacts_dir=str(artefacts_dir),
+            npz_path=str(npz_path),
+        )
         yield handle
-    except BaseException as exc:
-        handle.fail(exc)
-        raise
+        # If the body returned without calling finalise, still record the
+        # artefact paths on the completion row (wallow's default finalise omits
+        # them). Idempotent: a prior finalise() makes this a no-op.
+        if not inner._finalised:
+            handle.finalise(results={})

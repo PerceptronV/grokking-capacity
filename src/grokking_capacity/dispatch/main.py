@@ -2,9 +2,10 @@
 
 For each expanded run:
   1. Outer-claim a wallow row (return_existing). Skip if status='completed' and
-     no --force. Otherwise launch a worker subprocess with --run-uuid.
-  2. The worker overwrites status='running' on entry and 'completed'/'failed'
-     on exit (see registry.lifecycle).
+     no --force. Otherwise launch a worker subprocess.
+  2. The worker re-claims the same row by its identifying tuple, reads back the
+     wallow-assigned `uuid`, overwrites status='running' on entry and
+     'completed'/'failed' on exit (see registry.lifecycle).
 
 Multi-node sharding partitions the expanded job list interleaved
 (`i % num_nodes == node_rank`). Per-GPU concurrency is bounded by a separate
@@ -14,17 +15,16 @@ the run.
 from __future__ import annotations
 
 import argparse
-import datetime as _dt
 import os
 import subprocess
 import sys
-import uuid as _uuid
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from threading import Event, Lock
 
 import torch
 import yaml
-from wallow import F, register
+from wallow import register
 
 from .. import consts
 from ..analysis.matching import build_match_table, save_match_table
@@ -42,34 +42,28 @@ def _identifying_from_run(run: dict) -> dict:
     return {k: v for k, v in run.items() if not k.startswith('_')}
 
 
-def _claim(run: dict, *, store, force: bool, node_rank: int) -> tuple[str | None, bool]:
-    """Outer claim. Returns (run_uuid, should_dispatch).
+def _claim(run: dict, *, store, force: bool, node_rank: int) -> bool:
+    """Outer claim. Returns whether the worker should be dispatched.
 
-    None uuid means we couldn't claim (e.g., row exists but force=False and
-    status=completed) — caller skips the dispatch.
+    Inserts (or reads back) a 'pending' row; wallow assigns its `uuid` at
+    INSERT. The worker re-derives the same identifying tuple and reads that
+    uuid back, so the dispatcher doesn't plumb it through. Returns False when a
+    completed row already exists and --force was not given.
     """
     identifying = build_identifying(**_identifying_from_run(run))
-    fresh_uuid = _uuid.uuid4().hex[:12]
     pre = register(
         store,
         identifying=identifying,
         annotating={
             'status': 'pending',
-            'run_uuid': fresh_uuid,
             'node_rank': node_rank,
         },
         on_duplicate='return_existing',
     )
-    row = pre.run
     if pre.was_inserted:
-        return fresh_uuid, True
-
-    # Row exists.
-    if row.status == 'completed' and not force:
-        return None, False
-    # Reuse the existing row's uuid; the worker will overwrite annotations.
-    existing_uuid = row.run_uuid or fresh_uuid
-    return existing_uuid, True
+        return True
+    # Row exists — dispatch only if not already completed (or forced).
+    return force or pre.run.status != 'completed'
 
 
 # ---------------------------------------------------------------------------
@@ -83,12 +77,8 @@ _EXP_TO_MODULE = {
 }
 
 
-def _str_or_int(v):
-    return str(v)
-
-
 def build_worker_cmd(
-    run: dict, *, run_uuid: str, force: bool, node_rank: int,
+    run: dict, *, force: bool, node_rank: int,
     db_path: str | None,
 ) -> list[str]:
     exp_type = run['experiment_type']
@@ -108,7 +98,7 @@ def build_worker_cmd(
         '--beta2', str(run['beta2']),
         '--batch-size', str(run['batch_size']),
         '--epochs', str(run['max_epochs']),
-        '--run-uuid', run_uuid,
+        '--mup-base', str(int(run.get('mup_base', 0))),
         '--node-rank', str(node_rank),
     ]
     if db_path:
@@ -117,16 +107,17 @@ def build_worker_cmd(
     if exp_type == 'capacity':
         cmd += ['--n-samples', str(run['n_samples'])]
         cmd += ['--dataset-type', str(run.get('_op_raw', 'random'))]
-    elif exp_type == 'speed':
-        cmd += ['--n-samples', str(run['n_samples'])]
+    else:
+        if exp_type == 'speed':
+            cmd += ['--n-samples', str(run['n_samples'])]
         cmd += ['--operation', str(run['operation'])]
         cmd += ['--train-fraction', str(run['train_fraction'])]
         cmd += ['--split-type', str(run['split_type'])]
-    elif exp_type == 'groks':
-        cmd += ['--operation', str(run['operation'])]
-        cmd += ['--train-fraction', str(run['train_fraction'])]
-        cmd += ['--split-type', str(run['split_type'])]
-        cmd += ['--ignore-memorisation']  # parity with the legacy dispatcher
+        if exp_type == 'groks':
+            cmd += ['--ignore-memorisation']  # parity with the legacy dispatcher
+            for key in ('norm_log_every', 'post_grok_epochs'):
+                if run.get(key) is not None:
+                    cmd += ['--' + key.replace('_', '-'), str(int(run[key]))]
     if force:
         cmd += ['--force']
     return cmd
@@ -160,29 +151,28 @@ def _kill_children() -> None:
 
 
 def _device_assignment(max_workers: int | None, workers_per_gpu: int | None):
+    for name, value in [('max_workers', max_workers), ('workers_per_gpu', workers_per_gpu)]:
+        if value is not None and value < 1:
+            raise ValueError(f'{name} must be positive')
     if not torch.cuda.is_available() or torch.cuda.device_count() == 0:
-        return max_workers or os.cpu_count(), []
-    info = []
-    total = 0
+        return max_workers or os.cpu_count() or 1, []
+    capacities = {}
+    names = {}
     for dev in range(torch.cuda.device_count()):
         major, minor = torch.cuda.get_device_capability(dev)
-        cc = major + minor / 10
-        w = workers_per_gpu if workers_per_gpu is not None else (
-            4 if cc >= 9.0 else 3 if cc >= 8.0 else 2 if cc >= 7.0 else 1
+        capacities[dev] = workers_per_gpu if workers_per_gpu is not None else (
+            4 if major >= 9 else 3 if major >= 8 else 2 if major >= 7 else 1
         )
-        total += w
-        info.append({'id': dev, 'name': torch.cuda.get_device_properties(dev).name,
-                      'capability': f'{major}.{minor}', 'workers': w})
-    if max_workers and max_workers > total:
-        max_workers = total
-    n = max_workers if max_workers else total
+        names[dev] = f'{torch.cuda.get_device_properties(dev).name} (Compute {major}.{minor})'
+    # Allocate the global limit across devices without exceeding local limits.
+    assignment = [dev for slot in range(max(capacities.values()))
+                  for dev, capacity in capacities.items() if slot < capacity]
+    if max_workers is not None:
+        assignment = assignment[:max_workers]
     print('GPU Worker Allocation:')
-    for g in info:
-        print(f"  GPU {g['id']}: {g['name']} (Compute {g['capability']}) → {g['workers']} workers")
-    assignment = []
-    for g in info:
-        assignment.extend([g['id']] * g['workers'])
-    return n, assignment
+    for dev, count in Counter(assignment).items():
+        print(f'  GPU {dev}: {names[dev]} → {count} workers')
+    return len(assignment), assignment
 
 
 def _run_one(cmd: list[str], device_id: int | None, lock: Lock) -> int:
@@ -215,16 +205,16 @@ def _run_batch(cmds: list[list[str]], dry_run: bool, max_workers: int | None,
     failed: list[list[str]] = []
     cancelled: list[list[str]] = []
     if assignment:
-        unique = list(dict.fromkeys(assignment))
-        wpg = assignment.count(unique[0])
+        worker_counts = Counter(assignment)
+        unique = list(worker_counts)
         per_dev: dict = {d: [] for d in unique}
         for i, cmd in enumerate(cmds):
             per_dev[unique[i % len(unique)]].append(cmd)
     else:
-        unique = [None]
-        wpg = n
+        worker_counts = {None: n}
         per_dev = {None: list(cmds)}
-    executors = {d: ThreadPoolExecutor(max_workers=wpg) for d in unique}
+    executors = {d: ThreadPoolExecutor(max_workers=count)
+                 for d, count in worker_counts.items()}
     futures: dict = {}
     try:
         for dev, dev_cmds in per_dev.items():
@@ -257,8 +247,8 @@ def _run_batch(cmds: list[list[str]], dry_run: bool, max_workers: int | None,
         for ex in executors.values():
             ex.shutdown(wait=False)
     _kill_children()
-    if cancelled:
-        print(f'\nCancelled: {len(cancelled)} job(s)')
+    if _shutdown.is_set():
+        print(f'\nInterrupted; {len(cancelled)} outstanding job(s)')
         sys.exit(130)
     if failed:
         print(f'\nFailed: {len(failed)} job(s):')
@@ -301,6 +291,7 @@ def run_suite(
     max_workers: int | None, workers_per_gpu: int | None,
     node_rank: int, num_nodes: int, db_path: str | None,
 ) -> None:
+    _shutdown.clear()
     with open(yaml_path) as f:
         spec = yaml.safe_load(f)
     suite_name = spec['name']
@@ -311,7 +302,7 @@ def run_suite(
         print(f"Multi-node: node {node_rank} of {num_nodes}")
     print()
 
-    store = get_store(db_path)
+    store = None if dry_run else get_store(db_path)
 
     # Group expanded runs by experiment_type to preserve capacity → speed → groks order.
     by_type: dict[str, list[dict]] = {'capacity': [], 'speed': [], 'groks': []}
@@ -329,22 +320,16 @@ def run_suite(
         for i, run in enumerate(runs):
             if num_nodes > 1 and i % num_nodes != node_rank:
                 continue
-            if dry_run:
-                # Don't pollute the registry on a dry-run; preview the command
-                # the worker would receive (uuid is a placeholder).
-                run_uuid = '<uuid>'
-                cmds.append(build_worker_cmd(run, run_uuid=run_uuid, force=force,
-                                              node_rank=node_rank, db_path=db_path))
-                continue
-            try:
-                run_uuid, should_dispatch = _claim(run, store=store, force=force, node_rank=node_rank)
-            except Exception as e:
-                print(f"  CLAIM FAILED: {e!r} for run {run}")
-                continue
-            if not should_dispatch:
-                skipped += 1
-                continue
-            cmds.append(build_worker_cmd(run, run_uuid=run_uuid, force=force,
+            if not dry_run:
+                try:
+                    should_dispatch = _claim(run, store=store, force=force, node_rank=node_rank)
+                except Exception as e:
+                    print(f"  CLAIM FAILED: {e!r} for run {run}")
+                    continue
+                if not should_dispatch:
+                    skipped += 1
+                    continue
+            cmds.append(build_worker_cmd(run, force=force,
                                           node_rank=node_rank, db_path=db_path))
         if skipped:
             print(f"  Skip (already completed): {skipped} run(s)")

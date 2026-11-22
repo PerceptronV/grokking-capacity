@@ -1,0 +1,33 @@
+name: p197_alpha_forecast
+description: >
+  Second forward prediction (2026-08-04, speedrun/alpha-cone.md): reducing
+  alpha expands the grokking cone; at p=197 (zero grokking measured at
+  alpha=0.5) the fitted laws + measured T_gen ~ alpha^-2.7 (epochs) predict
+  grokking RESURRECTED with onset ~6.0e5 params (d~193) at alpha=0.4 and
+  ~2.6e5 (d~126) at alpha=0.3. Widths bracket both predictions.
+
+defaults:
+  operation: "/"
+  train_fraction: 0.5
+  split_type: random
+  depth: 2
+  heads: 1
+  weight_decay: 1.0
+  dropout: 0.2
+  lr: 0.001
+  beta1: 0.9
+  beta2: 0.98
+  batch_size: 512
+  max_epochs: 4000
+  primes: [197]
+  seeds: [42, 43, 44, 45, 46]
+
+experiments:
+  groks:
+    type: groks
+    train_fraction: [0.4, 0.3]
+    dims: [52, 76, 100, 124, 148, 172, 200, 236, 300, 364]
+
+analysis:
+  use_default_capacity_constant: true
+  intersection_figures: []

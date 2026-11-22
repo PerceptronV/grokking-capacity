@@ -19,6 +19,7 @@ from tqdm import tqdm
 from ..data import grokking_data_torch, random_target_data_torch
 from ..models import TransformerTorch, count_parameters
 from ..registry import build_identifying, run_lifecycle, AlreadyCompleted
+from ..utils.optim import build_adamw
 from ..utils.cli_args import (
     add_model_args, add_optimizer_args, add_device_args, add_io_args, add_registry_args,
 )
@@ -140,8 +141,9 @@ def _train_capacity(args, *, device: str) -> Dict:
     param_count = count_parameters(model)
     print(f"  n_samples={args.n_samples} dim={args.dim} params={param_count:,}")
 
-    optimizer = optim.AdamW(model.parameters(), lr=args.lr,
-                             betas=(args.beta1, args.beta2), weight_decay=args.weight_decay)
+    optimizer = build_adamw(model, lr=args.lr, betas=(args.beta1, args.beta2),
+                            weight_decay=args.weight_decay,
+                            mup_base=getattr(args, 'mup_base', 0), dim=args.dim)
     trainer = CapacityTrainer(model=model, optimizer=optimizer, n_tokens=n_tokens,
                                batch_size=args.batch_size, device=device)
     results = trainer.train(
@@ -149,6 +151,8 @@ def _train_capacity(args, *, device: str) -> Dict:
         max_epochs=args.epochs, patience=args.patience, min_delta=args.min_delta, verbose=True,
     )
     results['param_count'] = param_count
+    if getattr(args, 'save_model', False):
+        results['model_state_dict'] = {key: value.detach().cpu() for key, value in model.state_dict().items()}
     return results
 
 
@@ -166,6 +170,8 @@ def main():
     parser.add_argument('--patience', type=int, default=100,
                         help='Epochs without improvement before early stop')
     parser.add_argument('--min-delta', type=float, default=1e-4)
+    parser.add_argument('--save-model', action='store_true',
+                        help='Save final weights for independent capacity verification')
     args = parser.parse_args()
 
     np.random.seed(args.seed)
@@ -188,6 +194,7 @@ def main():
         lr=args.lr, weight_decay=args.weight_decay,
         beta1=args.beta1, beta2=args.beta2, batch_size=args.batch_size,
         max_epochs=args.epochs, seed=args.seed,
+        mup_base=getattr(args, 'mup_base', 0),
     )
 
     print(f"=== capacity p={args.p} type={args.dataset_type_raw} seed={args.seed} | "
@@ -197,7 +204,6 @@ def main():
     try:
         with run_lifecycle(
             identifying,
-            run_uuid=args.run_uuid,
             force=args.force,
             db_path=args.db_path,
             device=device,
@@ -216,6 +222,14 @@ def main():
                 train_acc_trace=results['train_acc_trace'],
                 bits_trace=results['bits_trace'],
             )
+            if args.save_model:
+                from pathlib import Path
+                torch.save({'model_state_dict': results['model_state_dict'],
+                            'metadata': {'dim': args.dim, 'depth': args.depth,
+                                         'heads': args.heads, 'dropout': args.dropout,
+                                         'p': args.p, 'n_tokens': args.p + 2, 'seq_len': 4,
+                                         'param_count': results['param_count']}},
+                           Path(h.artefacts_dir) / 'model.pt')
             h.finalise(results={
                 'param_count': int(results['param_count']),
                 'epochs_trained': int(results['epochs_trained']),
@@ -228,7 +242,7 @@ def main():
                   f"bits/example: {results['final_bits_per_example']:.2f}, "
                   f"total bits: {results['total_bits_memorized']:.0f}")
     except AlreadyCompleted as e:
-        print(f"  Skip: run {e.run_uuid} already completed (use --force to re-run).")
+        print(f"  Skip: run {e.run.uuid} already completed (use --force to re-run).")
 
 
 if __name__ == '__main__':

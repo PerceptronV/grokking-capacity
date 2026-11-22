@@ -2,6 +2,13 @@
 name = "grokking_capacity"
 description = "Grokking experiments — capacity, speed, groks — registered + dedup'd by wallow."
 
+# Artefacts live under data/<experiment_type>/<uuid>/. `uuid` is wallow's
+# native per-row id (generated at INSERT); `Store.artefacts_dir(run)` resolves
+# this layout. Override the root at runtime via the GC_DATA_DIR env var (see
+# registry/store.py). artefacts_root is relative to the process cwd.
+artefacts_root = "data"
+artefacts_layout = "{experiment_type}/{uuid}"
+
 # ---- identifying fields ----------------------------------------------------
 # Together these define one experiment. Two runs with the same identifying
 # tuple dedup against each other. Identifying fields must be int/float/string/bool
@@ -85,6 +92,11 @@ default = 5000
 type = "int"
 default = 42
 
+[identifying.mup_base]
+type = "int"
+default = 0
+doc = "Per-layer Adam learning-rate scaling (muP, lr-only): 0 = off (every parameter at lr); N > 0 = embeddings and norm gains at lr, all matrix parameters at lr * N / dim. Added 2026-09-22 so per-layer-scaled runs live in the same registry and code path as the fixed-rate runs."
+
 [identifying.architecture_family]
 type = "string"
 default = "transformer_gated"
@@ -98,11 +110,6 @@ doc = "Marker for the model family. Bumping this is the cheapest way to make MLP
 type = "string"
 indexed = true
 doc = "'pending' | 'running' | 'completed' | 'failed'."
-
-[annotating.run_uuid]
-type = "string"
-indexed = true
-doc = "Random uuid generated at first claim. Used as the directory name under data/<experiment_type>/<run_uuid>/."
 
 [annotating.artefacts_dir]
 type = "path"

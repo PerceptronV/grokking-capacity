@@ -14,6 +14,7 @@ from tqdm import tqdm
 from ..data import random_target_data_torch
 from ..models import TransformerTorch, count_parameters
 from ..registry import build_identifying, run_lifecycle, AlreadyCompleted
+from ..utils.optim import build_adamw
 from ..utils.cli_args import (
     add_model_args, add_optimizer_args, add_device_args, add_io_args, add_registry_args,
 )
@@ -108,8 +109,13 @@ def _train_speed(args, *, device: str) -> Dict:
     param_count = count_parameters(model)
     print(f"  n_samples={args.n_samples} dim={args.dim} params={param_count:,}")
 
-    optimizer = optim.AdamW(model.parameters(), lr=args.lr,
-                             betas=(args.beta1, args.beta2), weight_decay=args.weight_decay)
+    if getattr(args, 'optimizer', 'adamw') == 'sgd':
+        optimizer = optim.SGD(model.parameters(), lr=args.lr,
+                              momentum=args.momentum, weight_decay=args.weight_decay)
+    else:
+        optimizer = build_adamw(model, lr=args.lr, betas=(args.beta1, args.beta2),
+                                weight_decay=args.weight_decay,
+                                mup_base=getattr(args, 'mup_base', 0), dim=args.dim)
     trainer = SpeedTrainer(model=model, optimizer=optimizer,
                            batch_size=args.batch_size, device=device)
     results = trainer.train(
@@ -140,6 +146,15 @@ def main():
     parser.add_argument('--split-type', type=str, default='random',
                         choices=['random', 'sequential', 'alternating'])
     parser.add_argument('--n-samples', type=int, required=True, help='Dataset size')
+    parser.add_argument('--optimizer', type=str, default='adamw',
+                        choices=['adamw', 'sgd'],
+                        help='Optimiser. SGD is a control cell for the batch-noise '
+                             'discriminator; run SGD cells against a dedicated '
+                             'GC_WALLOW_DB — the identifying tuple does not include '
+                             'the optimiser, so mixing them in one registry would '
+                             'collide with AdamW rows.')
+    parser.add_argument('--momentum', type=float, default=0.0,
+                        help='SGD momentum (ignored for adamw).')
     parser.add_argument('--saturation-threshold', type=float, default=99.0,
                         help='Accuracy threshold (%%) to consider saturated')
     parser.add_argument('--patience', type=int, default=0,
@@ -159,6 +174,7 @@ def main():
         lr=args.lr, weight_decay=args.weight_decay,
         beta1=args.beta1, beta2=args.beta2, batch_size=args.batch_size,
         max_epochs=args.epochs, seed=args.seed,
+        mup_base=getattr(args, 'mup_base', 0),
     )
 
     print(f"=== speed p={args.p} op={args.operation} seed={args.seed} | "
@@ -168,7 +184,6 @@ def main():
     try:
         with run_lifecycle(
             identifying,
-            run_uuid=args.run_uuid,
             force=args.force,
             db_path=args.db_path,
             device=device,
@@ -205,7 +220,7 @@ def main():
                   f"saturation_step={results['saturation_step']:,}, "
                   f"final acc={results['final_acc']:.2f}%")
     except AlreadyCompleted as e:
-        print(f"  Skip: run {e.run_uuid} already completed (use --force to re-run).")
+        print(f"  Skip: run {e.run.uuid} already completed (use --force to re-run).")
 
 
 if __name__ == '__main__':

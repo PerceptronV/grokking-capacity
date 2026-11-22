@@ -34,6 +34,7 @@ IDENTIFYING_FIELDS: tuple[str, ...] = (
     "batch_size",
     "max_epochs",
     "seed",
+    "mup_base",
     "architecture_family",
 )
 

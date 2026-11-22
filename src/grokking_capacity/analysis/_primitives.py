@@ -12,9 +12,10 @@ import numpy as np
 import seaborn as sns
 
 from .aggregate import find_intersection
+from ._figure_style import save_paper_figure
 
 
-def calculate_grokking_delay(
+def calculate_generalisation_delay(
     train_acc, val_acc,
     threshold_train: float = 99.0, threshold_val: float = 99.0,
 ):
@@ -37,7 +38,7 @@ def calculate_grokking_delay(
     return None, None, None
 
 
-def plot_grokking_delay_with_speed(
+def plot_generalisation_delay_with_speed(
     delay_records: List[Dict],
     speed_curve: Dict[float, float],
     groks_curve: Dict[float, float],
@@ -51,6 +52,11 @@ def plot_grokking_delay_with_speed(
     show: bool = False,
     x_label: str = "Parameter count",
     colour_label: str = "Dimension",
+    crossing_direction: str = "any",
+    show_unresolved: bool = True,
+    legend_inside: bool = False,
+    colour_limits: Optional[Tuple[float, float]] = None,
+    show_colourbar: bool = True,
 ) -> Optional[Tuple[float, float]]:
     """The intersection plot (Image #1).
 
@@ -71,6 +77,12 @@ def plot_grokking_delay_with_speed(
             per-seed delay from the npz traces for the scatter. May
             differ from the curve thresholds.
 
+    show_unresolved=False omits flagged cells from the delay scatter only.
+    Timescale curves and their intersection always use the supplied full curves.
+    legend_inside=True places the legend at the upper right of the axes.
+    colour_limits fixes the colour mapping across panels; show_colourbar=False
+    omits the redundant scale from panels that share another panel's colourbar.
+
     Returns the intersection (x, epochs) or None.
     """
     if not delay_records or not speed_curve or not groks_curve:
@@ -81,21 +93,34 @@ def plot_grokking_delay_with_speed(
     colours = np.array([r["colour"] for r in delay_records], dtype=float)
     delays = np.array([r["delay"] for r in delay_records], dtype=float)
 
-    fig, ax1 = plt.subplots(figsize=(10, 7))
+    width = (8 if show_colourbar else 6.8) if legend_inside else 7
+    fig, ax1 = plt.subplots(figsize=(width, 6.2))
 
     crest = sns.color_palette("crest", as_cmap=True)
+    incomplete = np.array([r.get("n_unresolved", 0) > 0 for r in delay_records])
+    visible = np.ones(len(delay_records), dtype=bool) if show_unresolved else ~incomplete
+    if colour_limits is None:
+        colour_limits = (float(colours.min()), float(colours.max()))
     scatter = ax1.scatter(
-        xs, delays, c=colours, cmap=crest, s=80, alpha=0.7, edgecolors="none",
+        xs[visible], delays[visible], c=colours[visible], cmap=crest,
+        vmin=colour_limits[0], vmax=colour_limits[1],
+        s=55, alpha=0.7, edgecolors="none",
         label=f"Generalisation delay (val≥{threshold_val:.0f}% − train≥{threshold_train:.0f}%)",
     )
-    ax1.set_xlabel(x_label, fontsize=14)
-    ax1.set_ylabel("Generalisation delay (epochs)", fontsize=14, color="#1b7a3d")
+    if show_unresolved and incomplete.any():
+        ax1.scatter(xs[incomplete], np.full(incomplete.sum(), .04),
+                    transform=ax1.get_xaxis_transform(), marker="x", color="#b86b14",
+                    s=35, linewidths=1, label="Unresolved seed outcome (marks along axis)")
+    ax1.set_xlabel(x_label, fontsize=17, color="black")
+    ax1.set_ylabel("Generalisation delay (epochs)", fontsize=17, color="black")
     ax1.set_xscale("log")
-    ax1.tick_params(axis="y", labelcolor="#1b7a3d")
+    ax1.tick_params(axis="both", colors="black", labelsize=14)
     ax1.axhline(y=0, color="gray", linestyle="--", alpha=0.5, linewidth=1)
     ax1.grid(True, alpha=0.3)
-    cbar = plt.colorbar(scatter, ax=ax1, label=colour_label, pad=0.12)
-    cbar.ax.tick_params(labelsize=10)
+    if show_colourbar:
+        cbar = plt.colorbar(scatter, ax=ax1, label=colour_label, pad=0.12)
+        cbar.ax.tick_params(colors="black", labelsize=13)
+        cbar.ax.yaxis.label.set_color("black")
 
     ax2 = ax1.twinx()
     speed_x = np.array(sorted(speed_curve.keys()), dtype=float)
@@ -110,11 +135,11 @@ def plot_grokking_delay_with_speed(
         speed_x, speed_y, "-", color="#7570b3", linewidth=2, alpha=0.85,
         label=f"Epochs to memorise (train≥{mem_curve_threshold:.0f}%)",
     )
-    ax2.set_ylabel("Epochs", fontsize=14, color="#d95f02")
+    ax2.set_ylabel("Epochs", fontsize=17, color="black")
     ax2.set_yscale("log")
-    ax2.tick_params(axis="y", labelcolor="#d95f02")
+    ax2.tick_params(axis="y", colors="black", labelsize=14)
 
-    intersection = find_intersection(speed_curve, groks_curve)
+    intersection = find_intersection(speed_curve, groks_curve, direction=crossing_direction)
     if intersection is not None:
         ix, iy = intersection
         ax2.axvline(x=ix, color="#8B0000", linestyle=":", linewidth=1.5, alpha=0.5)
@@ -122,23 +147,27 @@ def plot_grokking_delay_with_speed(
         ax1.annotate(
             f"{ix:,.0f}", xy=(ix, ax1.get_ylim()[0]),
             xytext=(0, -16), textcoords="offset points",
-            ha="center", va="bottom", fontsize=11, color="#8B0000",
+            ha="center", va="bottom", fontsize=13, color="#8B0000",
         )
         ax2.annotate(
             f"{iy:,.0f}", xy=(ax2.get_xlim()[1], iy),
             xytext=(-5, 5), textcoords="offset points",
-            ha="right", va="bottom", fontsize=11, color="#8B0000",
+            ha="right", va="bottom", fontsize=13, color="#8B0000",
         )
 
     h1, l1 = ax1.get_legend_handles_labels()
     h2, l2 = ax2.get_legend_handles_labels()
-    ax2.legend(h1 + h2, l1 + l2, loc="upper right", fontsize=11)
+    if legend_inside:
+        ax2.legend(h1 + h2, l1 + l2, loc="upper right", fontsize=10.5,
+                   frameon=True, framealpha=0.9, borderpad=0.4)
+    else:
+        ax2.legend(h1 + h2, l1 + l2, loc="upper center", bbox_to_anchor=(0.5, -0.2), ncol=1, fontsize=13, frameon=False)
     if title:
-        ax1.set_title(title, fontsize=15)
+        ax1.set_title(title, fontsize=17)
 
     plt.tight_layout()
     if save_path:
-        plt.savefig(save_path, bbox_inches="tight", dpi=150)
+        save_paper_figure(fig, save_path, footer=not legend_inside)
     if show:
         plt.show()
     else:
@@ -197,7 +226,7 @@ def plot_capacity_curves(
     ax.grid(True, alpha=0.3, which="both")
     plt.tight_layout()
     if save_path:
-        plt.savefig(save_path, bbox_inches="tight", dpi=150)
+        save_paper_figure(fig, save_path)
     if show:
         plt.show()
     else:
@@ -244,7 +273,7 @@ def plot_capacity_estimation(
     )
     plt.tight_layout()
     if save_path:
-        plt.savefig(save_path, bbox_inches="tight", dpi=150)
+        save_paper_figure(fig, save_path)
     if show:
         plt.show()
     else:
@@ -304,7 +333,7 @@ def plot_saturation_epochs_vs_inverse_capacity(
     ax.grid(True, alpha=0.3, which="both")
     plt.tight_layout()
     if save_path:
-        plt.savefig(save_path, bbox_inches="tight", dpi=150)
+        save_paper_figure(fig, save_path)
     if show:
         plt.show()
     else:
@@ -320,7 +349,7 @@ def plot_saturation_time_vs_capacity_fraction(
 ) -> Tuple[float, float, float]:
     """Image #3(b): epochs to saturation vs capacity fraction f = S/(C·P).
 
-    Returns (b, a, r²) for the global fit `epochs = a · exp(b · f)`.
+    Returns (gamma, B, r²) for the global fit `epochs = B · exp(gamma · f)`.
     """
     if not by_dim:
         return 0.0, 0.0, 0.0
@@ -350,9 +379,9 @@ def plot_saturation_time_vs_capacity_fraction(
     dims_arr = np.array(dims)
 
     log_e = np.log(epochs_arr)
-    b, log_a = np.polyfit(f_arr, log_e, 1)
-    a = float(np.exp(log_a))
-    pred = b * f_arr + log_a
+    gamma, log_B = np.polyfit(f_arr, log_e, 1)
+    B = float(np.exp(log_B))
+    pred = gamma * f_arr + log_B
     ss_res = float(np.sum((log_e - pred) ** 2))
     ss_tot = float(np.sum((log_e - log_e.mean()) ** 2))
     r_squared = 1 - ss_res / ss_tot if ss_tot > 0 else 0.0
@@ -365,14 +394,14 @@ def plot_saturation_time_vs_capacity_fraction(
             mask = primes_arr == p
             label = f"p={p}"
             if mask.sum() >= 2:
-                bp, log_ap = np.polyfit(f_arr[mask], np.log(epochs_arr[mask]), 1)
-                pred_p = bp * f_arr[mask] + log_ap
+                gamma_p, log_Bp = np.polyfit(f_arr[mask], np.log(epochs_arr[mask]), 1)
+                pred_p = gamma_p * f_arr[mask] + log_Bp
                 ssr = float(np.sum((np.log(epochs_arr[mask]) - pred_p) ** 2))
                 sst = float(np.sum((np.log(epochs_arr[mask]) - np.log(epochs_arr[mask]).mean()) ** 2))
                 r2_p = 1 - ssr / sst if sst > 0 else 0.0
                 label = f"p={p} (R²={r2_p:.3f})"
                 xfit = np.linspace(f_arr[mask].min() * 0.95, f_arr[mask].max() * 1.05, 100)
-                ax.plot(xfit, np.exp(log_ap) * np.exp(bp * xfit), "--", color=color,
+                ax.plot(xfit, np.exp(log_Bp) * np.exp(gamma_p * xfit), "--", color=color,
                         linewidth=2, alpha=0.8)
             ax.scatter(f_arr[mask], epochs_arr[mask], c=[color], s=100, alpha=0.7,
                        edgecolors="black", linewidths=1, label=label)
@@ -384,8 +413,8 @@ def plot_saturation_time_vs_capacity_fraction(
             ax.scatter(f_arr[mask], epochs_arr[mask], c=[color], s=100, alpha=0.7,
                        edgecolors="black", linewidths=1, label=f"dim={d}")
         xfit = np.linspace(f_arr.min() * 0.95, f_arr.max() * 1.05, 100)
-        ax.plot(xfit, a * np.exp(b * xfit), "--", color="red", linewidth=2, alpha=0.7,
-                label=f"Fit: epochs = {a:.1f} × exp({b:.2f} × f)")
+        ax.plot(xfit, B * np.exp(gamma * xfit), "--", color="red", linewidth=2, alpha=0.7,
+                label=f"Fit: epochs = {B:.1f} × exp({gamma:.2f} × f)")
 
     ax.set_xlabel("Capacity fraction", fontsize=14)
     ax.set_ylabel("Epochs to saturation", fontsize=14)
@@ -394,16 +423,16 @@ def plot_saturation_time_vs_capacity_fraction(
     ax.grid(True, alpha=0.3, which="both")
     ax.text(
         0.05, 0.95,
-        f"Overall fit: epochs = {a:.1f} × exp({b:.2f} × f)\n"
-        f"Exponent: {b:.2f}\nR²: {r_squared:.3f}\nC = {C:.2f} bits/param",
+        f"Overall fit: epochs = {B:.1f} × exp({gamma:.2f} × f)\n"
+        f"Exponent: {gamma:.2f}\nR²: {r_squared:.3f}\nC = {C:.2f} bits/param",
         transform=ax.transAxes, fontsize=11, verticalalignment="top",
         bbox=dict(boxstyle="round", facecolor="wheat", alpha=0.8),
     )
     plt.tight_layout()
     if save_path:
-        plt.savefig(save_path, bbox_inches="tight", dpi=150)
+        save_paper_figure(fig, save_path)
     if show:
         plt.show()
     else:
         plt.close()
-    return float(b), float(a), float(r_squared)
+    return float(gamma), float(B), float(r_squared)

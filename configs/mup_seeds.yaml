@@ -1,0 +1,35 @@
+name: mup_seeds
+description: >
+  Registration R2 (2026-09-27): per-seed delay distribution where memorisation
+  is the faster timescale but unused under per-layer scaling. Thirty seeds at
+  wide widths for p = 251, 281, 311, plus p = 223 as the comparison cell.
+
+defaults:
+  operation: "/"
+  train_fraction: 0.5
+  split_type: random
+  depth: 2
+  heads: 1
+  weight_decay: 1.0
+  dropout: 0.2
+  lr: 0.001
+  beta1: 0.9
+  beta2: 0.98
+  batch_size: 512
+  max_epochs: 1500
+  mup_base: 236
+  seeds: [42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71]
+
+experiments:
+  beyond_boundary:
+    type: groks
+    primes: [251, 281, 311]
+    dims: [1000, 2000]
+  comparison:
+    type: groks
+    primes: [223]
+    dims: [1000]
+
+analysis:
+  use_default_capacity_constant: true
+  intersection_figures: []

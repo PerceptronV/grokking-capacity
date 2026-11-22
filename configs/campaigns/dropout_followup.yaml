@@ -1,0 +1,86 @@
+common:
+  depth: 2
+  heads: 1
+  init_scale: 1.0
+  lr: 0.001
+  beta1: 0.9
+  beta2: 0.98
+  weight_decay: 1.0
+  dropout: 0.2
+  batch_size: 512
+  epochs: 5000
+  save_model: true
+groups:
+  arithmetic:
+    kind: groks
+    options:
+      p: 97
+      operation: /
+      train_fraction: 0.5
+      split_type: random
+      dim: 26
+      ignore_memorisation: true
+      norm_log_every: 0
+    grid:
+      seed:
+      - 73
+      - 74
+      - 75
+      - 76
+      - 77
+      - 78
+      - 79
+      - 80
+      - 81
+      - 82
+  A_direct_capacity:
+    kind: capacity
+    options:
+      p: 97
+      dataset_type: random
+      patience: 100
+      min_delta: 0.0001
+    grid:
+      seed:
+      - 61
+      - 62
+      dim:
+      - 26
+      n_samples:
+      - 2048
+      - 4096
+      - 8192
+      - 16384
+  capacity_confirmation:
+    kind: capacity
+    options:
+      p: 113
+      dataset_type: random
+      patience: 100
+      min_delta: 0.0001
+    grid:
+      seed:
+      - 61
+      dim:
+      - 10
+      - 12
+      - 14
+      - 16
+      - 18
+      - 20
+      - 22
+      n_samples:
+      - 1000
+      - 1374
+      - 1891
+      - 2601
+      - 3576
+      - 4917
+      - 6761
+      - 9300
+resources:
+  devices:
+  - cuda:1
+  - cuda:0
+  - cuda:1
+  - cuda:0

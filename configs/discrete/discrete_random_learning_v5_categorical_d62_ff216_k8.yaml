@@ -1,0 +1,28 @@
+defaults:
+  task: random
+  p: 149
+  operation: /
+  train_fraction: 0.5
+  depth: 2
+  heads: 1
+  dropout: 0.0
+  dim: 62
+  lr: 0.001
+  weight_decay: 1.0
+  batch_size: 512
+  max_steps: 10000
+  eval_every: 100
+  checkpoint_every: 1000
+  sustained_evals: 3
+  stop_on_success: false
+  model: categorical
+  alphabet: 8
+  categorical_temperature: 0.1
+  categorical_normalization: rms
+  categorical_evaluation: hard_mode
+  mlp_dim: 216
+  seed: 61
+  n_samples: 2048
+  purpose: learning_validation
+runs:
+- name: B_categorical_d62_ff216_k8_random_learning_n2048_s61

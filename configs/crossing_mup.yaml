@@ -1,0 +1,306 @@
+name: crossing_mup
+description: 'Crossing programme, per-layer scaling base 236 (registered 2026-09-23):
+  as crossing_fixed, muP primes 97..311.'
+defaults:
+  operation: /
+  train_fraction: 0.5
+  split_type: random
+  depth: 2
+  heads: 1
+  weight_decay: 1.0
+  dropout: 0.2
+  lr: 0.001
+  beta1: 0.9
+  beta2: 0.98
+  batch_size: 512
+  max_epochs: 2500
+  mup_base: 236
+  seeds:
+  - 42
+  - 43
+  - 44
+  - 45
+  - 46
+experiments:
+  mem_p97:
+    type: speed
+    primes:
+    - 97
+    dims:
+    - 64
+    - 72
+    - 84
+    - 92
+    - 108
+    - 120
+    - 136
+    - 156
+    - 180
+    - 204
+    n_samples: auto
+  gen_p97:
+    type: groks
+    primes:
+    - 97
+    dims:
+    - 64
+    - 72
+    - 84
+    - 92
+    - 108
+    - 120
+    - 136
+    - 156
+    - 180
+    - 204
+  mem_p113:
+    type: speed
+    primes:
+    - 113
+    dims:
+    - 64
+    - 72
+    - 84
+    - 100
+    - 112
+    - 132
+    - 152
+    - 172
+    - 200
+    - 232
+    n_samples: auto
+  gen_p113:
+    type: groks
+    primes:
+    - 113
+    dims:
+    - 64
+    - 72
+    - 84
+    - 100
+    - 112
+    - 132
+    - 152
+    - 172
+    - 200
+    - 232
+  mem_p139:
+    type: speed
+    primes:
+    - 139
+    dims:
+    - 64
+    - 80
+    - 92
+    - 112
+    - 132
+    - 160
+    - 188
+    - 224
+    - 268
+    - 320
+    n_samples: auto
+  gen_p139:
+    type: groks
+    primes:
+    - 139
+    dims:
+    - 64
+    - 80
+    - 92
+    - 112
+    - 132
+    - 160
+    - 188
+    - 224
+    - 268
+    - 320
+  mem_p151:
+    type: speed
+    primes:
+    - 151
+    dims:
+    - 92
+    - 108
+    - 128
+    - 152
+    - 184
+    - 220
+    - 260
+    - 308
+    - 368
+    - 440
+    n_samples: auto
+  gen_p151:
+    type: groks
+    primes:
+    - 151
+    dims:
+    - 92
+    - 108
+    - 128
+    - 152
+    - 184
+    - 220
+    - 260
+    - 308
+    - 368
+    - 440
+  mem_p197:
+    type: speed
+    primes:
+    - 197
+    dims:
+    - 136
+    - 164
+    - 192
+    - 232
+    - 276
+    - 328
+    - 392
+    - 464
+    - 552
+    - 660
+    n_samples: auto
+  gen_p197:
+    type: groks
+    primes:
+    - 197
+    dims:
+    - 136
+    - 164
+    - 192
+    - 232
+    - 276
+    - 328
+    - 392
+    - 464
+    - 552
+    - 660
+  mem_p223:
+    type: speed
+    primes:
+    - 223
+    dims:
+    - 164
+    - 196
+    - 232
+    - 276
+    - 328
+    - 392
+    - 468
+    - 556
+    - 664
+    - 792
+    n_samples: auto
+  gen_p223:
+    type: groks
+    primes:
+    - 223
+    dims:
+    - 164
+    - 196
+    - 232
+    - 276
+    - 328
+    - 392
+    - 468
+    - 556
+    - 664
+    - 792
+  mem_p251:
+    type: speed
+    primes:
+    - 251
+    dims:
+    - 220
+    - 260
+    - 308
+    - 364
+    - 428
+    - 508
+    - 604
+    - 712
+    - 844
+    - 1000
+    n_samples: auto
+  gen_p251:
+    type: groks
+    primes:
+    - 251
+    dims:
+    - 220
+    - 260
+    - 308
+    - 364
+    - 428
+    - 508
+    - 604
+    - 712
+    - 844
+    - 1000
+  mem_p281:
+    type: speed
+    primes:
+    - 281
+    dims:
+    - 272
+    - 316
+    - 364
+    - 420
+    - 484
+    - 560
+    - 648
+    - 748
+    - 864
+    - 1000
+    n_samples: auto
+  gen_p281:
+    type: groks
+    primes:
+    - 281
+    dims:
+    - 272
+    - 316
+    - 364
+    - 420
+    - 484
+    - 560
+    - 648
+    - 748
+    - 864
+    - 1000
+  mem_p311:
+    type: speed
+    primes:
+    - 311
+    dims:
+    - 320
+    - 360
+    - 412
+    - 468
+    - 528
+    - 600
+    - 684
+    - 776
+    - 880
+    - 1000
+    n_samples: auto
+  gen_p311:
+    type: groks
+    primes:
+    - 311
+    dims:
+    - 320
+    - 360
+    - 412
+    - 468
+    - 528
+    - 600
+    - 684
+    - 776
+    - 880
+    - 1000
+analysis:
+  use_default_capacity_constant: true
+  intersection_figures: []

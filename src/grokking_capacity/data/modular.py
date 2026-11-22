@@ -15,35 +15,22 @@ def split_indices(n: int, train_fraction: float, p: int, op: str, type: str = 'r
         inds = np.random.permutation(n)
         return inds[:n_train], inds[n_train:]
 
-    elif type == 'sequential':  # hold out later moduli
-        cyc_length = p - 1 if op == '/' else p
-        cyc_train = int(train_fraction * cyc_length)
-        train_inds = np.array([
-            [a * cyc_length + i for i in range(cyc_train)]
-            for a in range(p)
-        ]).flatten()
-        test_inds = np.array([
-            [a * cyc_length + i for i in range(cyc_train, cyc_length)]
-            for a in range(p)
-        ]).flatten()
-        return np.random.permutation(train_inds), np.random.permutation(test_inds)
-
-    elif type == 'alternating':  # alternate holding out moduli between train and test
-        cyc_length = p - 1 if op == '/' else p
-        cyc_train = list(range(0, cyc_length, 2))
-        cyc_test = list(range(1, cyc_length, 2))
-        train_inds = np.array([
-            [a * cyc_length + i for i in cyc_train]
-            for a in range(p)
-        ]).flatten()
-        test_inds = np.array([
-            [a * cyc_length + i for i in cyc_test]
-            for a in range(p)
-        ]).flatten()
-        return np.random.permutation(train_inds), np.random.permutation(test_inds)
-
+    cyc_length = p - 1 if op == '/' else p
+    if type == 'sequential':  # hold out later right-hand operands
+        boundary = int(train_fraction * cyc_length)
+        train_columns, test_columns = range(boundary), range(boundary, cyc_length)
+    elif type == 'alternating':  # fixed even/odd split; independent of train_fraction
+        train_columns, test_columns = range(0, cyc_length, 2), range(1, cyc_length, 2)
     else:
         raise ValueError(f"Invalid type: {type}")
+
+    # Both structured splits use the same row-major ordering. Keep training
+    # permutation before test permutation to preserve the seeded protocol.
+    partitions = [
+        np.array([[a * cyc_length + i for i in columns] for a in range(p)]).flatten()
+        for columns in (train_columns, test_columns)
+    ]
+    return tuple(np.random.permutation(indices) for indices in partitions)
 
 
 def grokking_data_torch(
@@ -54,20 +41,20 @@ def grokking_data_torch(
     device='cpu',
 ):
     """Generate modular arithmetic dataset, returning torch tensors."""
-    operations = {
-        '*': lambda a, b: (a * b) % p,
-        '/': lambda a, b: (a * pow(int(b), p - 2, p)) % p,
-        '+': lambda a, b: (a + b) % p,
-        '-': lambda a, b: (a - b) % p,
-    }
-    if op not in operations:
+    if op not in {'*', '/', '+', '-'}:
         raise ValueError("Unsupported operation, choose from ['*', '/', '+', '-']")
 
-    X = np.array([(a, b) for a in range(p) for b in range(1 if op == '/' else 0, p)])
-    T = np.array([operations[op](a, b) for a, b in X])
-
-    embed = {'*': p, '/': p, '+': p, '-': p, '=': p + 1}
-    X = np.array([[a, embed[op], b, embed['=']] for (a, b) in X])
+    rhs = np.arange(1 if op == '/' else 0, p)
+    a = np.repeat(np.arange(p), len(rhs))
+    b = np.tile(rhs, p)
+    if op == '/':
+        # Each denominator's inverse is shared by all p left-hand operands.
+        inverse = np.array([pow(int(value), p - 2, p) for value in rhs])
+        T = (a * np.tile(inverse, p)) % p
+    else:
+        operation = {'*': np.multiply, '+': np.add, '-': np.subtract}[op]
+        T = operation(a, b) % p
+    X = np.column_stack((a, np.full_like(a, p), b, np.full_like(a, p + 1)))
 
     train_inds, test_inds = split_indices(len(X), train_fraction, p, op, split_type)
     Xtrain, Ttrain = X[train_inds], T[train_inds]

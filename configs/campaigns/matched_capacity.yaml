@@ -1,0 +1,49 @@
+common:
+  p: 113
+  depth: 2
+  heads: 1
+  dropout: 0.2
+  weight_decay: 1.0
+  lr: 0.001
+  beta1: 0.9
+  beta2: 0.98
+  batch_size: 512
+  epochs: 5000
+  patience: 100
+  min_delta: 0.0001
+  save_model: true
+groups:
+  capacity:
+    kind: capacity
+    grid:
+      seed:
+      - 20261103
+      - 20261104
+      n_samples:
+      - 1000
+      - 1374
+      - 1891
+      - 2601
+      - 3576
+      - 4917
+      - 6761
+      - 9300
+      dim:
+      - 10
+      - 12
+      - 14
+      - 16
+      - 18
+      - 22
+resources:
+  devices:
+  - cuda:0
+  - cuda:0
+  - cuda:0
+  - cuda:0
+  - cuda:0
+  - cuda:0
+  environment:
+    OMP_NUM_THREADS: '1'
+    MKL_NUM_THREADS: '1'
+    OPENBLAS_NUM_THREADS: '1'

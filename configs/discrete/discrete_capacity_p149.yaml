@@ -1,0 +1,44 @@
+# Each discrete capacity run requires its own successful p149 arithmetic gate.
+defaults:
+  task: random
+  p: 149
+  operation: /
+  depth: 2
+  heads: 1
+  dropout: 0.0
+  seed: 61
+  lr: 0.001
+  weight_decay: 1.0
+  batch_size: 512
+  n_samples: 16384
+  max_steps: 20000
+  eval_every: 200
+  checkpoint_every: 2000
+  stop_on_success: false
+runs:
+- name: A_d44_n16384_s61
+  model: baseline
+  dim: 44
+- name: A_d46_n16384_s61
+  model: baseline
+  dim: 46
+- name: B_l16_q8_n16384_s61
+  model: discrete
+  dim: 96
+  latent_dim: 16
+  levels: 8
+- name: B_l16_q16_n16384_s61
+  model: discrete
+  dim: 96
+  latent_dim: 16
+  levels: 16
+- name: C_l16_n16384_s61
+  model: continuous
+  dim: 96
+  latent_dim: 16
+  levels: 8
+- name: B_l16_q64_n16384_s61
+  model: discrete
+  dim: 96
+  latent_dim: 16
+  levels: 64

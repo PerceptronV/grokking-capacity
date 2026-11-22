@@ -1,0 +1,37 @@
+name: lr_wall_check
+description: >
+  Clean re-measurement (2026-09-23) of the learning-rate wall at p = 197,
+  replacing the retired harness's numbers (447 -> 46 epochs at d = 1400;
+  width exponents 0.9 / 0.28). Canonical gc-groks, fixed rate and per-layer
+  scaling (base 236) at four wide widths, five seeds, cap 1500.
+
+defaults:
+  operation: "/"
+  train_fraction: 0.5
+  split_type: random
+  depth: 2
+  heads: 1
+  weight_decay: 1.0
+  dropout: 0.2
+  lr: 0.001
+  beta1: 0.9
+  beta2: 0.98
+  batch_size: 512
+  max_epochs: 1500
+  seeds: [42, 43, 44, 45, 46]
+
+experiments:
+  fixed_rate:
+    type: groks
+    primes: [197]
+    dims: [620, 880, 1400, 2000]
+    mup_base: 0
+  per_layer:
+    type: groks
+    primes: [197]
+    dims: [620, 880, 1400, 2000]
+    mup_base: 236
+
+analysis:
+  use_default_capacity_constant: true
+  intersection_figures: []

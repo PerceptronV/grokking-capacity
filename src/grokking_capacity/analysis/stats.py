@@ -4,9 +4,9 @@ predict where grokking onset happens empirically?
 Per (ArchGroup × slice value) cell, for each declared intersection figure,
 we compute:
   - predicted_onset_x: x-coordinate of the speed/groks intersection
-  - empirical_onset_x: smallest x past the last zero-delay run, with
-    delays taken as min over compatible seeds (matches the visualise.py
-    convention)
+  - empirical_onset_x: smallest x with positive delay and no unresolved smaller size, with
+    the configured delay aggregation (minimum by default), preserving
+    unresolved seed outcomes
 And report log-ratio = log10(empirical / predicted) — zero is perfect, the
 sign tells which side missed.
 
@@ -32,6 +32,7 @@ import pandas as pd
 from scipy import stats as scipy_stats
 
 from . import aggregate
+from ._figure_style import save_paper_figure
 from .config_view import ArchGroup, ConfigView, IntersectionFigure, StatsConfig
 from .plots import (
     DELAY_TRAIN_THRESHOLD,
@@ -42,19 +43,61 @@ from .plots import (
 )
 
 
-def _empirical_onset(group: ArchGroup, figure: IntersectionFigure, slice_value) -> Optional[float]:
+def _empirical_onset_details(group: ArchGroup, figure: IntersectionFigure, slice_value) -> dict:
     records = _delay_records_for_slice(group, figure, slice_value)
     if not records:
-        return None
+        return {**aggregate.onset_summary({}), "n_unresolved_cells": 0, "n_unresolved_seeds": 0}
     pairs = [(r["x"], r["delay"]) for r in records]
-    return aggregate.find_grokking_onset(aggregate.min_delay_curve(pairs))
+    # Records are already reduced: aggregating their aggregates would be wrong.
+    by_x = {}
+    for x, delay in pairs:
+        if x in by_x:
+            raise ValueError("onset requires one cell per x; colour must identify that cell")
+        by_x[x] = delay
+    result = aggregate.onset_summary(by_x, threshold=figure.delay_positive_threshold)
+    return {**result, "n_unresolved_cells": sum(r['delay'] is None for r in records),
+            "n_unresolved_seeds": sum(r.get('n_unresolved', 0) for r in records)}
+
+
+def _empirical_onset(group: ArchGroup, figure: IntersectionFigure, slice_value) -> Optional[float]:
+    return _empirical_onset_details(group, figure, slice_value)['value']
 
 
 def _predicted_onset(group: ArchGroup, figure: IntersectionFigure, slice_value) -> Optional[float]:
     speed = _curve_for_slice(group.speed_runs, figure, slice_value, "saturation_epoch")
     groks = _curve_for_slice(group.groks_runs, figure, slice_value, "grokking_epoch")
-    pt = aggregate.find_intersection(speed, groks)
-    return pt[0] if pt is not None else None
+    return aggregate.intersection_summary(speed, groks,
+        direction="decreasing" if figure.x_field == "param_count" else "any")["value"]
+
+
+def _capacity_baseline(
+    group: ArchGroup, figure: IntersectionFigure, slice_value,
+) -> tuple[float, float]:
+    """Static capacity-scale predictor for one cell: (k_mem_bits,
+    capacity_baseline_x).
+
+    `k_mem_bits` is the total memorisation load K_mem of the training set
+    (bits), and `capacity_baseline_x = K_mem / C` converts it to param-count
+    units via the group's capacity constant — i.e. the raw scale of the
+    capacity threshold, comparable with `predicted_onset_x` /
+    `empirical_onset_x` on the canonical figure. Only defined when the
+    figure slices by prime with param_count on the x-axis; (nan, nan)
+    otherwise.
+    """
+    if figure.slice_field != "p" or figure.x_field != "param_count":
+        return float("nan"), float("nan")
+    try:
+        from .matching import compute_n_equiv
+        k_mem_bits = float(compute_n_equiv(
+            int(slice_value), group.key.operation,
+            float(group.key.train_fraction),
+        )[1])
+    except (TypeError, ValueError):
+        return float("nan"), float("nan")
+    c = group.capacity_constant
+    if c is None or not np.isfinite(c) or c <= 0:
+        return k_mem_bits, float("nan")
+    return k_mem_bits, k_mem_bits / float(c)
 
 
 def compute_predictiveness(view: ConfigView, figure: IntersectionFigure) -> pd.DataFrame:
@@ -62,14 +105,21 @@ def compute_predictiveness(view: ConfigView, figure: IntersectionFigure) -> pd.D
 
     Columns: config, figure, slice_field, slice_value, x_field,
     predicted_onset_x, empirical_onset_x, log_ratio, capacity_constant,
-    capacity_source, n_seeds_groks, n_seeds_speed, plus every swept-axis
-    identifying field.
+    capacity_source, k_mem_bits, capacity_baseline_x (static K_mem/C
+    predictor in param-count units; NaN off the canonical figure),
+    n_seeds_groks, n_seeds_speed, plus every swept-axis identifying field.
     """
     rows: list[dict] = []
     for group in view.iter_groups():
         for sv in _slice_values(group, figure):
-            predicted = _predicted_onset(group, figure, sv)
-            empirical = _empirical_onset(group, figure, sv)
+            cross = aggregate.intersection_summary(
+                _curve_for_slice(group.speed_runs, figure, sv, "saturation_epoch"),
+                _curve_for_slice(group.groks_runs, figure, sv, "grokking_epoch"),
+                direction="decreasing" if figure.x_field == "param_count" else "any")
+            predicted = cross["value"]
+            onset = _empirical_onset_details(group, figure, sv)
+            empirical = onset["value"] if onset["status"] == "observed" else None
+            k_mem_bits, capacity_baseline_x = _capacity_baseline(group, figure, sv)
             n_groks = sum(1 for r in group.groks_runs
                           if r.get(figure.slice_field) == sv)
             n_speed = sum(1 for r in group.speed_runs
@@ -82,14 +132,32 @@ def compute_predictiveness(view: ConfigView, figure: IntersectionFigure) -> pd.D
             row = {
                 "config": view.config_name,
                 "figure": figure.name,
+                "delay_aggregation": aggregate.reducer_name(figure.delay_aggregation),
+                "timescale_aggregation": aggregate.reducer_name(figure.timescale_aggregation),
+                "delay_censoring": figure.delay_censoring,
+                "delay_positive_threshold": figure.delay_positive_threshold,
                 "slice_field": figure.slice_field,
                 "slice_value": sv,
                 "x_field": figure.x_field,
                 "predicted_onset_x": predicted,
+                "crossing_status": cross["status"],
+                "crossing_interpolation": cross["interpolation"],
+                "crossing_count": len(cross["roots"]),
+                "empirical_onset_bound": onset["value"],
+                figure.slice_field: sv,
                 "empirical_onset_x": empirical,
+                "empirical_onset_status": onset['status'],
+                "onset_rule": onset['rule'],
+                "onset_first_confirmed": onset['first_confirmed'],
+                "onset_earliest_possible": onset['earliest'],
+                "onset_earlier_unresolved": onset['earlier_unresolved'],
+                "n_unresolved_delay_cells": onset['n_unresolved_cells'],
+                "n_unresolved_delay_seeds": onset['n_unresolved_seeds'],
                 "log_ratio": log_ratio,
                 "capacity_constant": group.capacity_constant,
                 "capacity_source": group.capacity_constant_source,
+                "k_mem_bits": k_mem_bits,
+                "capacity_baseline_x": capacity_baseline_x,
                 "n_seeds_groks": n_groks,
                 "n_seeds_speed": n_speed,
             }
@@ -133,8 +201,10 @@ def plot_predicted_vs_empirical(df: pd.DataFrame, save_path: Path) -> Optional[P
     ax.plot([lo, hi], [lo, hi], "--", color="gray", alpha=0.7, label="y = x")
     ax.set_xscale("log")
     ax.set_yscale("log")
+    ax.xaxis.set_minor_formatter(plt.matplotlib.ticker.NullFormatter())
+    ax.yaxis.set_minor_formatter(plt.matplotlib.ticker.NullFormatter())
     ax.set_xlabel(f"Predicted onset (intersection {x_field})", fontsize=13)
-    ax.set_ylabel(f"Empirical onset (smallest non-zero-delay {x_field})", fontsize=13)
+    ax.set_ylabel(f"Empirical onset (first grokking model, {x_field})", fontsize=13)
     ax.text(
         0.05, 0.95,
         f"N = {len(x)}\nR² (log-log vs y=x) = {r2:.3f}\nMAE (log10) = {mae_log:.3f}",
@@ -145,7 +215,7 @@ def plot_predicted_vs_empirical(df: pd.DataFrame, save_path: Path) -> Optional[P
     ax.grid(True, alpha=0.3, which="both")
     plt.tight_layout()
     save_path.parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(save_path, bbox_inches="tight", dpi=150)
+    save_paper_figure(fig, save_path)
     plt.close()
     return save_path
 
@@ -176,7 +246,7 @@ def plot_error_vs_axis(df: pd.DataFrame, axis: str, save_path: Path) -> Optional
     ax.grid(True, alpha=0.3)
     plt.tight_layout()
     save_path.parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(save_path, bbox_inches="tight", dpi=150)
+    save_paper_figure(fig, save_path)
     plt.close()
     return save_path
 
@@ -263,16 +333,21 @@ def _spearman_and_permutation(
                     "n_permutations": 0, "n": int(len(log_p)),
                     "skipped": "rho_nan"}
         rng = np.random.default_rng(seed)
-        obs = float(rho)
+        # Permuting average ranks is exactly the Spearman permutation test,
+        # including ties, and avoids recomputing ranks for every shuffle.
+        rank_p = scipy_stats.rankdata(log_p)
+        rank_e = scipy_stats.rankdata(log_e)
+        rank_p -= rank_p.mean()
+        rank_e -= rank_e.mean()
+        observed_dot = abs(float(rank_p @ rank_e))
         n_ge = 0
-        perm = log_e.copy()
+        perm = rank_e.copy()
         for _ in range(n_permutations):
             rng.shuffle(perm)
-            r, _ = scipy_stats.spearmanr(log_p, perm)
-            if np.isfinite(r) and abs(r) >= abs(obs):
+            if abs(float(rank_p @ perm)) >= observed_dot:
                 n_ge += 1
     p_perm = (n_ge + 1) / (n_permutations + 1)  # +1 smoothing
-    return {"rho": float(obs), "p_analytic": float(p_an),
+    return {"rho": float(rho), "p_analytic": float(p_an),
             "p_permutation": float(p_perm), "n_permutations": int(n_permutations),
             "n": int(len(log_p))}
 
@@ -331,7 +406,7 @@ def _ols_fit(X: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, float, int]:
     beta, _, _, _ = np.linalg.lstsq(X, y, rcond=None)
     resid = y - X @ beta
     rss = float(resid @ resid)
-    df = int(len(y) - X.shape[1])
+    df = int(len(y) - np.linalg.matrix_rank(X))
     return beta, rss, df
 
 
@@ -401,7 +476,7 @@ def _design_matrix_for_axes(
         # Numeric? Cast and use directly.
         try:
             num = pd.to_numeric(s)
-            if num.notna().all():
+            if num.notna().all() and num.nunique() > 1:
                 cols.append(num.to_numpy(dtype=float))
                 names.append(ax)
                 continue
@@ -424,23 +499,38 @@ def _baseline_lr_table(
     *, axes: list[str],
 ) -> dict[str, Any]:
     """Nested OLS comparisons: M0 (null), M1 (intersection), M2 (axes),
-    M3 (combined). Returns model fits and the three nested F-tests."""
+    M3 (combined). Returns model fits and the three nested F-tests.
+
+    When the predictiveness table carries a finite `capacity_baseline_x`
+    (the static K_mem/C scale), two extra models join the table: M2c
+    (capacity scale alone) and M3c = M1 ∪ M2c, with F-tests M3c-vs-M2c
+    (does the intersection add over the static scale?) and M3c-vs-M1
+    (does the static scale add over the intersection?)."""
     n = len(log_e)
     if n < 4:
         return {"models": {}, "ftests": {}, "skipped": "n<4"}
 
     X_axes, axis_names = _design_matrix_for_axes(valid, axes)
 
+    # Static capacity-scale predictor, log10-transformed. Only usable when
+    # every valid cell carries a finite positive value (all-NaN — e.g. a
+    # figure not sliced by prime — simply omits the M2c/M3c rows).
+    log_cb: Optional[np.ndarray] = None
+    if "capacity_baseline_x" in valid.columns:
+        cb = pd.to_numeric(valid["capacity_baseline_x"], errors="coerce").to_numpy(dtype=float)
+        if np.isfinite(cb).all() and (cb > 0).all():
+            log_cb = np.log10(cb)
+
     def fit(X: np.ndarray) -> dict[str, Any]:
         beta, rss, df = _ols_fit(X, log_e)
         ss_tot = float(np.sum((log_e - log_e.mean()) ** 2))
         r2 = 1.0 - rss / ss_tot if ss_tot > 0 else 0.0
-        k = X.shape[1] - 1  # predictors excluding intercept
+        k = int(np.linalg.matrix_rank(X)) - 1  # independent predictors
         r2_adj = (1 - (1 - r2) * (n - 1) / (n - 1 - k)) if (n - 1 - k) > 0 else None
         return {"rss": float(rss), "df": int(df),
                 "r2": float(r2),
                 "r2_adj": float(r2_adj) if r2_adj is not None else None,
-                "n_predictors": int(k), "beta": beta}
+                "n_predictors": int(k), "design_rank": int(k + 1), "beta": beta}
 
     intercept = np.ones((n, 1))
     X0 = intercept
@@ -455,16 +545,31 @@ def _baseline_lr_table(
 
     skipped: list[str] = []
     # M2 needs at least one residual df; otherwise it's saturated/degenerate.
-    if X2 is not None and X2.shape[1] < n:
+    if X2 is not None and np.linalg.matrix_rank(X2) < n:
         fits["M2"] = fit(X2)
         fits["M2"]["predictors"] = list(axis_names)
     else:
         skipped.append("M2")
-    if X3 is not None and X3.shape[1] < n:
+    if X3 is not None and np.linalg.matrix_rank(X3) < n:
         fits["M3"] = fit(X3)
         fits["M3"]["predictors"] = ["log10(predicted_onset_x)", *axis_names]
     else:
         skipped.append("M3")
+
+    if log_cb is not None:
+        X2c = np.column_stack([intercept, log_cb])
+        X3c = np.column_stack([intercept, log_p, log_cb])
+        if np.linalg.matrix_rank(X2c) < n:
+            fits["M2c"] = fit(X2c)
+            fits["M2c"]["predictors"] = ["log10(capacity_baseline_x)"]
+        else:
+            skipped.append("M2c")
+        if np.linalg.matrix_rank(X3c) < n:
+            fits["M3c"] = fit(X3c)
+            fits["M3c"]["predictors"] = ["log10(predicted_onset_x)",
+                                         "log10(capacity_baseline_x)"]
+        else:
+            skipped.append("M3c")
 
     def f_test(small: str, big: str) -> Optional[dict[str, Any]]:
         if small not in fits or big not in fits:
@@ -485,6 +590,9 @@ def _baseline_lr_table(
         "M3_vs_M2": f_test("M2", "M3"),
         "M3_vs_M1": f_test("M1", "M3"),
     }
+    if "M3c" in fits:
+        ftests["M3c_vs_M2c"] = f_test("M2c", "M3c")
+        ftests["M3c_vs_M1"] = f_test("M1", "M3c")
 
     # Strip beta coefficients (numpy arrays) before serialisation.
     out_models: dict[str, dict[str, Any]] = {}
@@ -616,6 +724,11 @@ def compute_hypothesis_tests(
     cfg: StatsConfig = view.stats
     log_p, log_e, valid = _valid_log_pairs(df)
     log_ratio = log_e - log_p
+    # Older point tables store the slice variable under its generic name.
+    # Materialise it explicitly so the requested prime/width baseline is tested.
+    if figure.slice_field not in valid and "slice_value" in valid:
+        valid = valid.copy()
+        valid[figure.slice_field] = valid["slice_value"]
 
     out: dict[str, Any] = {
         "figure": figure.name,
@@ -737,7 +850,7 @@ def format_hypothesis_tests_markdown(results: dict[str, Any]) -> str:
     if models:
         lines.append("| Model | Predictors | RSS | df | R² | adj R² |")
         lines.append("|---|---|---|---|---|---|")
-        for k in ("M0", "M1", "M2", "M3"):
+        for k in ("M0", "M1", "M2", "M3", "M2c", "M3c"):
             m = models.get(k)
             if not m:
                 continue
@@ -759,6 +872,16 @@ def format_hypothesis_tests_markdown(results: dict[str, Any]) -> str:
         lines.append(f"- **M3 vs M1** (hyperparams add over intersection — sceptic-friendly): "
                      f"F = {_fmt(m3_vs_m1.get('f'))}, p = {_fmt(m3_vs_m1.get('p'))}  "
                      f"{_verdict(m3_vs_m1.get('p'), alpha, want_reject=False)}")
+        m3c_vs_m2c = ftests.get("M3c_vs_M2c")
+        if m3c_vs_m2c:
+            lines.append(f"- **M3c vs M2c** (intersection adds over static K_mem/C scale): "
+                         f"F = {_fmt(m3c_vs_m2c.get('f'))}, p = {_fmt(m3c_vs_m2c.get('p'))}  "
+                         f"{_verdict(m3c_vs_m2c.get('p'), alpha, want_reject=True)}")
+        m3c_vs_m1 = ftests.get("M3c_vs_M1")
+        if m3c_vs_m1:
+            lines.append(f"- **M3c vs M1** (static K_mem/C scale adds over intersection): "
+                         f"F = {_fmt(m3c_vs_m1.get('f'))}, p = {_fmt(m3c_vs_m1.get('p'))}  "
+                         f"{_verdict(m3c_vs_m1.get('p'), alpha, want_reject=False)}")
         lines.append("")
     if "skipped_models" in suf:
         lines.append(f"_Skipped: {', '.join(suf['skipped_models'])} — "

@@ -6,7 +6,7 @@ from wallow import F, register
 
 from grokking_capacity.registry import (
     build_identifying,
-    claim,
+    run_lifecycle,
     AlreadyCompleted,
     get_store,
 )
@@ -44,51 +44,56 @@ def test_register_then_dedup(isolated_repo):
     )
     r1 = register(
         store, identifying=ident,
-        annotating={"status": "running", "run_uuid": "abc123"},
+        annotating={"status": "running", "host": "abc123"},
         on_duplicate="return_existing",
     )
     assert r1.was_inserted is True
+    # wallow assigns a native uuid at INSERT.
+    assert r1.run.uuid
 
     r2 = register(
         store, identifying=ident,
-        annotating={"status": "running", "run_uuid": "different"},
+        annotating={"status": "running", "host": "different"},
         on_duplicate="return_existing",
     )
     assert r2.was_inserted is False
-    # run_uuid was NOT overwritten — return_existing returns the prior row.
-    assert r2.run.run_uuid == "abc123"
+    # return_existing returns the prior row unmodified.
+    assert r2.run.host == "abc123"
+    assert r2.run.uuid == r1.run.uuid
 
 
-def test_claim_then_already_completed(isolated_repo):
+def test_lifecycle_then_already_completed(isolated_repo):
     ident = build_identifying(
         experiment_type="groks", p=13, dim=8, seed=42,
     )
-    h1 = claim(ident)
-    # Worker finishes successfully.
-    h1.finalise(results={
-        "param_count": 1234,
-        "epochs_trained": 10,
-        "final_train_acc": 99.5,
-        "final_val_acc": 98.0,
-    })
+    with run_lifecycle(ident) as h1:
+        first_uuid = h1.uuid
+        h1.finalise(results={
+            "param_count": 1234,
+            "epochs_trained": 10,
+            "final_train_acc": 99.5,
+            "final_val_acc": 98.0,
+        })
 
-    # Re-claim without --force should raise AlreadyCompleted.
-    with pytest.raises(AlreadyCompleted):
-        claim(ident)
+    # Re-claim without force should raise AlreadyCompleted (carrying the run).
+    with pytest.raises(AlreadyCompleted) as exc:
+        with run_lifecycle(ident):
+            pass
+    assert exc.value.run.uuid == first_uuid
 
-    # With --force we get a fresh handle pointing at the SAME run_uuid.
-    h2 = claim(ident, force=True)
-    assert h2.run_uuid == h1.run_uuid
+    # With force we re-enter the SAME row (uuid is stable across reruns).
+    with run_lifecycle(ident, force=True) as h2:
+        assert h2.uuid == first_uuid
 
 
-def test_claim_creates_artefacts_dir(isolated_repo):
+def test_lifecycle_creates_artefacts_dir(isolated_repo):
     import os
     ident = build_identifying(
         experiment_type="speed", p=13, dim=8, seed=42, n_samples=100,
     )
-    h = claim(ident)
-    assert os.path.isdir(h.artefacts_dir)
-    assert h.artefacts_dir.endswith(f"speed/{h.run_uuid}")
+    with run_lifecycle(ident) as h:
+        assert os.path.isdir(h.artefacts_dir)
+        assert h.artefacts_dir.endswith(f"speed/{h.uuid}")
 
 
 def test_failed_run_records_status(isolated_repo):

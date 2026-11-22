@@ -1,0 +1,76 @@
+name: p97_multilevel_and_categorical_dropout
+registered: '2026-10-25'
+branch: idea/discrete
+common:
+  p: 97
+  depth: 2
+  heads: 1
+  dropout: 0.2
+  lr: 0.001
+  weight_decay: 1.0
+  beta1: 0.9
+  beta2: 0.98
+  batch_size: 512
+  epochs: 5000
+  patience: 100
+  min_delta: 0.0001
+fixed_dataset:
+  operation: modular_division
+  training_fraction: 0.5
+  training_examples: 4656
+  label_information_bits: 30866.284423090663
+  order: Fix dataset first; select A/B by development gates and capacity; freeze A/B; only then construct unrestricted C from B.
+A:
+  model: baseline
+  dim: 32
+  mlp_dim: 128
+  calibration: Reuse the completed same-protocol A calibration at seeds61/62, with source/config/artifact verification; new confirmation seeds201-210 shared across the two experiments.
+  source_selection: results/discrete/p97-dropout-match-v1/selection.json
+families:
+  q8:
+    model: quantized
+    levels: 8
+    quantizer_clip: 1.0
+    quantizer_surrogate: rms_clipped
+    initial_candidates: [{dim: 36, mlp_dim: 144}, {dim: 44, mlp_dim: 176}]
+  categorical:
+    model: categorical
+    alphabet: 8
+    categorical_temperature: 1.0
+    categorical_normalization: slot_layernorm
+    categorical_training_sampling: false
+    initial_candidates: [{dim: 36, mlp_dim: 144}, {dim: 48, mlp_dim: 192}]
+    interface: L equals residual width d; d-to-L*A logits, per-slot nonaffine LayerNorm eps1e-4, hard argmax one-hots with softmax STE, learned L*A-to-d embedding sum; no continuous bypass.
+    interpretation: Deterministic language-regularisation-style training; this is not sampled Dreamer training. All evaluations use hard argmax.
+C:
+  selection: Construct only after A/B capacity match is frozen; never use C outcomes to resize B.
+  scalar: Remove parameter-free quantizers; identical remaining shapes and initial tensors.
+  categorical: Ordinary transformer at B's width/depth. Increase feedforward width by round(2*alphabet*dim/3) to account for the two categorical projection matrices per block. Require parameter difference <=0.1%; do not pass softmax probabilities or retain a narrow adapter. Same seed/data, but differing FF shapes prevent identical full initialization.
+capacity:
+  seeds: [61, 62]
+  n_samples: [2048, 4096, 8192, 16384]
+  target_tolerance: 0.10
+  pair_tolerance: 0.10
+  estimator: Maximum final hard-evaluation learned bits across dataset sizes, separately for each seed.
+  stopping: Original CapacityTrainer online-loss patience100/min_delta1e-4, ceiling5000 epochs. Preserve primary stop; continue same optimizer/RNG in200-epoch segments if late100/previous100 drift exceeds1%, within the original ceiling.
+  acceptance: A/B both within10% of fixed dataset and each other on both seeds. Selected maxima must be interior, below95% label entropy, below epoch cap and drift<=1%. B must have more parameters than A; report ratio rather than assuming binary model's reduction persists.
+  C_check: Measure after construction on same grid/seeds; record excess or lack of excess explicitly. Largest-N maxima are lower bounds. Do not resize B from C evidence.
+learning_gates:
+  arithmetic_seeds: [41, 42]
+  arithmetic: Exact recipe needs three consecutive held-out hard-eval accuracies>=99% and final eval-mode training>=99%, before any random-label job.
+  random: Each capacity seed must learn random N2048 to final hard-eval accuracy>=99%, before larger N for that seed.
+  failures: Retain every failed pilot and all capacity measurements. Failed learning cannot establish low capacity or successful nongrokking.
+development:
+  adaptation: Resize B width/feedforward dimensions using only gates and capacity. Keep fixed dataset, dropout, optimizer and each family's quantizer/alphabet/STE unchanged. Record every candidate before launch. If a family cannot learn, stop its dependent queue and report the obstacle before a separately documented recipe revision.
+  screening: After arithmetic and N2048 gates, N8192 seed61 may screen size. Complete full grid and second seed for candidates near target; retain rejected cells.
+confirmation:
+  seeds: [201, 202, 203, 204, 205, 206, 207, 208, 209, 210]
+  A_shared: Ten new A trajectories reused across both families, explicitly not twenty independent runs.
+  stopping: Three consecutive held-out99% epochs and current online training99%, otherwise5000 epochs.
+  primary_delay: max(0, first held-out98 epoch minus first dropout-active online training99 epoch).
+  secondary_delay: Same definition using end-of-epoch dropout-free training99.
+  speed: First epoch of three consecutive held-out95/99 epochs, reported as optimizer updates;10 updates per epoch.
+  aggregation: Minimum observed delay over10 seeds with all missing crossings retained as undefined; all-seed median speed with right-censoring bounds, never success-only medians presented as overall medians.
+  freeze: All B choices fixed before any confirmation trajectory. Confirmed B failures retained without retuning.
+resources:
+  default: Four concurrent small workers on cuda1; preserve unrelated jobs. Increase concurrency only after checking utilization and memory.

@@ -12,16 +12,16 @@ from grokking_capacity.analysis.config_view import ArchKey, ARCH_KEY_FIELDS
 
 # ---- aggregate.find_grokking_onset -------------------------------------------
 
-def test_onset_first_nonzero_after_last_zero():
+def test_onset_first_positive():
     # Three zero-delay runs, then non-zero — onset is the first non-zero pc.
     md = {1000: 0.0, 2000: 0.0, 3000: 0.0, 4000: 5.0, 5000: 12.0}
     assert aggregate.find_grokking_onset(md) == 4000
 
 
 def test_onset_skips_intermediate_zero():
-    # Zero in the middle, non-zero at the end — onset jumps past the last zero.
+    # A later zero does not remove the first positive onset.
     md = {1000: 5.0, 2000: 0.0, 3000: 8.0, 4000: 12.0}
-    assert aggregate.find_grokking_onset(md) == 3000
+    assert aggregate.find_grokking_onset(md) == 1000
 
 
 def test_onset_all_zero_returns_none():
@@ -74,6 +74,7 @@ def test_compute_delays_train_never_saturates_dropped():
     val[10:] = 100
     assert aggregate.compute_delays(
         [{"param_count": 5000, "train_acc": train, "val_acc": val}],
+        censoring="legacy_lower_bound",
     ) == []
 
 
@@ -83,6 +84,7 @@ def test_compute_delays_val_never_saturates_uses_run_length():
     val = np.zeros(100)  # never reaches threshold
     delays = aggregate.compute_delays(
         [{"param_count": 5000, "train_acc": train, "val_acc": val}],
+        censoring="legacy_lower_bound",
     )
     # Falls back to len(val) - train_epoch = 100 - 10 = 90.
     assert delays == [(5000.0, 90.0)]
@@ -191,7 +193,6 @@ def test_config_view_groups_runs_by_arch(isolated_repo, tmp_path):
             identifying=ident,
             annotating={
                 "status": "completed",
-                "run_uuid": f"smoke_{ident['n_samples']}",
                 "param_count": 12000,
                 "total_bits_memorized": float(ident["n_samples"]) * 5.0,
             },

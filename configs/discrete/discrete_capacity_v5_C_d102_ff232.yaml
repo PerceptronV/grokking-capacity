@@ -1,0 +1,26 @@
+defaults:
+  task: random
+  p: 149
+  operation: /
+  train_fraction: 0.5
+  depth: 2
+  heads: 1
+  dropout: 0.0
+  seed: 61
+  lr: 0.001
+  weight_decay: 1.0
+  beta1: 0.9
+  beta2: 0.98
+  batch_size: 512
+  max_steps: 120000
+  eval_every: 200
+  checkpoint_every: 2000
+  sustained_evals: 3
+  stop_on_success: false
+  dim: 102
+  model: baseline
+  mlp_dim: 232
+  n_samples: 16384
+  purpose: capacity_control
+runs:
+- name: C_baseline_d102_ff232_n16384_s61

@@ -15,6 +15,7 @@ from tqdm import tqdm
 from ..data import grokking_data_torch
 from ..models import TransformerTorch, count_parameters
 from ..registry import build_identifying, run_lifecycle, AlreadyCompleted
+from ..utils.optim import build_adamw
 from ..utils.cli_args import (
     add_model_args, add_optimizer_args, add_device_args, add_io_args, add_registry_args,
 )
@@ -22,9 +23,16 @@ from ..utils.checkpoints import load_model
 from ..utils.device import get_device
 
 
+@torch.no_grad()
+def squared_param_norm(model) -> float:
+    """``V_t = ‖θ‖²`` — whole-model squared parameter norm at the current step."""
+    return float(sum((p.detach() ** 2).sum() for p in model.parameters()
+                     if p.requires_grad))
+
+
 class GrokkingTrainer:
     def __init__(self, model, optimizer, n_tokens, batch_size=512, device='cpu',
-                 baseline_model=None):
+                 baseline_model=None, norm_log_every=0):
         self.model = model
         self.optimizer = optimizer
         self.n_tokens = n_tokens
@@ -34,6 +42,14 @@ class GrokkingTrainer:
         if self.baseline_model is not None:
             self.baseline_model = self.baseline_model.to(device)
             self.baseline_model.eval()
+        # Norm-contraction channel (V_t logged every `norm_log_every` optimiser
+        # steps; 0 disables). steps_per_epoch lets the analysis convert the
+        # per-epoch accuracy thresholds into the per-step index the norm uses.
+        self.norm_log_every = norm_log_every
+        self.norm_steps_trace: list[int] = []
+        self.norm_value_trace: list[float] = []
+        self.global_step = 0
+        self.steps_per_epoch = 0
         self.train_acc_trace: list[float] = []
         self.train_loss_trace: list[float] = []
         self.val_acc_trace: list[float] = []
@@ -84,13 +100,18 @@ class GrokkingTrainer:
 
     def train(self, train_data, val_data, *, epochs: int,
               early_stopping_train: Optional[float], early_stopping_val: Optional[float],
-              patience: int, min_delta: float, ignore_memorisation: bool):
+              patience: int, min_delta: float, ignore_memorisation: bool,
+              post_grok_epochs: int = 0):
         X_train, T_train = train_data
         X_val, T_val = val_data
         n_train = X_train.shape[0]
         best_val_acc = 0.0
         epochs_without_improvement = 0
         use_patience = patience >= 0
+        bs = self.batch_size if self.batch_size != -1 else n_train
+        self.steps_per_epoch = (n_train + bs - 1) // bs
+        stop_pending = False
+        grok_stop_epoch = 0
 
         bar = tqdm(range(epochs), desc='Training', unit='epoch')
         for epoch in bar:
@@ -106,6 +127,10 @@ class GrokkingTrainer:
                 loss = F.cross_entropy(logits, Tb)
                 loss.backward()
                 self.optimizer.step()
+                self.global_step += 1
+                if self.norm_log_every and self.global_step % self.norm_log_every == 0:
+                    self.norm_steps_trace.append(self.global_step)
+                    self.norm_value_trace.append(squared_param_norm(self.model))
                 total_loss += loss.item() * Xb.size(0)
                 total_correct += (torch.argmax(logits, dim=1) == Tb).sum().item()
             train_loss = total_loss / n_train
@@ -131,9 +156,21 @@ class GrokkingTrainer:
                     postfix['M_U'] = f'{mu:.1f}'
             bar.set_postfix(postfix)
 
-            if (early_stopping_val is not None and val_acc >= early_stopping_val
-                    and early_stopping_train is not None and train_acc >= early_stopping_train):
-                print(f"\nEarly stopping at epoch {epoch + 1}: train={train_acc:.3f}, val={val_acc:.3f}")
+            grok_reached = (early_stopping_val is not None and val_acc >= early_stopping_val
+                            and early_stopping_train is not None
+                            and train_acc >= early_stopping_train)
+            if grok_reached and not stop_pending:
+                if post_grok_epochs <= 0:
+                    print(f"\nEarly stopping at epoch {epoch + 1}: "
+                          f"train={train_acc:.3f}, val={val_acc:.3f}")
+                    break
+                # Keep training the plateau so the analysis sees a settled V_post.
+                stop_pending = True
+                grok_stop_epoch = epoch + post_grok_epochs
+                print(f"\nGrok at epoch {epoch + 1}; training {post_grok_epochs} "
+                      f"more epoch(s) to settle the V_post plateau.")
+            if stop_pending and epoch >= grok_stop_epoch:
+                print(f"\nStopping at epoch {epoch + 1} ({post_grok_epochs} past grok).")
                 break
 
             if use_patience:
@@ -152,6 +189,10 @@ class GrokkingTrainer:
             'train_loss': np.array(self.train_loss_trace),
             'val_loss': np.array(self.val_loss_trace),
         }
+        if self.norm_steps_trace:
+            results['norm_steps'] = np.array(self.norm_steps_trace, dtype=np.int64)
+            results['norm_values'] = np.array(self.norm_value_trace, dtype=float)
+            results['steps_per_epoch'] = int(self.steps_per_epoch)
         if self.train_log_probs_trace:
             results['train_log_probs'] = np.stack(self.train_log_probs_trace, axis=0)
             results['val_log_probs'] = np.stack(self.val_log_probs_trace, axis=0)
@@ -186,8 +227,17 @@ def main():
     parser.add_argument('--ignore-memorisation', action='store_true')
     parser.add_argument('--baseline', type=str, default=None,
                         help='Path to baseline model .pt for M_U computation')
+    parser.add_argument('--freeze-norm-scales', action='store_true',
+                        help='Freeze all RMSNorm gains at init (normalisation-'
+                             'clock test; use a dedicated GC_WALLOW_DB).')
     parser.add_argument('--save-model', action='store_true',
                         help='Save the trained weights into the artefacts directory')
+    parser.add_argument('--norm-log-every', type=int, default=20,
+                        help='Log the squared parameter norm V_t every N optimiser steps '
+                             '(0 disables). The norm-contraction (gc-contraction) channel.')
+    parser.add_argument('--post-grok-epochs', type=int, default=0,
+                        help='After the early-stop trigger, train this many more epochs to '
+                             'settle the post-grok norm plateau V_post (0 = stop at grok).')
     args = parser.parse_args()
 
     np.random.seed(args.seed)
@@ -202,7 +252,7 @@ def main():
         dropout=args.dropout, init_scale=args.init_scale,
         lr=args.lr, weight_decay=args.weight_decay,
         beta1=args.beta1, beta2=args.beta2, batch_size=args.batch_size,
-        max_epochs=args.epochs, seed=args.seed,
+        max_epochs=args.epochs, seed=args.seed, mup_base=args.mup_base,
     )
 
     print(f"=== groks p={args.p} op={args.operation} seed={args.seed} | "
@@ -219,7 +269,6 @@ def main():
     try:
         with run_lifecycle(
             identifying,
-            run_uuid=args.run_uuid,
             force=args.force,
             db_path=args.db_path,
             device=device,
@@ -234,15 +283,37 @@ def main():
                 depth=args.depth, dim=args.dim, heads=args.heads,
                 n_tokens=n_tokens, seq_len=4, dropout=args.dropout, init_scale=args.init_scale,
             ).to(device)
+            if args.freeze_norm_scales:
+                # Freeze every RMSNorm gain at its init value (ones): the
+                # normalisation-clock test of principled/gen-solvable-circuit
+                # (prediction: T_gen–λ slope steepens toward −1 and the
+                # width advantage collapses). Run these in a separate DB —
+                # the identifying tuple has no freeze column.
+                n_frozen = 0
+                for name, prm in model.named_parameters():
+                    if 'norm.weight' in name:
+                        prm.requires_grad_(False)
+                        n_frozen += 1
+                print(f"  frozen {n_frozen} RMSNorm gain tensors")
             param_count = count_parameters(model)
             print(f"  Device: {device}, params: {param_count:,}")
 
-            optimizer = optim.AdamW(model.parameters(), lr=args.lr,
-                                     betas=(args.beta1, args.beta2),
-                                     weight_decay=args.weight_decay)
+            if args.save_model:
+                # Init-time snapshot for the Fourier init-overlap analysis
+                # (analysis/init_overlap.py): the exact weights training
+                # started from, not a same-seed rebuild.
+                init_path = os.path.join(h.artefacts_dir, 'model_init.pt')
+                torch.save({'model_state_dict':
+                            {k: v.cpu() for k, v in model.state_dict().items()}},
+                           init_path)
+
+            optimizer = build_adamw(model, lr=args.lr, betas=(args.beta1, args.beta2),
+                                    weight_decay=args.weight_decay,
+                                    mup_base=args.mup_base, dim=args.dim)
             trainer = GrokkingTrainer(model=model, optimizer=optimizer, n_tokens=n_tokens,
                                        batch_size=args.batch_size, device=device,
-                                       baseline_model=baseline_model)
+                                       baseline_model=baseline_model,
+                                       norm_log_every=args.norm_log_every)
 
             early_stop_t = None if args.no_early_stopping else args.early_stopping_train
             early_stop_v = None if args.no_early_stopping else args.early_stopping_val
@@ -253,6 +324,7 @@ def main():
                 early_stopping_val=early_stop_v,
                 patience=args.patience, min_delta=args.min_delta,
                 ignore_memorisation=args.ignore_memorisation,
+                post_grok_epochs=args.post_grok_epochs,
             )
             train_acc_pct = results['train_acc'] * 100.0
             val_acc_pct = results['val_acc'] * 100.0
@@ -265,6 +337,10 @@ def main():
                 'op': args.operation, 'train_fraction': args.train_fraction,
                 'n_train': Xtr.shape[0], 'n_val': Xva.shape[0],
             }
+            if 'norm_steps' in results:
+                data_dict['norm_steps'] = results['norm_steps']
+                data_dict['norm_values'] = results['norm_values']
+                data_dict['steps_per_epoch'] = results['steps_per_epoch']
             if 'train_log_probs' in results:
                 data_dict['train_log_probs'] = results['train_log_probs']
                 data_dict['val_log_probs'] = results['val_log_probs']
@@ -301,7 +377,7 @@ def main():
                        f"grok@{grok_epoch}")
             print(summary)
     except AlreadyCompleted as e:
-        print(f"  Skip: run {e.run_uuid} already completed (use --force to re-run).")
+        print(f"  Skip: run {e.run.uuid} already completed (use --force to re-run).")
 
 
 if __name__ == '__main__':

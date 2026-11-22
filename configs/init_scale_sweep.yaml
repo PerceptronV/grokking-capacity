@@ -48,6 +48,13 @@ experiments:
 # M3-vs-M2 F-test directly answers "does the intersection beat predicting
 # onset from init_scale and the slice axis alone?"
 analysis:
+  # Pin figure rows to the machine (and seed pool) that produced this
+  # suite, so aggregates are comparable across cells when the registry
+  # holds replicas from other machines.
+  row_filters:
+    hosts: ['68-209-72-216']
+    seeds: [42, 43, 44, 45]
+
   # See central.yaml — capacity fits too noisy; pin to consts.C for now.
   use_default_capacity_constant: true
 

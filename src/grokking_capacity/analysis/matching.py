@@ -9,8 +9,10 @@ from __future__ import annotations
 import dataclasses
 import json
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Any, Optional
 
+import torch
 from wallow import F
 
 from ..models import TransformerTorch
@@ -23,11 +25,14 @@ def compute_n_equiv(p: int, operation: str, train_fraction: float) -> tuple[int,
     return compute_dataset_size_bits(p, operation, train_fraction)
 
 
+@lru_cache(maxsize=1024)
 def get_param_count(dim: int, depth: int, heads: int, p: int, dropout: float = 0.0) -> int:
-    model = TransformerTorch(
-        depth=depth, dim=dim, heads=heads,
-        n_tokens=p + 2, seq_len=4, dropout=dropout,
-    )
+    """Count the actual architecture without consuming the training RNG stream."""
+    with torch.random.fork_rng(devices=[]):
+        model = TransformerTorch(
+            depth=depth, dim=dim, heads=heads,
+            n_tokens=p + 2, seq_len=4, dropout=dropout,
+        )
     return sum(p_.numel() for p_ in model.parameters() if p_.requires_grad)
 
 
@@ -83,19 +88,12 @@ def _row_to_dict(row: Any, extra: tuple[str, ...] = ()) -> dict[str, Any]:
         "experiment_type", "p", "operation", "train_fraction", "split_type",
         "dataset_type", "n_samples", "dim", "depth", "heads", "dropout",
         "init_scale", "lr", "weight_decay", "seed", "architecture_family",
-        "param_count", "run_uuid", "npz_path", "n_equiv", "dataset_bits",
+        "param_count", "uuid", "npz_path", "n_equiv", "dataset_bits",
         "saturation_step", "saturation_epoch", "saturated", "final_acc",
         "final_loss", "final_train_acc", "final_val_acc", "grokking_epoch",
         "total_bits_memorized", "final_bits_per_example",
     ) + extra
     return {f: getattr(row, f, None) for f in fields}
-
-
-def _query_completed(store, **filters) -> list[dict[str, Any]]:
-    expr = F("status") == "completed"
-    for k, v in filters.items():
-        expr = expr & (F(k) == v)
-    return [_row_to_dict(r) for r in store.where(expr).all()]
 
 
 def build_match_table(
@@ -118,15 +116,20 @@ def build_match_table(
     Pairs by (p, operation, train_fraction, depth, heads, dropout, init_scale,
     seed, n_samples ≈ n_equiv, param_count ≈ groks.param_count). weight_decay
     is deliberately NOT used in the join — the values for the two sides are
-    recorded separately so the confound is auditable.
+    recorded separately so the confound is auditable. Optional filters restrict
+    both input cohorts; an explicitly empty filter selects no runs.
     """
     from .capacity_constant import measure_capacity_constant  # local import: avoids cycle
 
     store = get_store(db_path)
 
     base = F("status") == "completed"
-    if primes:
-        base = base & F("p").in_(primes)
+    for field, values in {
+        "p": primes, "weight_decay": weight_decays, "depth": depths,
+        "heads": heads, "dropout": dropouts, "init_scale": init_scales,
+    }.items():
+        if values is not None:
+            base = base & F(field).in_(values)
 
     groks_rows = store.where(base & (F("experiment_type") == "groks")).all()
     speed_rows = store.where(base & (F("experiment_type") == "speed")).all()
@@ -152,11 +155,11 @@ def build_match_table(
         n_equiv, K_mem = compute_n_equiv(g["p"], g["operation"], g["train_fraction"])
 
         cond = (
-            int(g.get("depth") or 2),
-            int(g.get("heads") or 1),
-            float(g.get("weight_decay") or 1.0),
-            float(g.get("dropout") or 0.2),
-            float(g.get("init_scale") or 1.0),
+            int(g["depth"] if g.get("depth") is not None else 2),
+            int(g["heads"] if g.get("heads") is not None else 1),
+            float(g["weight_decay"] if g.get("weight_decay") is not None else 1.0),
+            float(g["dropout"] if g.get("dropout") is not None else 0.2),
+            float(g["init_scale"] if g.get("init_scale") is not None else 1.0),
         )
         if measure_capacity:
             if cond not in c_cache:
@@ -180,22 +183,16 @@ def build_match_table(
             mismatch = abs(gp - sp) / gp if gp > 0 else 0.0
             if mismatch > param_tolerance:
                 continue
-            if g.get("operation") != s.get("operation"):
-                continue
-            if g.get("train_fraction") != s.get("train_fraction"):
-                continue
-            if g.get("seed") != s.get("seed"):
-                continue
-            if g.get("depth") != s.get("depth") or g.get("heads") != s.get("heads"):
-                continue
-            if g.get("dropout") != s.get("dropout"):
-                continue
-            if g.get("init_scale") != s.get("init_scale"):
+            exact_fields = (
+                "p", "operation", "train_fraction", "seed", "depth", "heads",
+                "dropout", "init_scale",
+            )
+            if any(g.get(field) != s.get(field) for field in exact_fields):
                 continue
             cap_frac = K_mem / (C * gp) if gp > 0 else 0.0
             matches.append(ExperimentMatch(
-                groks_run_uuid=g["run_uuid"] or "",
-                speed_run_uuid=s["run_uuid"] or "",
+                groks_run_uuid=g["uuid"] or "",
+                speed_run_uuid=s["uuid"] or "",
                 capacity_run_uuid=None,
                 param_count_groks=int(gp),
                 param_count_speed=int(sp),

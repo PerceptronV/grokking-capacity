@@ -1,46 +1,237 @@
-# Model Capacity Determines Grokking through Competing Memorisation and Generalisation Speeds
+# How Large Must a Model Be to Grok?
 
-Existing accounts of grokking explain the phenomena in terms of mechanistic frameworks such as circuit efficiency or lazy-to-rich transitions. However, despite a known dependence between grokking and model size, how model capacity shapes grokking remains an open question. We give an information-theoretic account of this relationship on the task of modular arithmetic, showing that grokking does not immediately occur when a model becomes large enough to memorise the training set, but rather emerges as the outcome of a competition between two measurable timescales: a memorisation speed $T_{\text{mem}}(P)$ and a generalisation speed $T_{\text{gen}}(P)$, both of which are functions of model parameter count $P$. Adapting the information capacity framework of Morris et al. (2025), we estimate $T_{\text{mem}}(P)$ on random-label data of equivalent complexity and $T_{\text{gen}}(P)$ on the modular task itself, and show that grokking emerges close to the parameter scale where these timescales intersect. The framework also suggests an empirical model for predicting memorisation speed given model capacity and dataset complexity, recovering the previously reported empirical observation that larger models memorise faster. Overall, we motivate the formalisation of different learning timescales as important abstractions to study when explaining how model capacity shapes grokking on algorithmic tasks.
+This repository contains code for reproducing the experiments and data associated with the paper ['How Large Must a Model Be to Grok? A competition between memorisation and generalisation timescales'](https://arxiv.org/abs/2605.09724), by Yiding Song and Hanming Ye. It is published at the 40th Conference on Neural Information Processing Systems (NeurIPS 2026), Sydney, Australia.
+
+**Abstract**
+
+> Despite a known dependence between grokking and model parameter count, how model capacity shapes grokking remains an open question. Focusing on small Transformers and modular arithmetic, we give a quantitative account of the relationship between model capacity and grokking as a competition between two timescales: generalisation ($T_{\text{gen}}$) and memorisation ($T_{\text{mem}}$).
+Building on prior formalisms for the empirical information capacity of Transformers, we define and measure $T_{\text{gen}}$ on modular arithmetic datasets and $T_{\text{mem}}$ on random-label datasets of equivalent complexity, and show that their intersection correlates with model sizes where consistent grokking begins.
+We also observe empirical laws for $T_{\text{gen}}$ and $T_{\text{mem}}$ as models and datasets scale, motivating their forms theoretically and finding that our model of $T_{\text{mem}}$ is consistent with prior observations that larger models tend to memorise faster.
+Moreover, extrapolating our empirical timescale laws predicted the existence of datasets for which no model of any size would consistently grok, a pattern supported on the modular arithmetic datasets of larger primes, demonstrating that our framework can make qualitative predictions out-of-distribution.
 
 ## Installation
 
-In your micromamba environment of choice, run the following command to install the package in editable mode:
+Use Python 3.10 or newer. From the repository root, install into a virtual
+environment (or an existing Conda/Mamba environment):
 
 ```bash
-pip install -e .
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -e .
 ```
 
-This exposes the experiment entry points (`gc-capacity`, `gc-speed`, `gc-groks`), the suite dispatcher (`gc-dispatch`), and the figure renderer (`gc-figures`). The experiment runs database lives at `runs.db` (override with `GC_WALLOW_DB`); the schema is declared in `wallow.toml` and auto-creates on first use.
+The dependencies include PyTorch and the scientific Python stack. For GPU
+training, use a PyTorch installation with CUDA support compatible with your
+machine. The paper's full sweeps require substantial GPU training; inspecting
+commands and running unit tests do not require a GPU.
+
+Optional dependencies are installed with `python -m pip install -e '.[test]'`
+for tests or `python -m pip install -e '.[test,paper]'` for tests and PDF
+validation. Compiling the manuscript also requires a TeX installation providing
+`pdflatex`, `bibtex`, and the packages used by the paper.
+
+The main commands are:
+
+- `gc-capacity`, `gc-speed`, and `gc-groks`: individual training runs.
+- `gc-dispatch`: run a YAML experiment suite.
+- `gc-figures`: render figures and statistics from a suite's measurements.
+- `gc-paper-analysis`: rebuild the revised paper's numerical analyses from its
+  saved inputs.
+- `gc-workflow`: list and run capacity, cone, mechanism, and sensitivity workflows.
+- `gc-merge-registries`: combine run registries from different machines.
+
+Run any of these with `--help`; `gc-workflow --list` lists the workflow catalogue.
+The optional shell launchers in `scripts/` require Mamba and tmux. The Python
+commands above work without them.
 
 ## Reproducibility
 
-The paper's data is produced by a set of YAML-driven suites under `configs/`. Each suite is dispatched in parallel across the available GPUs by `gc-dispatch`.
+### Repository layout
 
-To reproduce every suite end-to-end on a single multi-GPU node, run the wrapper script from the repo root with your micromamba environment name:
+- `configs/`: dispatcher suites; development recipes are grouped in subdirectories.
+- `src/grokking_capacity/`: training, models, registry access, and reusable analysis.
+- `scripts/`: two suite launchers and their command guide; see the
+  [command guide](scripts/README.md).
+- `tests/`: unit and integration checks using synthetic data and temporary stores.
+- `docs/`: optional, separate manuscript checkout; it is not included in this
+  repository.
+
+### Experiments and Data
+
+The modular-arithmetic and random-label datasets are generated by the code.
+Recorded run registries, training traces, checkpoints, and analysis artifacts
+are not bundled in Git, and there is currently no public download archive.
+The instructions below distinguish generating new measurements from rebuilding
+the revised manuscript's exact results.
+
+#### Run the main sweep and robustness experiments
+
+Run commands from the repository root. Put the SQLite registry on **local
+disk**, rather than an NFS mount; artifacts may live separately. For example,
+if your home directory is on local disk:
 
 ```bash
-scripts/replicate.sh <micromamba-env>
+mkdir -p "$HOME/grokking-replication"
+export GC_WALLOW_DB="$HOME/grokking-replication/runs.db"
+export GC_DATA_DIR="$PWD/data/replication"
+
+gc-dispatch --config configs/central.yaml --dry-run
+gc-dispatch --config configs/central.yaml --workers-per-gpu 1
 ```
 
-This launches a detached `tmux` session that runs all ten suites (`central`, `weight_decay_sweep`, `alpha_sweep`, `dropout_sweep`, `lr_sweep`, `init_scale_sweep`, `task_add`, `depth_scaling`, `heads_sweep`, `task_mul`) sequentially.
+The dry run prints the planned jobs without creating a registry or training
+models. The second command runs them, skipping completed experiments already
+in that registry. Adjust worker concurrency to your GPU memory.
 
-Once the wallow database is populated, render the figures off it (one folder per config under `figures/`):
+The [central suite](configs/central.yaml) covers ten primes from 97 to 139 and
+seeds 42–51. It trains a two-layer, one-head Transformer on modular division
+with training fraction 0.5, weight decay 1, dropout 0.2, learning rate 0.001,
+batch size 512, and a 5,000-epoch limit. The YAML specifies the width grids.
+Within a suite, capacity measurements run first, followed by random-label
+memorisation (`speed`) and modular-arithmetic training (`groks`).
+The revised paper's primary onset/intersection statistics use widths up to
+256; the training suite also includes wider models.
+
+Use the same dispatch command with these configs for the revised paper's
+robustness comparisons:
+
+| Variation | Config |
+| --- | --- |
+| Weight decay | [weight_decay_sweep.yaml](configs/weight_decay_sweep.yaml) |
+| Learning rate | [lr_sweep.yaml](configs/lr_sweep.yaml) |
+| Initialisation scale | [init_scale_sweep.yaml](configs/init_scale_sweep.yaml) |
+| Training fraction | [alpha_sweep.yaml](configs/alpha_sweep.yaml) |
+| Model depth | [depth_scaling.yaml](configs/depth_scaling.yaml) |
+| Modular addition | [task_add.yaml](configs/task_add.yaml) |
+| Modular multiplication | [task_mul.yaml](configs/task_mul.yaml) |
+
+The revised paper's capacity normalisation comes from a separate matched
+calibration, rather than the older capacity grid in `central.yaml`:
 
 ```bash
-gc-figures --all
+gc-workflow capacity run_capacity_h100_matched --dry-run
+gc-workflow capacity run_capacity_h100_matched \
+    --root "$HOME/grokking-replication/matched-capacity"
 ```
 
-To render a single config or restrict to a figure family, see `gc-figures --help`.
+Its [config](configs/campaigns/matched_capacity.yaml) specifies 96 runs across
+two seeds, six widths, and eight dataset sizes. The default resource allocation
+uses six concurrent workers on `cuda:0`; to change it, copy the config, edit
+`resources.devices`, and pass `--config /path/to/copy.yaml`. Keep the campaign
+root on local disk because it contains per-run SQLite registries. New campaigns
+use separate output roots and record their configuration and source hashes.
+
+The cone/extrapolation, mechanism, and estimator-sensitivity experiments have
+additional workflows:
+
+```bash
+gc-workflow cone --list
+gc-workflow mechanisms --list
+gc-workflow sensitivity --list
+```
+
+See the [command guide](scripts/README.md) and
+[workflow catalogue](src/grokking_capacity/workflow_catalog.json) for their
+entry points. Some reconstruct historical cohorts and require existing
+measurements at fixed paths. The suite launcher alone does not reproduce every
+experiment or figure in the revised manuscript.
+
+#### Analyse newly generated measurements
+
+Runs are recorded using [wallow.toml](wallow.toml), with traces normally stored
+as `data/<experiment_type>/<uuid>/trace.npz` (under `GC_DATA_DIR` when set).
+Retain both the registry and its referenced artifacts.
+
+The checked-in analysis configs select the machines and seed pools used in the
+paper. For a new replication, copy the relevant config:
+
+```bash
+cp configs/central.yaml "$HOME/grokking-replication/central.yaml"
+```
+
+In that copy, set `analysis.row_filters.hosts` to the hostname recorded in your
+registry, or omit the host filter if the registry contains only your new
+replication. Preserve the planned seed pool and measurement settings. Then run:
+
+```bash
+gc-figures --config "$HOME/grokking-replication/central.yaml" \
+    --db "$GC_WALLOW_DB" --out figures/replication/central
+```
+
+This writes suite figures, statistical summaries, and capacity provenance in
+`meta.json`. Use `--only intersection --only stats` to select those outputs.
+These are config-driven analyses: `central.yaml` retains a historical capacity
+constant, whereas the revised-paper pipeline below uses the saved matched
+calibration and its explicit cohort rules.
+
+For multiple machines, use a separate local registry on each and merge into a
+new output database with `gc-merge-registries merge`; see `--help` for source and
+artifact-root arguments. Preserve the original registries and traces.
+
+#### Rebuild the revised paper's analyses and PDF
+
+The publication pipeline in
+[analysis/paper](src/grokking_capacity/analysis/paper) expects the original
+selected runs and frozen analysis inputs. Fresh runs have different UUIDs and
+provenance, so they cannot simply replace those inputs in an exact rebuild.
+The required layout includes:
+
+- `runs.db` at the repository root and its referenced training traces.
+- `$HOME/crossing_fixed_runs.db`, `$HOME/crossing_mup_runs.db`,
+  `$HOME/p197_alpha_runs.db`, and `$HOME/p197_alpha025_runs.db`, together with
+  their referenced traces.
+- `results/capacity_h100_matched_20261103/summary.json` and
+  `results/law_complete_ten_seed_sensitivity_20261106/selected_runs.csv`.
+- `results/cone_cellmeans_min_20261106/`, containing `fit.json`,
+  `min_delay_cells.csv`, and PDF/PNG versions of `cone_min_cellmeans` and
+  `clock_fits`.
+- `results/cone_matched_aggregations_20261106/summary.json` and
+  `fold_bootstrap.csv`, plus `results/theory/crossing_fixed.csv`,
+  `crossing_mup.csv`, and `forecast_onset.json`.
+
+Trace paths stored in the registries must resolve. Some historical readers use
+those saved paths directly; setting `GC_DATA_DIR` or `GC_WALLOW_DB` alone does
+not relocate all publication inputs.
+
+With those inputs available:
+
+```bash
+gc-paper-analysis
+```
+
+This runs the intersection, statistical, fitted-law, and sensitivity analyses
+and writes `results/paper_revision_20261107/`. It does not edit the manuscript.
+Use `--out results/paper-reproduction` to compare a recomputation in a separate
+directory. The pipeline verifies the original law-fit cohort against its saved
+selection.
+
+To publish the default analysis outputs and compile the PDF, the separate
+manuscript checkout must contain the TeX, bibliography, styles, code, and figure
+assets under `docs/papers/2026 Grokking Capacity/`. Then run:
+
+```bash
+python "docs/papers/2026 Grokking Capacity/code/build_revised_paper.py" \
+    --reuse-analyses
+```
+
+This updates generated tables and figures, compiles the paper, checks references
+and numerical consistency, and writes `paper-neurips-revised.pdf` both in the
+paper directory and in its `exports/` subdirectory. It consumes the default
+analysis directory, not a custom `--out` directory. Changed results in running
+prose must be reconciled separately.
 
 ## License and Attribution
 
 Use the following BibTeX entry to cite this work:
 
 ```bibtex
-@article{song2026grokking,
-  title={Model Capacity Determines Grokking through Competing Memorisation and Generalisation Speeds},
-  author={Song, Yiding and Ye, Hanming}
-  year={2026}
+@inproceedings{
+  song2026grokking,
+  title={How Large Must a Model Be to Grok? A competition between memorisation and generalisation timescales},
+  author={Yiding Song and Hanming Ye},
+  booktitle={The Fortieth Annual Conference on Neural Information Processing Systems},
+  year={2026},
+  url={https://openreview.net/forum?id=2kLkhhcpNe}
 }
 ```
 

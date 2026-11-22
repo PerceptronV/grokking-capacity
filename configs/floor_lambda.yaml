@@ -1,0 +1,38 @@
+name: floor_lambda
+description: >
+  Experiment 2 (T_gen floor nature, docs/todo.md): at the floor width
+  (p=197, d=236), is the minimum generalisation time mechanism-limited
+  (T_gen ~ lambda^(-1/2): removable by cranking decay) or intrinsic
+  (lambda- and lr-flat)? Two blocks: decay sweep at fixed lr; lr sweep at
+  fixed decay.
+
+defaults:
+  operation: "/"
+  train_fraction: 0.5
+  split_type: random
+  depth: 2
+  heads: 1
+  dropout: 0.2
+  lr: 0.001
+  beta1: 0.9
+  beta2: 0.98
+  batch_size: 512
+  max_epochs: 3000
+  primes: [197]
+  seeds: [42, 43, 44, 45, 46]
+
+experiments:
+  wd_at_floor:
+    type: groks
+    dims: [236]
+    weight_decay: [0.1, 0.3, 0.5, 1.0, 2.0, 3.0]
+
+  lr_at_floor:
+    type: groks
+    dims: [236]
+    weight_decay: [1.0]
+    lr: [0.0003, 0.003]
+
+analysis:
+  use_default_capacity_constant: true
+  intersection_figures: []

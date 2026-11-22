@@ -1,0 +1,24 @@
+# Finite-budget capacity screening, NOT a saturated-capacity estimate.
+# Requires the successful B_l32_q16 arithmetic run via --gate.
+defaults:
+  task: random
+  p: 97
+  operation: '/'
+  depth: 2
+  heads: 1
+  dropout: 0.0
+  seed: 61
+  lr: 0.001
+  weight_decay: 1.0
+  batch_size: 512
+  n_samples: 8192
+  max_steps: 20000
+  eval_every: 200
+  checkpoint_every: 2000
+  stop_on_success: false
+runs:
+  - {name: A_d16_n8192_s61, model: baseline, dim: 16}
+  - {name: A_d20_n8192_s61, model: baseline, dim: 20}
+  - {name: A_d24_n8192_s61, model: baseline, dim: 24}
+  - {name: B_l32_q16_n8192_s61, model: discrete, dim: 96, latent_dim: 32, levels: 16}
+  - {name: C_l32_q16_n8192_s61, model: continuous, dim: 96, latent_dim: 32, levels: 16}
