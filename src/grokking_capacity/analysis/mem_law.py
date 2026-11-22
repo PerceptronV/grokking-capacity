@@ -16,7 +16,6 @@ recomputes ``T_mem`` from the stored ``train_acc_trace``. Config-driven like ``g
 """
 from __future__ import annotations
 
-import argparse
 import json
 import sys
 from pathlib import Path
@@ -28,11 +27,10 @@ import seaborn as sns
 
 from .config_view import ConfigView, load_npz
 from .error_decay import collect_random_runs, _capacity_fraction
+from ._cli import CONFIGS_DIR, RESULTS_DIR, analysis_parser, config_jobs
 
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-CONFIGS_DIR = REPO_ROOT / "configs"
-DEFAULT_OUT_ROOT = REPO_ROOT / "results"
+DEFAULT_OUT_ROOT = RESULTS_DIR
 
 MEM_ACC = 0.99          # T_mem := first epoch with train_acc >= this
 MIN_POINTS = 5
@@ -302,30 +300,18 @@ def _render_one(config_path: Path, out_dir: Path, db_path: Optional[str]) -> Non
 
 
 def main(argv: Optional[list[str]] = None) -> int:
-    p = argparse.ArgumentParser(
-        prog="gc-mem-law",
-        description="Fortify T_mem ∝ e^{a·f}: bootstrap CI on a, exp-vs-power-vs-stretched "
-                    "model comparison, and the f-collapse universality test.",
+    parser = analysis_parser(
+        'gc-mem-law',
+        'Fortify T_mem ∝ e^{a·f}: bootstrap CI on a, exp-vs-power-vs-stretched model '
+        'comparison, and the f-collapse universality test.',
+        subdir='mem_law',
     )
-    src = p.add_mutually_exclusive_group(required=True)
-    src.add_argument("--config", type=Path, help="Path to a single configs/*.yaml")
-    src.add_argument("--all", action="store_true", help="Iterate every yaml in configs/")
-    p.add_argument("--out", type=Path, default=None,
-                   help="Output dir (default: results/<config_name>/mem_law/)")
-    p.add_argument("--db", default=None,
-                   help="Path to runs.db (default: GC_WALLOW_DB env or repo runs.db)")
-    args = p.parse_args(argv)
-
-    if args.all:
-        if args.out:
-            print("[gc-mem-law] --out is ignored with --all", file=sys.stderr)
-        for cfg in sorted(CONFIGS_DIR.glob("*.yaml")):
-            _render_one(cfg, DEFAULT_OUT_ROOT / cfg.stem / "mem_law", args.db)
-        return 0
-
-    cfg = args.config
-    out = args.out or (DEFAULT_OUT_ROOT / cfg.stem / "mem_law")
-    _render_one(cfg, out, args.db)
+    args = parser.parse_args(argv)
+    for config, out in config_jobs(
+        args, configs_dir=CONFIGS_DIR, output_root=DEFAULT_OUT_ROOT,
+        prog=parser.prog, subdir='mem_law',
+    ):
+        _render_one(config, out, args.db)
     return 0
 
 

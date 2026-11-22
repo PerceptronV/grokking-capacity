@@ -17,7 +17,6 @@ Pure post-hoc: reuses ``gc-contraction``'s window/fits. Config-driven like ``gc-
 """
 from __future__ import annotations
 
-import argparse
 import json
 import sys
 from pathlib import Path
@@ -29,11 +28,10 @@ import seaborn as sns
 
 from .config_view import ConfigView, load_npz
 from .contraction import analyze_run, collect_groks_runs
+from ._cli import CONFIGS_DIR, RESULTS_DIR, analysis_parser, config_jobs
 
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-CONFIGS_DIR = REPO_ROOT / "configs"
-DEFAULT_OUT_ROOT = REPO_ROOT / "results"
+DEFAULT_OUT_ROOT = RESULTS_DIR
 
 MIN_SEEDS = 3            # cells with fewer valid seeds are dropped
 STABLE_CV = 0.20        # within-cell median CV at/under this ⇒ "tight"
@@ -264,30 +262,18 @@ def _render_one(config_path: Path, out_dir: Path, db_path: Optional[str]) -> Non
 
 
 def main(argv: Optional[list[str]] = None) -> int:
-    p = argparse.ArgumentParser(
-        prog="gc-kappa-stability",
-        description="Variance-decompose the contraction rate κ across seeds and cells "
-                    "to test whether it is a stable architecture-level constant.",
+    parser = analysis_parser(
+        'gc-kappa-stability',
+        'Variance-decompose the contraction rate κ across seeds and cells to test whether it '
+        'is a stable architecture-level constant.',
+        subdir='kappa_stability',
     )
-    src = p.add_mutually_exclusive_group(required=True)
-    src.add_argument("--config", type=Path, help="Path to a single configs/*.yaml")
-    src.add_argument("--all", action="store_true", help="Iterate every yaml in configs/")
-    p.add_argument("--out", type=Path, default=None,
-                   help="Output dir (default: results/<config_name>/kappa_stability/)")
-    p.add_argument("--db", default=None,
-                   help="Path to runs.db (default: GC_WALLOW_DB env or repo runs.db)")
-    args = p.parse_args(argv)
-
-    if args.all:
-        if args.out:
-            print("[gc-kappa-stability] --out is ignored with --all", file=sys.stderr)
-        for cfg in sorted(CONFIGS_DIR.glob("*.yaml")):
-            _render_one(cfg, DEFAULT_OUT_ROOT / cfg.stem / "kappa_stability", args.db)
-        return 0
-
-    cfg = args.config
-    out = args.out or (DEFAULT_OUT_ROOT / cfg.stem / "kappa_stability")
-    _render_one(cfg, out, args.db)
+    args = parser.parse_args(argv)
+    for config, out in config_jobs(
+        args, configs_dir=CONFIGS_DIR, output_root=DEFAULT_OUT_ROOT,
+        prog=parser.prog, subdir='kappa_stability',
+    ):
+        _render_one(config, out, args.db)
     return 0
 
 

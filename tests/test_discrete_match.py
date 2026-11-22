@@ -3,7 +3,7 @@ import math
 
 import pytest
 
-from scripts.assess_discrete_match import assess
+from grokking_capacity.experiments.discrete_workflow.capacity import assess
 
 
 def rows(model, capacity):
@@ -47,7 +47,7 @@ def test_rejects_composite_division_modulus():
 
 
 def test_confirmation_uses_new_paired_modular_seeds_and_rotates_order():
-    from scripts.confirm_discrete import confirmation_runs
+    from grokking_capacity.experiments.discrete_workflow.confirmation import confirmation_runs
     shared=dict(p=149,operation='/',depth=2,heads=1,dropout=0.,lr=.001,
                 weight_decay=1.,beta1=.9,beta2=.98,batch_size=512)
     a={**shared,'model':'baseline','dim':44,'seed':61,'n_samples':16384,'task':'random'}
@@ -76,7 +76,7 @@ def test_distinct_full_width_alphabets_cannot_be_pooled():
 
 def test_sampling_noise_cannot_hide_categorical_memory(tmp_path):
     import json
-    from scripts.assess_discrete_match import load_run
+    from grokking_capacity.experiments.discrete_workflow.capacity import load_run
     cfg = dict(model='categorical', task='random', p=149, max_steps=60000,
                seed=61, n_samples=16384)
     trace = [dict(step=step, train_bits=80000., train_mode_bits=100000.)
@@ -104,7 +104,7 @@ def test_parameter_ratio_amendment_keeps_dataset_matching():
 
 
 def test_confirmation_preserves_categorical_evaluation_and_continuous_control():
-    from scripts.confirm_discrete import confirmation_runs, fullwidth_control
+    from grokking_capacity.experiments.discrete_workflow.confirmation import confirmation_runs, fullwidth_control
     shared=dict(p=149,operation='/',depth=2,heads=1,dropout=0.,lr=.001,
                 weight_decay=1.,beta1=.9,beta2=.98,batch_size=512)
     a={**shared,'model':'baseline','dim':44}
@@ -117,7 +117,7 @@ def test_confirmation_preserves_categorical_evaluation_and_continuous_control():
 
 
 def test_source_equivalence_is_limited_to_verified_runner_pair():
-    from scripts.discrete_source_compatibility import (
+    from grokking_capacity.experiments.discrete_workflow.compatibility import (
         RUNNER, VERIFIED_RANDOM_RUNNERS, baseline_random_sources_compatible)
     old, new = sorted(VERIFIED_RANDOM_RUNNERS)
     a = {RUNNER: old, 'model': 'unchanged'}
@@ -129,7 +129,7 @@ def test_source_equivalence_is_limited_to_verified_runner_pair():
 
 
 def test_unused_quantizer_equivalence_does_not_admit_new_model_or_data_code():
-    from scripts.discrete_source_compatibility import (
+    from grokking_capacity.experiments.discrete_workflow.compatibility import (
         RUNNER, FULLWIDTH, VERIFIED_UNUSED_QUANTIZER_MODULES, VERIFIED_BASELINE_DEPENDENCIES,
         baseline_random_sources_compatible)
     old, new = sorted(VERIFIED_UNUSED_QUANTIZER_MODULES)
@@ -145,7 +145,7 @@ def test_unused_quantizer_equivalence_does_not_admit_new_model_or_data_code():
 @pytest.mark.parametrize('p', [97, 149])
 def test_prime_replication_matches_target_and_pairs_binary_control(p):
     import torch
-    from scripts.confirm_discrete import confirmation_runs
+    from grokking_capacity.experiments.discrete_workflow.confirmation import confirmation_runs
     from grokking_capacity.models.discrete import make_model
     from grokking_capacity.models.transformer import count_parameters
     target = (p * (p - 1) // 2) * math.log2(p + 2)
@@ -180,7 +180,7 @@ def test_prime_replication_matches_target_and_pairs_binary_control(p):
 def test_replication_requires_independent_arithmetic_audit_before_random(tmp_path, monkeypatch):
     import json
     from types import SimpleNamespace
-    import scripts.run_discrete_replication as pipeline
+    import grokking_capacity.experiments.discrete_workflow.run_discrete_replication as pipeline
     gate = tmp_path / 'gate'
     gate.mkdir()
     evidence = {'path': str(gate), 'summary_sha256': 'saved'}

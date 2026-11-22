@@ -16,7 +16,6 @@ via :class:`ConfigView`.
 """
 from __future__ import annotations
 
-import argparse
 import json
 import sys
 from pathlib import Path
@@ -29,11 +28,10 @@ from scipy.optimize import curve_fit
 
 from ..consts import C as DEFAULT_C
 from .config_view import ConfigView, load_npz
+from ._cli import CONFIGS_DIR, RESULTS_DIR, analysis_parser, config_jobs
 
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-CONFIGS_DIR = REPO_ROOT / "configs"
-DEFAULT_OUT_ROOT = REPO_ROOT / "results"
+DEFAULT_OUT_ROOT = RESULTS_DIR
 
 # Window / validity thresholds. Fixed here, before looking at any aggregates.
 MID_ACC = 0.5            # window starts at the first epoch with acc >= this
@@ -325,30 +323,18 @@ def _render_one(config_path: Path, out_dir: Path, db_path: Optional[str]) -> Non
 
 
 def main(argv: Optional[list[str]] = None) -> int:
-    p = argparse.ArgumentParser(
-        prog="gc-error-decay",
-        description="Fit late-stage training-error decay (exp vs power-law vs stretched) "
-                    "on random-label runs for a grokking_capacity YAML config.",
+    parser = analysis_parser(
+        'gc-error-decay',
+        'Fit late-stage training-error decay (exp vs power-law vs stretched) on random-label '
+        'runs for a grokking_capacity YAML config.',
+        subdir='error_decay',
     )
-    src = p.add_mutually_exclusive_group(required=True)
-    src.add_argument("--config", type=Path, help="Path to a single configs/*.yaml")
-    src.add_argument("--all", action="store_true", help="Iterate every yaml in configs/")
-    p.add_argument("--out", type=Path, default=None,
-                   help="Output directory (default: results/<config_name>/error_decay/)")
-    p.add_argument("--db", default=None,
-                   help="Path to runs.db (default: GC_WALLOW_DB env or repo runs.db)")
-    args = p.parse_args(argv)
-
-    if args.all:
-        if args.out:
-            print("[gc-error-decay] --out is ignored with --all", file=sys.stderr)
-        for cfg in sorted(CONFIGS_DIR.glob("*.yaml")):
-            _render_one(cfg, DEFAULT_OUT_ROOT / cfg.stem / "error_decay", args.db)
-        return 0
-
-    cfg = args.config
-    out = args.out or (DEFAULT_OUT_ROOT / cfg.stem / "error_decay")
-    _render_one(cfg, out, args.db)
+    args = parser.parse_args(argv)
+    for config, out in config_jobs(
+        args, configs_dir=CONFIGS_DIR, output_root=DEFAULT_OUT_ROOT,
+        prog=parser.prog, subdir='error_decay',
+    ):
+        _render_one(config, out, args.db)
     return 0
 
 

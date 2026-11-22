@@ -1,17 +1,15 @@
 """`gc-figures` — generate every figure family for one config (or all)."""
 from __future__ import annotations
 
-import argparse
 import sys
 from pathlib import Path
 
+from ._cli import CONFIGS_DIR, REPO_ROOT, analysis_parser, config_jobs
 from .config_view import ConfigView
 from .plots import render_all, write_meta
 from .stats import render_stats
 
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-CONFIGS_DIR = REPO_ROOT / "configs"
 DEFAULT_OUT_ROOT = REPO_ROOT / "figures"
 
 
@@ -24,8 +22,8 @@ def _render_one(config_path: Path, out_dir: Path, only: set[str] | None,
         return
     print(f"  {len(view.groups)} arch group(s); swept axes: {view.swept_axes or '(none)'}")
     out_dir.mkdir(parents=True, exist_ok=True)
-    plot_only = only and (only - {"stats"})
-    rendered = render_all(view, out_dir, only=plot_only)
+    plot_only = None if only is None else only - {"stats"}
+    rendered = {} if plot_only == set() else render_all(view, out_dir, only=plot_only)
     for kind, paths in rendered.items():
         print(f"  {kind}: {len(paths)} file(s)")
     if not skip_stats and (only is None or "stats" in only):
@@ -37,18 +35,10 @@ def _render_one(config_path: Path, out_dir: Path, only: set[str] | None,
 
 
 def main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(
-        prog="gc-figures",
-        description="Render figures for a grokking_capacity YAML config.",
+    p = analysis_parser(
+        "gc-figures", "Render figures for a grokking_capacity YAML config.",
+        output_dir="figures",
     )
-    src = p.add_mutually_exclusive_group(required=True)
-    src.add_argument("--config", type=Path, help="Path to a single configs/*.yaml")
-    src.add_argument("--all", action="store_true",
-                     help="Iterate every yaml in configs/")
-    p.add_argument("--out", type=Path, default=None,
-                   help="Output directory (default: figures/<config_name>/)")
-    p.add_argument("--db", default=None,
-                   help="Path to runs.db (default: GC_WALLOW_DB env or repo runs.db)")
     p.add_argument("--skip-stats", action="store_true",
                    help="Skip the predictiveness CSV/plots")
     p.add_argument("--only", choices=["intersection", "capacity", "speed", "stats"],
@@ -58,17 +48,10 @@ def main(argv: list[str] | None = None) -> int:
 
     only = set(args.only) if args.only else None
 
-    if args.all:
-        if args.out:
-            print("[gc-figures] --out is ignored with --all (each config gets its own folder)",
-                  file=sys.stderr)
-        for cfg in sorted(CONFIGS_DIR.glob("*.yaml")):
-            _render_one(cfg, DEFAULT_OUT_ROOT / cfg.stem, only, args.db, args.skip_stats)
-        return 0
-
-    cfg = args.config
-    out = args.out or (DEFAULT_OUT_ROOT / cfg.stem)
-    _render_one(cfg, out, only, args.db, args.skip_stats)
+    for cfg, out in config_jobs(
+        args, configs_dir=CONFIGS_DIR, output_root=DEFAULT_OUT_ROOT, prog=p.prog,
+    ):
+        _render_one(cfg, out, only, args.db, args.skip_stats)
     return 0
 
 

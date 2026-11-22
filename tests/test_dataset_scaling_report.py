@@ -1,9 +1,7 @@
 import importlib.util
 from pathlib import Path
 import pytest
-p=Path(__file__).resolve().parents[1]/'scripts/report_p97_dataset_scaling.py'
-spec=importlib.util.spec_from_file_location('dataset_report',p)
-r=importlib.util.module_from_spec(spec);spec.loader.exec_module(r)
+from grokking_capacity.experiments.discrete_workflow import report_p97_dataset_scaling as r
 
 
 def test_censored_times_are_not_complete_means_or_medians():

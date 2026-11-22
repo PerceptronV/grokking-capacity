@@ -5,7 +5,24 @@ import torch
 from grokking_capacity.experiments.multilevel_dropout import (
     make_model, continuous_from_b, boundary_audit, train_arithmetic, late_drift)
 from grokking_capacity.models.transformer import count_parameters
-from grokking_capacity.experiments.matched_dropout import train_arithmetic as original_train
+import ast
+import json
+import math
+import time
+import zipfile
+import torch.nn.functional as F
+from grokking_capacity.experiments.registered import ARCHIVE
+
+
+def archived_train():
+    with zipfile.ZipFile(ARCHIVE/'sources.zip') as archive:
+        source = archive.read('src/grokking_capacity/experiments/matched_dropout.py').decode()
+    tree = ast.parse(source)
+    definitions = [node for node in tree.body if isinstance(node, ast.FunctionDef)
+                   and node.name in ('evaluate', 'train_arithmetic')]
+    ns = dict(torch=torch, F=F, math=math, time=time, json=json)
+    exec(compile(ast.Module(body=definitions, type_ignores=[]), '<archived protocol>', 'exec'), ns)
+    return ns['train_arithmetic']
 from grokking_capacity.utils.optim import build_adamw
 
 
@@ -59,7 +76,7 @@ def test_training_and_rng_match_completed_protocol(kind):
     torch.set_num_threads(1);c=config(kind);g=torch.Generator().manual_seed(15)
     x=torch.randint(0,9,(30,4),generator=g);t=torch.randint(0,9,(30,),generator=g)
     outputs=[]
-    for train in [original_train,train_arithmetic]:
+    for train in [archived_train(),train_arithmetic]:
         torch.manual_seed(14);m=make_model(c)
         opt=build_adamw(m,lr=.001,betas=(.9,.98),weight_decay=1.,mup_base=0,dim=c['dim'])
         trace=train(m,opt,(x[:18],t[:18],x[18:],t[18:]),c,'cpu')
@@ -79,8 +96,8 @@ def test_late_drift_requires_sufficient_positive_history():
 def test_independent_metrics_keep_censoring_and_missing_delays():
     import sys
     from pathlib import Path
-    sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
-    from report_p97_multilevel import independent_metrics,aggregate,bound
+
+    from grokking_capacity.experiments.discrete_workflow.report_p97_multilevel import independent_metrics, aggregate, bound
     from grokking_capacity.experiments.multilevel_dropout import metrics
     trace=[dict(epoch=i+1,train_online_acc=.8,train_eval_acc=1.,val_acc=v)
            for i,v in enumerate([.7,.99,.7,.99,.99])]
@@ -104,8 +121,8 @@ def test_independent_metrics_keep_censoring_and_missing_delays():
 def test_capacity_diagnostics_can_be_atomically_published(tmp_path):
     import sys,json
     from pathlib import Path
-    sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
-    from manage_p97_multilevel import diagnostics,atomic_json
+
+    from grokking_capacity.experiments.discrete_workflow.manage_p97_multilevel import diagnostics, atomic_json
     np.savez(tmp_path/'trace.npz',bits_trace=np.ones(200),train_loss_trace=np.ones(200),train_acc_trace=np.ones(200))
     result=dict(epochs=200,final_bits=8192.,config=dict(epochs=5000,n_samples=8192))
     d=diagnostics(tmp_path,result)
@@ -118,8 +135,8 @@ def test_capacity_diagnostics_can_be_atomically_published(tmp_path):
 def test_confirmation_binding_publication_and_shared_a(tmp_path,monkeypatch):
     import sys,json
     from pathlib import Path
-    sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
-    import manage_p97_multilevel as manager
+
+    import grokking_capacity.experiments.discrete_workflow.manage_p97_multilevel as manager
     monkeypatch.setattr(manager,'RUN',tmp_path)
     monkeypatch.setattr(manager,'assert_sources',lambda:None)
     monkeypatch.setattr(manager,'verify_inherited_a',lambda:{'models':{'model':'baseline','dim':32,'mlp_dim':128}})

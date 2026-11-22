@@ -1,8 +1,26 @@
 import json
+from pathlib import Path
 
 import pytest
 
-from scripts.report_discrete import comparison, control_config_matches, first_passage_delay, validate
+from grokking_capacity.experiments.discrete_workflow.report import comparison, control_config_matches, first_passage_delay, validate
+
+
+def test_controller_hash_validation_preserves_archives_and_rejects_unknown():
+    from grokking_capacity.experiments.discrete import ROOT
+    from grokking_capacity.experiments.discrete_workflow import confirmation, unrestricted
+    from grokking_capacity.experiments.discrete_workflow.report import (
+        confirmation_implementation_matches, digest,
+    )
+    for module, name, is_unrestricted in [
+        (confirmation, "confirm_discrete", False),
+        (unrestricted, "confirm_discrete_unrestricted", True),
+    ]:
+        assert confirmation_implementation_matches(digest(Path(module.__file__)), is_unrestricted)
+        snapshot = Path(confirmation.__file__).with_name("frozen") / (name + "_20261122.py")
+        assert confirmation_implementation_matches(digest(snapshot), is_unrestricted)
+        assert not confirmation_implementation_matches("0" * 64, is_unrestricted)
+    assert confirmation_implementation_matches(digest(Path(confirmation.__file__).with_name("frozen") / "confirm_discrete_p149.py"))
 
 
 def test_report_keeps_censored_crossings_out_of_ratios_and_labels_observed_medians():
@@ -71,8 +89,8 @@ def test_paper_delay_clamps_validation_first_to_zero_but_preserves_missing_event
 def test_nested_replication_status_and_development_scope(tmp_path):
     import json
     from grokking_capacity.experiments.discrete import DEFAULTS
-    from scripts.discrete_status import statuses
-    from scripts.report_fullwidth_development import export
+    from grokking_capacity.experiments.discrete_workflow.status import statuses
+    from grokking_capacity.experiments.discrete_workflow.report_fullwidth_development import export
     for relative, p in [('p97-v6/capacity-A/A_n8192_s61',97), ('fullwidth-old/A_n8192_s61',149)]:
         folder=tmp_path/relative
         folder.mkdir(parents=True)

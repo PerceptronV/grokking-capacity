@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "grokking_capacity"
 version = "0.2.0"
-description = "Empirical study of grokking onset as a function of model capacity, predicted from memorisation and generalisation speeds."
+description = "Empirical study of grokking onset as a function of model capacity, predicted from memorisation and generalisation timescales."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -35,6 +35,9 @@ gc-speed = "grokking_capacity.experiments.speed:main"
 gc-groks = "grokking_capacity.experiments.groks:main"
 gc-dispatch = "grokking_capacity.dispatch.main:main"
 gc-figures = "grokking_capacity.analysis.cli:main"
+gc-paper-analysis = "grokking_capacity.analysis.paper.__main__:main"
+gc-workflow = "grokking_capacity.workflows:main"
+gc-discrete-report = "grokking_capacity.experiments.discrete_workflow.report:main"
 gc-error-decay = "grokking_capacity.analysis.error_decay:main"
 gc-contraction = "grokking_capacity.analysis.contraction:main"
 gc-rate-vs-capacity = "grokking_capacity.analysis.rate_vs_capacity:main"
@@ -50,4 +53,4 @@ include = ["grokking_capacity", "grokking_capacity.*"]
 namespaces = false
 
 [tool.setuptools.package-data]
-grokking_capacity = ["py.typed"]
+grokking_capacity = ["py.typed", "workflow_catalog.json", "experiments/legacy_v1/*.json", "experiments/legacy_v1/*.zip"]

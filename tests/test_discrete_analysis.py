@@ -1,4 +1,4 @@
-from scripts.analyse_discrete import memorisation_intervals
+from grokking_capacity.experiments.discrete_workflow.analysis import memorisation_intervals
 
 
 def test_separate_plateaus_and_censoring():

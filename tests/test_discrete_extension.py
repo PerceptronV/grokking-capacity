@@ -6,7 +6,7 @@ import pytest
 import torch
 
 import grokking_capacity.experiments.discrete as runner
-from scripts.extend_discrete import extend
+from grokking_capacity.experiments.discrete_workflow.extend_discrete import extend
 
 
 @pytest.mark.parametrize('task', ['random', 'modular'])

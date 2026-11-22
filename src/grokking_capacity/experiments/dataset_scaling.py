@@ -1,8 +1,9 @@
 """Nested dataset-size sweep, with fixed update budgets and evaluation cadence.
 
-Prior campaign sources are imported without modification. No scientific source
-may change after registration; new campaigns never overwrite existing runs.
+Shared arithmetic and model helpers preserve the original protocol. Sources
+are frozen at registration; new campaigns never overwrite existing runs.
 """
+from .registered import protocol_sources, verify_sources
 import argparse
 import json
 import math
@@ -16,21 +17,16 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from . import multilevel_dropout as base
-from . import capacity_scaling as previous
+from . import arithmetic
+from . import model_protocols
+from . import capacity_matching
+from .registered import ROOT, read, sha, atomic_json
 from ..data import grokking_data_torch
 from ..models.transformer import count_parameters
 from ..utils.optim import build_adamw
 
-ROOT = previous.ROOT
 RUN = ROOT / 'results/discrete/p97-dataset-scaling-v1'
-SOURCES = previous.SOURCES + [
-    'src/grokking_capacity/experiments/dataset_scaling.py',
-    'scripts/run_p97_dataset_scaling.py',
-    'configs/discrete_p97_dataset_scaling.yaml',
-    'scripts/report_p97_dataset_scaling.py',
-]
-read, sha, atomic_json = previous.read, base.sha, base.atomic_json
+SOURCES = protocol_sources("dataset_scaling")
 
 
 def source_hashes():
@@ -59,13 +55,13 @@ def select_pairs(constants, sizes, candidates=range(2,162,2), tolerance=.1):
             k=constants[role]['bits_per_parameter']
             if k<=0:
                 raise ValueError('Positive empirical capacity constant required')
-            width=min(candidates,key=lambda w:(abs(k*previous.parameter_count(role,w)/target-1),w))
-            parameters=previous.parameter_count(role,width)
+            width=min(candidates,key=lambda w:(abs(k*capacity_matching.parameter_count(role,w)/target-1),w))
+            parameters=capacity_matching.parameter_count(role,width)
             estimate=k*parameters
             mismatch=estimate/target-1
             if abs(mismatch)>tolerance:
                 raise ValueError(f'{role} N={n}: nearest width misses target by {mismatch:.2%}')
-            pair[role]=previous.model_spec(role,width)
+            pair[role]=capacity_matching.model_spec(role,width)
             pair[role+'_parameters']=parameters
             pair[role+'_estimated_bits']=estimate
             pair[role+'_dataset_mismatch']=mismatch
@@ -139,8 +135,8 @@ def train(model, optimizer, datasets, config, device, trace_path):
                 window_loss += loss.item() * len(tb)
                 window_correct += (logits.argmax(-1) == tb).sum().item()
                 if step % interval == 0:
-                    val = base.evaluate(model, Xv, Tv, device, bs)
-                    tr = base.evaluate(model, X, T, device, bs)
+                    val = arithmetic.evaluate(model, Xv, Tv, device, bs)
+                    tr = arithmetic.evaluate(model, X, T, device, bs)
                     row = dict(step=step, epoch=epoch, examples=examples,
                         completed_epochs=epoch-1+int(offset+len(tb)==n),
                         epoch_fraction=epoch-1+(offset+len(tb))/n,
@@ -163,6 +159,7 @@ def train(model, optimizer, datasets, config, device, trace_path):
 
 
 def run(config, output, device):
+    RUN = Path(output).resolve().parent.parent
     manifest = read(RUN/'manifest.json')
     assert manifest['source_hashes'] == source_hashes(), 'Frozen sources changed'
     assert read(RUN/'job_registry.json')[output.name] == config
@@ -175,14 +172,14 @@ def run(config, output, device):
     output.mkdir(parents=True, exist_ok=False)
     torch.manual_seed(config['seed'])
     datasets = data(config)
-    model = base.make_model(config)
+    model = model_protocols.make_model(config)
     params = count_parameters(model)
-    assert params == previous.parameter_count(config['role'], config['dim'])
-    initial = base.tensor_digest(model.state_dict().values())
+    assert params == capacity_matching.parameter_count(config['role'], config['dim'])
+    initial = arithmetic.tensor_digest(model.state_dict().values())
     torch.save(dict(model_state_dict=model.state_dict(), config=config), output/'model_init.pt')
     job_manifest = dict(config=config, source_hashes=source_hashes(), param_count=params,
-        initial_weights_sha256=initial, dataset_sha256=base.tensor_digest(datasets),
-        train_sha256=base.tensor_digest(datasets[:2]), test_sha256=base.tensor_digest(datasets[2:]),
+        initial_weights_sha256=initial, dataset_sha256=arithmetic.tensor_digest(datasets),
+        train_sha256=arithmetic.tensor_digest(datasets[:2]), test_sha256=arithmetic.tensor_digest(datasets[2:]),
         n_test=len(datasets[3]), started_at=time.time(), device=device, pid=os.getpid(),
         host=platform.node(), torch=str(torch.__version__), python=platform.python_version(),
         git_commit=subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip())
@@ -196,7 +193,7 @@ def run(config, output, device):
         joint_stop_passed=joint_stop(trace),
         learning_gate_passed=metrics['val_99_sustained_updates'] is not None and
             trace[-1]['val_acc'] >= .99 and trace[-1]['train_eval_acc'] >= .99,
-        boundary_audit=base.boundary_audit(model, datasets[0], config, device))
+        boundary_audit=model_protocols.boundary_audit(model, datasets[0], config, device))
     torch.save(dict(model_state_dict={k:v.detach().cpu() for k,v in model.state_dict().items()}, config=config), output/'model.pt')
     result.update(checkpoint_sha256=sha(output/'model.pt'), finished_at=time.time())
     atomic_json(output/'summary.json', result)
@@ -204,31 +201,34 @@ def run(config, output, device):
 
 
 def audit_job(path, device):
+    path = Path(path)
+    RUN = path.resolve().parent.parent
     s, m = read(path/'summary.json'), read(path/'manifest.json')
     c = s['config']
-    assert m['source_hashes'] == source_hashes() == read(RUN/'manifest.json')['source_hashes']
+    assert m['source_hashes'] == read(RUN/'manifest.json')['source_hashes']
+    source_verification = verify_sources(m['source_hashes'])
     assert m['config'] == c == read(RUN/'job_registry.json')[path.name]
     assert c['selection_sha256'] == sha(RUN/'selection.json')
     assert sha(path/'model.pt') == s['checkpoint_sha256']
     torch.manual_seed(c['seed'])
     datasets = data(c)
-    model = base.make_model(c)
-    assert base.tensor_digest(model.state_dict().values()) == m['initial_weights_sha256']
-    assert base.tensor_digest(datasets) == m['dataset_sha256']
-    assert len(datasets[1]) == c['n_train'] and len(datasets[3]) == m['n_test'] == 1863
-    assert base.tensor_digest(datasets[:2]) == m['train_sha256']
-    assert base.tensor_digest(datasets[2:]) == m['test_sha256']
+    model = model_protocols.make_model(c)
+    assert arithmetic.tensor_digest(model.state_dict().values()) == m['initial_weights_sha256']
+    assert arithmetic.tensor_digest(datasets) == m['dataset_sha256']
+    assert len(datasets[1]) == c['n_train'] and len(datasets[3]) == m['n_test'] == c['p']*(c['p']-1)-c['train_pool_size']
+    assert arithmetic.tensor_digest(datasets[:2]) == m['train_sha256']
+    assert arithmetic.tensor_digest(datasets[2:]) == m['test_sha256']
     initial = torch.load(path/'model_init.pt', map_location='cpu', weights_only=True)
-    assert initial['config'] == c and base.tensor_digest(initial['model_state_dict'].values()) == m['initial_weights_sha256']
+    assert initial['config'] == c and arithmetic.tensor_digest(initial['model_state_dict'].values()) == m['initial_weights_sha256']
     saved = torch.load(path/'model.pt', map_location='cpu', weights_only=True)
     assert saved['config'] == c
     model.load_state_dict(saved['model_state_dict'], strict=True)
-    assert count_parameters(model) == s['param_count'] == m['param_count'] == previous.parameter_count(c['role'], c['dim'])
+    assert count_parameters(model) == s['param_count'] == m['param_count'] == capacity_matching.parameter_count(c['role'], c['dim'])
     drops = [x for x in model.modules() if isinstance(x, torch.nn.Dropout)]
     assert drops and all(x.p == .2 for x in drops)
     model = model.to(device)
-    tr = base.evaluate(model, *datasets[:2], device, c['batch_size'])
-    val = base.evaluate(model, *datasets[2:], device, c['batch_size'])
+    tr = arithmetic.evaluate(model, *datasets[:2], device, c['batch_size'])
+    val = arithmetic.evaluate(model, *datasets[2:], device, c['batch_size'])
     assert tr['acc'] == s['final']['train_eval_acc'] and val['acc'] == s['final']['val_acc']
     assert abs(tr['loss']-s['final']['train_eval_loss']) < 1e-6
     assert abs(val['loss']-s['final']['val_loss']) < 1e-6
@@ -236,7 +236,7 @@ def audit_job(path, device):
     assert trace[-1] == s['final'] and trace_metrics(trace) == s['metrics']
     per_epoch = math.ceil(c['n_train']/c['batch_size'])
     for i, row in enumerate(trace):
-        step = (i+1)*c['eval_every']
+        step = min((i+1)*c['eval_every'], c['max_updates'])
         assert row['step'] == step <= c['max_updates']
         full, tail = divmod(step, per_epoch)
         assert row['examples'] == full*c['n_train']+min(tail*c['batch_size'], c['n_train'])
@@ -249,8 +249,8 @@ def audit_job(path, device):
     assert joint_stop(trace) == s['joint_stop_passed']
     assert joint_stop(trace) or trace[-1]['step'] == c['max_updates']
     assert s['learning_gate_passed'] == (s['metrics']['val_99_sustained_updates'] is not None and tr['acc']>=.99 and val['acc']>=.99)
-    return dict(name=path.name, all_passed=True, verification_device=device, train_eval=tr, test_eval=val,
-        boundary=base.boundary_audit(model, datasets[0], c, device),
+    return dict(source_verification=source_verification,audit_source_hashes=source_hashes(),name=path.name, all_passed=True, verification_device=device, train_eval=tr, test_eval=val,
+        boundary=model_protocols.boundary_audit(model, datasets[0], c, device),
         input_hashes={p.name:sha(p) for p in path.iterdir() if p.is_file()}, audited_at=time.time())
 
 

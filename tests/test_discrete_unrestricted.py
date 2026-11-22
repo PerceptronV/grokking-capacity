@@ -1,6 +1,6 @@
 import torch
 
-from scripts.confirm_discrete_unrestricted import unrestricted_runs,shared_initial_tensors
+from grokking_capacity.experiments.discrete_workflow.unrestricted import unrestricted_runs,shared_initial_tensors
 from grokking_capacity.experiments.discrete import DEFAULTS
 from grokking_capacity.models.discrete import make_model
 from grokking_capacity.models.transformer import count_parameters
@@ -23,7 +23,7 @@ def test_unrestricted_control_has_no_channel_and_shares_base_initialisation():
 
 
 def test_fullwidth_controls_are_ordinary_and_count_all_categorical_parameters():
-    from scripts.confirm_discrete import fullwidth_control, confirmation_runs
+    from grokking_capacity.experiments.discrete_workflow.confirmation import fullwidth_control, confirmation_runs
     from grokking_capacity.models.fullwidth_discrete import FullWidthCategoricalTransformer
     from grokking_capacity.models.transformer import TransformerTorch
     shared = dict(p=149, operation='/', depth=2, heads=1, dropout=0., lr=.001,
@@ -52,7 +52,7 @@ def test_fullwidth_controls_are_ordinary_and_count_all_categorical_parameters():
 
 def test_custom_feedforward_control_keeps_architecture_and_parameter_pairing():
     from grokking_capacity.experiments.discrete import DEFAULTS
-    from scripts.confirm_discrete import confirmation_runs, fullwidth_control
+    from grokking_capacity.experiments.discrete_workflow.confirmation import confirmation_runs, fullwidth_control
     shared = {**DEFAULTS, 'p':149, 'dim':44, 'model':'baseline'}
     b = {**shared, 'model':'quantized', 'dim':72, 'mlp_dim':576, 'levels':2,
          'quantizer_clip':1., 'quantizer_surrogate':'clipped'}
@@ -69,7 +69,7 @@ def test_custom_feedforward_control_keeps_architecture_and_parameter_pairing():
 
 def test_registered_confirmation_seeds_are_paired_and_rotate_without_data_overrides():
     import pytest
-    from scripts.confirm_discrete import confirmation_runs
+    from grokking_capacity.experiments.discrete_workflow.confirmation import confirmation_runs
     a = {**DEFAULTS, 'p':149, 'dim':44, 'model':'baseline', 'seed':61,
          'data_seed':42, 'task':'random', 'n_samples':16384}
     b = {**a, 'model':'quantized', 'dim':80, 'mlp_dim':320, 'levels':2,

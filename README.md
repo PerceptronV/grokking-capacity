@@ -1,6 +1,13 @@
-# Model Capacity Determines Grokking through Competing Memorisation and Generalisation Speeds
+# How Large Must a Model Be to Grok?
 
-Existing accounts of grokking explain the phenomena in terms of mechanistic frameworks such as circuit efficiency or lazy-to-rich transitions. However, despite a known dependence between grokking and model size, how model capacity shapes grokking remains an open question. We give an information-theoretic account of this relationship on the task of modular arithmetic, showing that grokking does not immediately occur when a model becomes large enough to memorise the training set, but rather emerges as the outcome of a competition between two measurable timescales: a memorisation speed $T_{\text{mem}}(P,p)$ and a generalisation speed $T_{\text{gen}}(P,p)$, both of which are functions of model parameter count $P$. Adapting the information capacity framework of Morris et al. (2025), we estimate $T_{\text{mem}}(P,p)$ on random-label data of equivalent complexity and $T_{\text{gen}}(P,p)$ on the modular task itself, and show that grokking emerges close to the parameter scale where these timescales intersect. The framework also suggests an empirical model for predicting memorisation speed given model capacity and dataset complexity, recovering the previously reported empirical observation that larger models memorise faster. Overall, we motivate the formalisation of different learning timescales as important abstractions to study when explaining how model capacity shapes grokking on algorithmic tasks.
+This repository contains code for reproducing the experimens and data associated with the paper ['How Large Must a Model Be to Grok? A competition between memorisation and generalisation timescales'](https://arxiv.org/abs/2605.09724), by Yiding Song and Hanming Ye. It is published at the 40th Conference on Neural Information Processing Systems (NeurIPS 2026), Sydney, Australia.
+
+**Abstract**
+
+> Despite a known dependence between grokking and model parameter count, how model capacity shapes grokking remains an open question. Focusing on small Transformers and modular arithmetic, we give a quantitative account of the relationship between model capacity and grokking as a competition between two timescales: generalisation ($T_{\text{gen}}$) and memorisation ($T_{\text{mem}}$).
+Building on prior formalisms for the empirical information capacity of Transformers, we define and measure $T_{\text{gen}}$ on modular arithmetic datasets and $T_{\text{mem}}$ on random-label datasets of equivalent complexity, and show that their intersection correlates with model sizes where consistent grokking begins.
+We also observe empirical laws for $T_{\text{gen}}$ and $T_{\text{mem}}$ as models and datasets scale, motivating their forms theoretically and finding that our model of $T_{\text{mem}}$ is consistent with prior observations that larger models tend to memorise faster.
+Moreover, extrapolating our empirical timescale laws predicted the existence of datasets for which no model of any size would consistently grok, a pattern supported on the modular arithmetic datasets of larger primes, demonstrating that our framework can make qualitative predictions out-of-distribution.
 
 ## Installation
 
@@ -10,124 +17,36 @@ In your micromamba environment of choice, run the following command to install t
 pip install -e .
 ```
 
-This exposes the experiment entry points (`gc-capacity`, `gc-speed`, `gc-groks`), the suite dispatcher (`gc-dispatch`), and the figure renderer (`gc-figures`). The experiment runs database lives at `runs.db` (override with `GC_WALLOW_DB`); the schema is declared in `wallow.toml` and auto-creates on first use.
+This exposes the experiment entry points (`gc-capacity`, `gc-speed`, `gc-groks`), the suite dispatcher (`gc-dispatch`), the figure renderer (`gc-figures`), and the grouped workflow command (`gc-workflow`). The experiment runs database lives at `runs.db` (override with `GC_WALLOW_DB`); the schema is declared in `wallow.toml` and auto-creates on first use.
 
 ## Reproducibility
 
-The paper's data is produced by a set of YAML-driven suites under `configs/`. Each suite is dispatched in parallel across the available GPUs by `gc-dispatch`.
+### Repository layout
 
-To reproduce every suite end-to-end on a single multi-GPU node, run the wrapper script from the repo root with your micromamba environment name:
+- `configs/`: dispatcher suites; development recipes are grouped in subdirectories.
+- `src/grokking_capacity/`: training, models, registry access, and reusable analysis.
+- `scripts/`: two suite launchers and their command guide; see the
+  [command guide](scripts/README.md).
+- `tests/`: unit and integration checks using synthetic data and temporary stores.
+- `docs/`: separate manuscript checkout, described above.
 
-```bash
-scripts/replicate.sh <micromamba-env>
-```
-
-This launches a detached `tmux` session that runs all ten suites (`central`, `weight_decay_sweep`, `alpha_sweep`, `dropout_sweep`, `lr_sweep`, `init_scale_sweep`, `task_add`, `depth_scaling`, `heads_sweep`, `task_mul`) sequentially.
-
-Once the wallow database is populated, render the figures off it (one folder per config under `figures/`):
-
-```bash
-gc-figures --all
-```
-
-To render a single config or restrict to a figure family, see `gc-figures --help`.
-
-## Revised paper workflow
-
-The manuscript lives in the separate `docs` checkout of
-[PerceptronV/writings](https://github.com/PerceptronV/writings), on branch `base`.
-Its sparse checkout contains `papers/2026 Grokking Capacity`. Commit and push
-that repository separately; do not stage missing paths outside its sparse cone.
-
-Install the publication dependencies with `pip install -e '.[paper,test]'`.
-The build also requires TeX Live (`pdflatex`, `bibtex`), the local run registries
-and traces, and the analysis inputs under `results/`. These large experiment
-artifacts are not installed with the Python package.
-
-```bash
-# Rebuild tables, PDF/PNG assets and the paper from existing analyses.
-python "docs/papers/2026 Grokking Capacity/code/build_revised_paper.py" --reuse-analyses
-
-# Recompute the selected analyses before building (requires local experiment data).
-python "docs/papers/2026 Grokking Capacity/code/build_revised_paper.py"
-
-# Run the test suite without unrelated globally installed pytest plugins.
-PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest tests "docs/papers/2026 Grokking Capacity/code/tests" -q
-```
-
-The build preserves author prose and updates only generated tables and figure
-assets. After recomputing analyses, reconcile numerical claims in the prose
-explicitly. Numerical validation checks tables, roots, figure pairs, references
-and raw-trace fingerprints; it does not substitute for the test suite or visual
-review. Build logs and validation records are written to
-`reports/paper_corrections_20261107/`, with the paper exported to
-`docs/papers/2026 Grokking Capacity/exports/paper-neurips-revised.pdf`.
-
-The active entry points are `recompute_paper_crossings.py`,
-`recompute_paper_statistics.py`, `prepare_paper_revision_models.py`,
-`prepare_paper_revision_supplement.py`, `publish_paper_revision.py` and
-`validate_revised_paper.py`, all under `docs/papers/2026 Grokking Capacity/code/`.
-The cone renderer and its publication helpers also live beside the paper. The publisher discovers
-figures from the current TeX includes. `paper_tables.py` only formats
-the generated sensitivity table; it does not rewrite the manuscript.
-
-The paper uses arithmetic means of observed times within each cell for both
-learning timescales, and minimum paired delay across ten seeds for the cone.
-See [aggregation conventions](src/grokking_capacity/analysis/AGGREGATION.txt)
-for the configurable reducers and handling of unresolved outcomes. The older
-`crossing_analysis.py` and `analysis/forecast_onset.py` retain different
-estimators for comparison; they do not generate the revised paper's results.
-One-off `update_*_paper.py` scripts preserve earlier revision steps and are not
-part of the current build.
-
-The timescale laws use `T_gen(P,p) = A * p**a * P**(-b)` and
-`T_mem(P,p) = B * exp(gamma * f)`. Saved generalisation fits use `b` for
-the parameter-count exponent; memorisation fits use `B` and `ln_B` for the
-prefactor. `alpha` remains the training fraction, and the paper writes batch
-size as `B_batch`. The loader in
-`src/grokking_capacity/analysis/timescale_laws.py` translates older saved law
-keys on reading; frozen inputs and older submissions retain their original
-notation and numerical values.
+### Experiments and Data
 
 ## License and Attribution
 
 Use the following BibTeX entry to cite this work:
 
 ```bibtex
-@article{song2026grokking,
-  title={Model Capacity Determines Grokking through Competing Memorisation and Generalisation Speeds},
-  author={Song, Yiding and Ye, Hanming}
-  year={2026}
+@inproceedings{
+  song2026grokking,
+  title={How Large Must a Model Be to Grok? A competition between memorisation and generalisation timescales},
+  author={Yiding Song and Hanming Ye},
+  booktitle={The Fortieth Annual Conference on Neural Information Processing Systems},
+  year={2026},
+  url={https://openreview.net/forum?id=2kLkhhcpNe}
 }
 ```
 
 Unless otherwise stated, the files and code in this repository are licensed under the GNU GENERAL PUBLIC LICENSE (Version 3), Copyright (C) 2026 Yiding Song and Hanming Ye.
 
 **Note:** the files [`modular.py`](src/grokking_capacity/data/modular.py) and [`transformer.py`](src/grokking_capacity/models/transformer.py) are adapted from the code by Amund Tveit (available at [adveit/torch_grokking](https://github.com/atveit/torch_grokking) under the MIT License), which itself is a PyTorch port of the original MLX code by Jason Stock (available at [stockeh/mlx-grokking](https://github.com/stockeh/mlx-grokking)). We have modified `modular.py` to add different split types and random data generation, and mostly left `transformer.py` untouched. The trainers used to finetune the neural network also takes inspiration from the code of Tveit and Stock.
-
-## Discrete latent experiment
-
-The `idea/discrete` experiment compares a small continuous model A, a larger
-transformer B with finite internal representations, and its continuous control C.
-The fixed task is modular division at p=149 with a 50% training split. Both A and
-B must match the training set's 79,811-bit label complexity and each other within
-10%; matching A to B alone is insufficient. The [protocol and evidence](DISCRETE_EXPERIMENT.md)
-require successful discrete arithmetic learning before any random-label tests.
-No final capacity-matched result has been established yet.
-
-```bash
-PYTHONPATH=src python -m grokking_capacity.experiments.discrete \
-  --config configs/discrete_learning_p149_precision.yaml \
-  --output results/discrete/learning-p149-v1 --device cuda:1
-PYTHONPATH=src python scripts/audit_discrete.py \
-  results/discrete/learning-p149-v1/B_l16_q64_p149_s42
-python scripts/discrete_status.py --active-only
-PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=src python -m pytest -q \
-  tests/test_discrete.py tests/test_discrete_extension.py tests/test_discrete_match.py
-```
-
-Capacity runs require `--gate` pointing to a successful matching discrete arithmetic
-run. `scripts/assess_discrete_match.py` checks the three-way match using completed,
-paired calibration across seeds and dataset sizes, with horizon and drift checks.
-Inspect an existing run's process and checkpoint before using `--resume`. Completed
-runs are skipped; changed source/configuration/data cannot silently overwrite a run.

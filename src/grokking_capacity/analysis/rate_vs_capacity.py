@@ -18,7 +18,6 @@ Pure post-hoc: it reuses ``gc-error-decay``'s window and exponential fit for the
 """
 from __future__ import annotations
 
-import argparse
 import json
 import sys
 from pathlib import Path
@@ -30,11 +29,10 @@ import seaborn as sns
 
 from .config_view import ConfigView, load_npz
 from .error_decay import analyze_run, collect_random_runs, _capacity_fraction
+from ._cli import CONFIGS_DIR, RESULTS_DIR, analysis_parser, config_jobs
 
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-CONFIGS_DIR = REPO_ROOT / "configs"
-DEFAULT_OUT_ROOT = REPO_ROOT / "results"
+DEFAULT_OUT_ROOT = RESULTS_DIR
 
 MEM_ACC = 0.99            # T_mem := first epoch with train_acc >= this
 CONSISTENT_TOL = 0.20     # |a_rate - a_agg| / a_agg below this -> CONSISTENT
@@ -228,30 +226,18 @@ def _render_one(config_path: Path, out_dir: Path, db_path: Optional[str]) -> Non
 
 
 def main(argv: Optional[list[str]] = None) -> int:
-    p = argparse.ArgumentParser(
-        prog="gc-rate-vs-capacity",
-        description="Compare the per-trajectory error-removal rate's f-dependence to the "
-                    "aggregate T_mem(f) exponent on random-label runs.",
+    parser = analysis_parser(
+        'gc-rate-vs-capacity',
+        "Compare the per-trajectory error-removal rate's f-dependence to the aggregate "
+        'T_mem(f) exponent on random-label runs.',
+        subdir='rate_vs_capacity',
     )
-    src = p.add_mutually_exclusive_group(required=True)
-    src.add_argument("--config", type=Path, help="Path to a single configs/*.yaml")
-    src.add_argument("--all", action="store_true", help="Iterate every yaml in configs/")
-    p.add_argument("--out", type=Path, default=None,
-                   help="Output dir (default: results/<config_name>/rate_vs_capacity/)")
-    p.add_argument("--db", default=None,
-                   help="Path to runs.db (default: GC_WALLOW_DB env or repo runs.db)")
-    args = p.parse_args(argv)
-
-    if args.all:
-        if args.out:
-            print("[gc-rate-vs-capacity] --out is ignored with --all", file=sys.stderr)
-        for cfg in sorted(CONFIGS_DIR.glob("*.yaml")):
-            _render_one(cfg, DEFAULT_OUT_ROOT / cfg.stem / "rate_vs_capacity", args.db)
-        return 0
-
-    cfg = args.config
-    out = args.out or (DEFAULT_OUT_ROOT / cfg.stem / "rate_vs_capacity")
-    _render_one(cfg, out, args.db)
+    args = parser.parse_args(argv)
+    for config, out in config_jobs(
+        args, configs_dir=CONFIGS_DIR, output_root=DEFAULT_OUT_ROOT,
+        prog=parser.prog, subdir='rate_vs_capacity',
+    ):
+        _render_one(config, out, args.db)
     return 0
 
 

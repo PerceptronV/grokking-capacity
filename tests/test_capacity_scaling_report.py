@@ -1,8 +1,8 @@
 import sys
 from pathlib import Path
 import pytest
-sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
-from report_p97_capacity_scaling import time_summary,slopes,paired_outcomes
+
+from grokking_capacity.experiments.discrete_workflow.report_p97_capacity_scaling import time_summary, slopes, paired_outcomes
 
 
 def test_censored_times_keep_full_sample_and_valid_median_bounds():
@@ -39,7 +39,7 @@ def test_paired_censoring_only_claims_identifiable_winners_and_ratio_bounds():
 
 
 def test_arithmetic_mean_scaling_is_not_confused_with_mean_log_scaling():
-    from report_p97_capacity_scaling import mean_time_slopes
+    from grokking_capacity.experiments.discrete_workflow.report_p97_capacity_scaling import mean_time_slopes
     rows=[];seeds=list(range(401,411))
     for i,x in enumerate([1,2,4,8]):
         for role in ['C','B']:

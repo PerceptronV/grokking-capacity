@@ -24,7 +24,6 @@ any aggregate.
 """
 from __future__ import annotations
 
-import argparse
 import json
 import sys
 from pathlib import Path
@@ -36,11 +35,10 @@ import seaborn as sns
 from scipy.optimize import curve_fit
 
 from .config_view import ConfigView, load_npz
+from ._cli import CONFIGS_DIR, RESULTS_DIR, analysis_parser, config_jobs
 
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-CONFIGS_DIR = REPO_ROOT / "configs"
-DEFAULT_OUT_ROOT = REPO_ROOT / "results"
+DEFAULT_OUT_ROOT = RESULTS_DIR
 
 # --- definitions (§1.5) — fixed before viewing aggregates ----------------- #
 TRAIN_MEM_ACC = 0.99      # T_mem  := first epoch with train_acc >= this
@@ -429,30 +427,18 @@ def _render_one(config_path: Path, out_dir: Path, db_path: Optional[str]) -> Non
 
 
 def main(argv: Optional[list[str]] = None) -> int:
-    p = argparse.ArgumentParser(
-        prog="gc-contraction",
-        description="Fit post-memorisation parameter-norm contraction (log-linear + Kosson) "
-                    "on grokking trajectories for a grokking_capacity YAML config.",
+    parser = analysis_parser(
+        'gc-contraction',
+        'Fit post-memorisation parameter-norm contraction (log-linear + Kosson) on grokking '
+        'trajectories for a grokking_capacity YAML config.',
+        subdir='contraction',
     )
-    src = p.add_mutually_exclusive_group(required=True)
-    src.add_argument("--config", type=Path, help="Path to a single configs/*.yaml")
-    src.add_argument("--all", action="store_true", help="Iterate every yaml in configs/")
-    p.add_argument("--out", type=Path, default=None,
-                   help="Output directory (default: results/<config_name>/contraction/)")
-    p.add_argument("--db", default=None,
-                   help="Path to runs.db (default: GC_WALLOW_DB env or repo runs.db)")
-    args = p.parse_args(argv)
-
-    if args.all:
-        if args.out:
-            print("[gc-contraction] --out is ignored with --all", file=sys.stderr)
-        for cfg in sorted(CONFIGS_DIR.glob("*.yaml")):
-            _render_one(cfg, DEFAULT_OUT_ROOT / cfg.stem / "contraction", args.db)
-        return 0
-
-    cfg = args.config
-    out = args.out or (DEFAULT_OUT_ROOT / cfg.stem / "contraction")
-    _render_one(cfg, out, args.db)
+    args = parser.parse_args(argv)
+    for config, out in config_jobs(
+        args, configs_dir=CONFIGS_DIR, output_root=DEFAULT_OUT_ROOT,
+        prog=parser.prog, subdir='contraction',
+    ):
+        _render_one(config, out, args.db)
     return 0
 
 

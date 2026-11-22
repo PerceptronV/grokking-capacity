@@ -76,14 +76,14 @@ with `--workers-per-gpu` if needed.
 
 ## Figures
 
-`gc-figures` reads any config in `configs/` and renders every figure family
+`gc-figures` reads dispatcher suite configs in `configs/` and renders every figure family
 straight off the wallow store. No CLI flags for plot selection — drive
 everything from the YAML.
 
 ```bash
 gc-figures --config configs/central.yaml                  # → figures/central/
 gc-figures --config configs/weight_decay_sweep.yaml --out /tmp/wd/
-gc-figures --all                                           # every config
+gc-figures --all                                           # dispatcher suites only
 gc-figures --config configs/central.yaml --only intersection --only stats
 ```
 

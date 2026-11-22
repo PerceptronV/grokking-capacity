@@ -1,0 +1,116 @@
+name: p97_capacity_matched_binary_dropout
+registered: '2026-10-25'
+branch: idea/discrete
+common:
+  p: 97
+  depth: 2
+  heads: 1
+  dropout: 0.2
+  lr: 0.001
+  weight_decay: 1.0
+  beta1: 0.9
+  beta2: 0.98
+  batch_size: 512
+  epochs: 5000
+  patience: 100
+  min_delta: 0.0001
+fixed_dataset:
+  operation: modular_division
+  training_fraction: 0.5
+  training_examples: 4656
+  label_information_bits: 30866.284423090663
+models:
+  A: Ordinary smaller continuous transformer; size selected by measured capacity.
+  B: Full-width binary scalar quantization after every block; RMS-clipped STE, fixed
+    levels [-1, 1]; no compression adapters.
+  C: Ordinary continuous transformer with exactly B's width, feedforward width, parameters
+    and same-seed initialization.
+capacity:
+  n_samples:
+  - 2048
+  - 4096
+  - 8192
+  - 16384
+  seeds:
+  - 61
+  - 62
+  estimator: Maximum final eval-mode learned bits over dataset sizes separately per
+    seed.
+  stopping: Original CapacityTrainer; online-loss patience 100 epochs, min_delta 1e-4,
+    ceiling 5000 epochs.
+  target_tolerance: 0.1
+  pair_tolerance: 0.1
+  minimum_B_to_A_parameter_ratio: 2.0
+  acceptance: A and B must each match the fixed dataset within 10%, and each other
+    within 10%, on both calibration seeds.
+  C_check: Directly measure C on the same grid; flag data-limited estimates and extend
+    larger datasets if needed to establish C exceeds matched capacity.
+learning_gates:
+  development_arithmetic_seeds:
+  - 41
+  - 42
+  arithmetic: Three consecutive held-out eval-mode accuracies >=99% and final eval-mode
+    training accuracy >=99%; stop pilot on this criterion.
+  random: After the exact recipe passes arithmetic, validate random n2048 final eval-mode
+    training accuracy >=99% before larger random-label cells.
+  no_transfer: Dropout-free gates cannot authorize the new dropout capacity runs.
+confirmation:
+  seeds:
+  - 101
+  - 102
+  - 103
+  - 104
+  - 105
+  - 106
+  - 107
+  - 108
+  - 109
+  - 110
+  pairing: Same dataset seed for A/B/C; B/C identical initial weights for every seed.
+  stopping: Up to 5000 epochs; stop when current online training >=99% and held-out
+    >=99% for three consecutive epochs.
+  primary_delay: max(0, first held-out 98% epoch minus first online training 99% epoch).
+  secondary_delay: Same first-passage calculation using end-of-epoch eval-mode training
+    accuracy.
+  aggregation: Minimum observed delay with all ten seed outcomes and missing crossings
+    separately; no zero imputation.
+  speed: First three-epoch sustained held-out 95% and 99%, reported in optimizer updates
+    (10 per epoch), with paired wins and censoring.
+  freeze: Select solely from learning gates and capacity before any confirmation seed;
+    never resize after seeing confirmation outcomes.
+development:
+  initial_A:
+    model: baseline
+    dim: 32
+    mlp_dim: 128
+  initial_B_candidates:
+  - model: quantized
+    dim: 72
+    mlp_dim: 62
+    levels: 2
+    quantizer_clip: 1.0
+    quantizer_surrogate: rms_clipped
+  - model: quantized
+    dim: 80
+    mlp_dim: 104
+    levels: 2
+    quantizer_clip: 1.0
+    quantizer_surrogate: rms_clipped
+  - model: quantized
+    dim: 88
+    mlp_dim: 128
+    levels: 2
+    quantizer_clip: 1.0
+    quantizer_surrogate: rms_clipped
+  adaptation: Resize only width/feedforward dimensions using development gates and
+    capacity; retain every attempted recipe. Keep dropout, optimizer, binary alphabet,
+    STE, data and budgets fixed.
+  diagnostics: Flag selected maxima at a dataset-size boundary, >=95% label entropy,
+    >1% late drift, or at the epoch ceiling. Extend calibration when needed; do not
+    accept a failed-learning model as reduced capacity.
+resources:
+  devices:
+  - cuda:0
+  - cuda:1
+  - cuda:0
+  - cuda:1

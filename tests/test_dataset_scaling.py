@@ -25,7 +25,7 @@ def test_logarithmic_registration_and_capacity_selection():
         for role in ['C','B']:
             assert abs(pair[role+'_estimated_bits']/pair['dataset_bits']-1)<=.1
             c=dict(**reg['common'],**pair[role])
-            assert ds.count_parameters(ds.base.make_model(c))==pair[role+'_parameters']
+            assert ds.count_parameters(ds.model_protocols.make_model(c))==pair[role+'_parameters']
             assert pair[role]['mlp_dim']==4*pair[role]['dim']
     with pytest.raises(ValueError):
         ds.select_pairs(old['constants'],[512])
@@ -69,7 +69,7 @@ def test_training_exact_budget_across_epochs_and_partial_batches(tmp_path,monkey
     opt = torch.optim.SGD(model.parameters(),lr=.01)
     datasets = (torch.randn(n,2),torch.zeros(n,dtype=torch.long),torch.randn(3,2),torch.zeros(3,dtype=torch.long))
     # Never trigger stopping; verify the evaluation cadence independently of epoch size.
-    monkeypatch.setattr(ds.base,'evaluate',lambda *args,**kw: dict(loss=1.,acc=.1))
+    monkeypatch.setattr(ds.arithmetic,'evaluate',lambda *args,**kw: dict(loss=1.,acc=.1))
     c = dict(batch_size=4,eval_every=2,max_updates=10)
     trace = ds.train(model,opt,datasets,c,'cpu',tmp_path/'trace.jsonl')
     assert [r['step'] for r in trace] == [2,4,6,8,10]
@@ -97,7 +97,7 @@ def test_training_stops_at_first_joint_success(tmp_path,monkeypatch):
         model.bias.copy_(torch.tensor([5.,-5.]))
     opt = torch.optim.SGD(model.parameters(),lr=.01)
     X,T = torch.zeros(3,2),torch.zeros(3,dtype=torch.long)
-    monkeypatch.setattr(ds.base,'evaluate',lambda *args,**kw: dict(loss=0.,acc=1.))
+    monkeypatch.setattr(ds.arithmetic,'evaluate',lambda *args,**kw: dict(loss=0.,acc=1.))
     trace = ds.train(model,opt,(X,T,X,T),dict(batch_size=4,eval_every=2,max_updates=10),'cpu',tmp_path/'trace.jsonl')
     assert [r['step'] for r in trace] == [2,4,6]
     assert ds.joint_stop(trace) and not ds.joint_stop(trace[:2])
@@ -107,8 +107,8 @@ def test_training_stops_at_first_joint_success(tmp_path,monkeypatch):
 def test_smallest_real_models_train_with_finite_ste_gradients(tmp_path,role,width):
     torch.set_num_threads(1)
     c=dict(p=97,depth=2,heads=1,dropout=.2,batch_size=8,eval_every=2,max_updates=4,
-        **ds.previous.model_spec(role,width))
-    model=ds.base.make_model(c)
+        **ds.capacity_matching.model_spec(role,width))
+    model=ds.model_protocols.make_model(c)
     before=[p.detach().clone() for p in model.parameters()]
     opt=ds.build_adamw(model,lr=.001,betas=(.9,.98),weight_decay=1.,mup_base=0,dim=width)
     X,T,V,U=ds.data(dict(p=97,n_train=17,train_pool_size=7449,seed=999))
@@ -116,7 +116,7 @@ def test_smallest_real_models_train_with_finite_ste_gradients(tmp_path,role,widt
     assert trace[-1]['step']==4
     assert all(torch.isfinite(p).all() for p in model.parameters())
     assert any(not torch.equal(a,b) for a,b in zip(before,model.parameters()))
-    boundary=ds.base.boundary_audit(model,X,c,'cpu')
+    boundary=ds.model_protocols.boundary_audit(model,X,c,'cpu')
     assert boundary['kind']==('unrestricted_continuous' if role=='C' else 'full_width_categorical')
     if role=='B':
         assert all(state.to_logits.weight.grad is not None and state.to_logits.weight.grad.abs().sum()>0

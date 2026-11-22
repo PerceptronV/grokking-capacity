@@ -43,11 +43,11 @@ legacy default for historical reproducibility; alternative analyses should
 pass --censoring unresolved and an isolated --out directory.
 
 Examples:
-  python scripts/plot_cone_aggregate.py --metric median \
+  gc-workflow cone plot_cone_aggregate --metric median \
     --out results/my_median_preview
-  python scripts/plot_cone_aggregate.py --metric quantile:0.25 \
+  gc-workflow cone plot_cone_aggregate --metric quantile:0.25 \
     --out results/my_quantile_preview
-  python scripts/crossing_analysis.py fixed --delay-aggregation median \
+  gc-workflow sensitivity crossing_analysis fixed --delay-aggregation median \
     --censoring unresolved --out results/my_crossing_preview
 
 A new metric is applied to per-seed delays, never to already reduced cell
@@ -64,7 +64,7 @@ generalisation. The forecast calibration and seed resampling now accept the
 configured delay metric. Setting timescale_aggregation in an intersection
 figure changes measured curves; it does NOT silently redefine those law fits.
 The forecast collector rejects a non-mean timescale setting. For unified
-mean/median law fits, use scripts/analyse_seed_aggregation.py laws, which
+mean/median law fits, use gc-workflow sensitivity analyse_seed_aggregation laws, which
 reports both observed-crossing and complete-ten-seed eligibility separately.
 
 Historical report/publisher scripts and archived fields named minimum_delay,
