@@ -60,15 +60,18 @@ gc-capacity --p 113 --seed 42 --dim 10 --n-samples 9300 --dataset-type random
 `gc-dispatch` partitions the expanded command list across nodes via
 `--node-rank` / `--num-nodes` (interleaved by `i % num_nodes == node_rank`),
 preserving the `capacity → speed → groks` ordering within each node. The
-match table is built only on node-rank 0. Both nodes must share `runs.db`
-(typically over NFS) so the wallow UNIQUE constraint dedups across nodes.
+match table is built only on node-rank 0. Each node must write to its own
+local-disk registry; merge those registries afterwards using the workflow above.
+The UNIQUE constraint deduplicates within each local registry, while distinct
+node ranks partition the planned jobs. A match table built before merging covers
+only the local shard and must be regenerated against the merged registry.
 
 ```bash
 # Node 0
-gc-dispatch --config configs/weight_decay_sweep.yaml --num-nodes 2 --node-rank 0
+GC_WALLOW_DB="$HOME/grokking-node0.db" gc-dispatch --config configs/weight_decay_sweep.yaml --num-nodes 2 --node-rank 0
 
 # Node 1
-gc-dispatch --config configs/weight_decay_sweep.yaml --num-nodes 2 --node-rank 1
+GC_WALLOW_DB="$HOME/grokking-node1.db" gc-dispatch --config configs/weight_decay_sweep.yaml --num-nodes 2 --node-rank 1
 ```
 
 Workers per GPU default to 4 for H100 (based on compute capability). Override

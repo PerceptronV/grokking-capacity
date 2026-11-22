@@ -9,28 +9,26 @@ import subprocess
 from typing import Any
 
 from ..utils.device import gpu_type as _gpu_type
+from .store import _repo_root
 
 
-def _git_short_hash() -> str | None:
+def _git_output(*arguments: str) -> str | None:
     try:
         out = subprocess.check_output(
-            ["git", "rev-parse", "--short", "HEAD"],
-            stderr=subprocess.DEVNULL,
+            ["git", *arguments], cwd=_repo_root(), stderr=subprocess.DEVNULL,
         )
         return out.decode().strip()
     except Exception:
         return None
 
 
+def _git_short_hash() -> str | None:
+    return _git_output("rev-parse", "--short", "HEAD")
+
+
 def _git_dirty() -> bool | None:
-    try:
-        out = subprocess.check_output(
-            ["git", "status", "--porcelain"],
-            stderr=subprocess.DEVNULL,
-        )
-        return bool(out.strip())
-    except Exception:
-        return None
+    output = _git_output("status", "--porcelain")
+    return None if output is None else bool(output)
 
 
 def collect_provenance(

@@ -13,20 +13,23 @@ per-machine SQLite files. Two operations are provided:
   registry. Rows are deduplicated on the identifying tuple
   (``identifying.IDENTIFYING_FIELDS``); for each tuple the winner is chosen by
   (completed status, artefact presence, source priority, latest completion).
-  Losing and non-completed rows are preserved verbatim in a
-  ``runs_superseded`` side table (wallow ignores extra tables) so every
-  source remains reproducible from the canonical file. Winning rows' artefact
-  dirs are copied under the canonical data root when they live elsewhere.
+  Losing and non-completed rows from each source's ``runs`` table are preserved
+  in a ``runs_superseded`` side table (wallow ignores extra tables). Winning
+  rows' artefact dirs are copied under the canonical data root when they live
+  elsewhere.
 
-Sources are opened read-only and never modified.
+Both operations read the source ``runs`` tables only; existing
+``runs_superseded`` histories are not carried forward. Retain original source
+registries when that history is needed. Sources are opened read-only and never
+modified.
 """
 from __future__ import annotations
 
 import argparse
 import json
-import os
 import shutil
 import sqlite3
+from contextlib import closing, contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -42,7 +45,7 @@ UUID_COL = "uuid"
 
 
 def _connect_ro(db_path: str | Path) -> sqlite3.Connection:
-    con = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+    con = sqlite3.connect(Path(db_path).resolve().as_uri() + "?mode=ro", uri=True)
     con.row_factory = sqlite3.Row
     return con
 
@@ -78,10 +81,47 @@ def _create_store_db(dest: Path) -> None:
     """Create an empty registry with the installed wallow's schema."""
     from .store import get_schema
 
-    os.environ.setdefault("WALLOW_JOURNAL_MODE", "DELETE")
     from wallow import Store
 
-    Store(str(dest), schema=get_schema(), check_schema=False)
+    store = Store(str(dest), schema=get_schema(), check_schema=False, journal_mode="DELETE")
+    store.engine.dispose()
+
+
+def _validate_columns(cols: list[str], *, require_all_identifying: bool = False) -> None:
+    """Reject incompatible sources without guessing missing experiment identities."""
+    from .store import get_schema
+
+    schema = get_schema()
+    columns = schema.Run.__table__.columns
+    unknown = set(cols) - set(columns.keys())
+    # Native wallow timestamps/UUID are columns too, although they are not
+    # declared among the project fields. SQLite only supplies server defaults.
+    required = {column.name for column in columns
+                if not column.nullable and column.server_default is None
+                and column.name != "id"}
+    if require_all_identifying:
+        required.update(IDENTIFYING_FIELDS)
+    missing = required - set(cols)
+    if unknown or missing:
+        raise ValueError(f"Incompatible registry columns: missing={sorted(missing)}, "
+                         f"unsupported={sorted(unknown)}")
+
+
+@contextmanager
+def _new_registry(dest: Path, cols: list[str]):
+    """Populate a fresh registry transactionally; never replace an existing file."""
+    _validate_columns(cols)
+    # Exclusive creation also protects against another process using this path
+    # between an existence check and schema creation.
+    with dest.open('xb'):
+        pass
+    try:
+        _create_store_db(dest)
+        with closing(sqlite3.connect(dest)) as con, con:
+            yield con
+    except BaseException:
+        dest.unlink()
+        raise
 
 
 def _insert(con: sqlite3.Connection, table: str, rows: list[dict], cols: list[str]) -> None:
@@ -106,15 +146,9 @@ def convert(source_db: Path, dest_db: Path, data_root: Path) -> int:
     rows, cols = _read_rows(source_db)
     for row in rows:
         _canonical_paths(row, data_root)
-    if dest_db.exists():
-        raise FileExistsError(dest_db)
-    _create_store_db(dest_db)
-    con = sqlite3.connect(dest_db)
-    try:
-        with con:
-            _insert(con, "runs", rows, cols)
-    finally:
-        con.close()
+    cols = list(dict.fromkeys([*cols, "artefacts_dir", "npz_path"]))
+    with _new_registry(dest_db, cols) as con:
+        _insert(con, "runs", rows, cols)
     return len(rows)
 
 
@@ -160,13 +194,17 @@ def merge(
     copy_artefacts: bool = True,
 ) -> MergeReport:
     """Merge registries. ``sources`` = [(db_path, artefact_root)], priority order."""
+    if not sources:
+        raise ValueError("At least one source registry is required")
     report = MergeReport()
     by_key: dict[tuple, list[_Candidate]] = {}
     all_uuids: dict[str, str] = {}
     cols: list[str] = []
 
     for i, (db_path, artefact_root) in enumerate(sources):
-        rows, cols = _read_rows(db_path)
+        rows, source_cols = _read_rows(db_path)
+        _validate_columns(source_cols, require_all_identifying=True)
+        cols = list(dict.fromkeys([*cols, *source_cols]))
         report.per_source[str(db_path)] = {"rows": len(rows)}
         for row in rows:
             u = str(row[UUID_COL])
@@ -190,31 +228,25 @@ def merge(
         if rest:
             report.collisions += 1
 
-    if dest_db.exists():
-        raise FileExistsError(dest_db)
-    _create_store_db(dest_db)
-    con = sqlite3.connect(dest_db)
-    try:
-        with con:
-            win_rows = []
-            for w in winners:
-                _canonical_paths(w.row, data_root)
-                win_rows.append(w.row)
-            _insert(con, "runs", win_rows, cols)
+    cols = list(dict.fromkeys([*cols, "artefacts_dir", "npz_path"]))
+    with _new_registry(dest_db, cols) as con:
+        win_rows = []
+        for w in winners:
+            _canonical_paths(w.row, data_root)
+            win_rows.append(w.row)
+        _insert(con, "runs", win_rows, cols)
 
-            sup_cols = cols + ["superseded_by_uuid", "source_db"]
-            col_defs = ", ".join(f'"{c}"' for c in sup_cols)
-            con.execute(f"CREATE TABLE runs_superseded ({col_defs})")
-            sup_rows = []
-            winner_by_key = {_identifying_key(w.row): str(w.row[UUID_COL]) for w in winners}
-            for l in losers:
-                r = dict(l.row)
-                r["superseded_by_uuid"] = winner_by_key.get(_identifying_key(l.row))
-                r["source_db"] = l.source_db
-                sup_rows.append(r)
-            _insert(con, "runs_superseded", sup_rows, sup_cols)
-    finally:
-        con.close()
+        sup_cols = cols + ["superseded_by_uuid", "source_db"]
+        col_defs = ", ".join(f'"{c}"' for c in sup_cols)
+        con.execute(f"CREATE TABLE runs_superseded ({col_defs})")
+        sup_rows = []
+        winner_by_key = {_identifying_key(w.row): str(w.row[UUID_COL]) for w in winners}
+        for l in losers:
+            r = dict(l.row)
+            r["superseded_by_uuid"] = winner_by_key.get(_identifying_key(l.row))
+            r["source_db"] = l.source_db
+            sup_rows.append(r)
+        _insert(con, "runs_superseded", sup_rows, sup_cols)
 
     report.kept = len(winners)
     report.superseded = len(losers)
