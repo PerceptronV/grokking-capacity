@@ -45,7 +45,7 @@ import numpy as np
 from .numerics import ols as _ols
 from . import aggregate
 from .config_view import ConfigView, load_npz
-from .matching import compute_n_equiv
+from .matching import compute_n_equiv, get_param_count
 from .plots import _passes_filters
 
 CENTRAL_PRIMES = (97, 101, 103, 107, 109, 113, 127, 131, 137, 139)
@@ -436,12 +436,7 @@ def seed_noise_floor(data: dict) -> dict[str, Any]:
 # --------------------------------------------------------------------------- #
 
 def param_count_table(p: int, dims: Iterable[int]) -> dict[int, int]:
-    from grokking_capacity.models import build_model, count_parameters
-    out = {}
-    for d in dims:
-        m = build_model(depth=2, dim=int(d), heads=1, p=p, dropout=0.2)
-        out[int(d)] = int(count_parameters(m))
-    return out
+    return {int(d): get_param_count(int(d), 2, 1, p, 0.2) for d in dims}
 
 
 def epoch_budget_check(p: int, dims: list[int], mem: dict, gen: dict,

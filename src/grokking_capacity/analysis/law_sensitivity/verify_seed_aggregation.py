@@ -5,13 +5,13 @@ from pathlib import Path
 from collections import defaultdict,Counter
 import csv,hashlib,json,math,statistics,shutil
 import pandas as pd
-import pymupdf
 ROOT=Path(__file__).resolve().parents[4]
 OUT=ROOT/'results/seed_aggregation_sensitivity_20261106'
 sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
 
 
 def main():
+    import pymupdf
     frozen=ROOT/'results/cone_ten_seeds_h100_20261106/figure/runs.json'
     runs=json.loads(frozen.read_text());by=defaultdict(list)
     for r in runs:by[r['p'],r['dim']].append(r)

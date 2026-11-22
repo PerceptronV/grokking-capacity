@@ -38,6 +38,7 @@ from .numerics import (
     normalise_accuracy as _norm_acc,
     first_crossing as _first_cross,
     r_squared as _r2,
+    linear_fit,
 )
 from .config_view import ConfigView, load_npz
 from ._cli import CONFIGS_DIR, RESULTS_DIR, analysis_parser, config_jobs
@@ -91,12 +92,7 @@ def _v_at_step(steps: np.ndarray, vals: np.ndarray, target: float) -> float:
 def fit_loglinear(steps: np.ndarray, V: np.ndarray):
     """Linear fit ``log V = intercept + slope·t``. Returns ``(slope, intercept, r2)``;
     the contraction rate is ``r = -slope`` (per step)."""
-    s = np.asarray(steps, float)
-    y = np.log(np.asarray(V, float))
-    A = np.vstack([s, np.ones_like(s)]).T
-    (slope, intercept), *_ = np.linalg.lstsq(A, y, rcond=None)
-    yhat = A @ np.array([slope, intercept])
-    return float(slope), float(intercept), _r2(y, yhat)
+    return linear_fit(steps, np.log(np.asarray(V, float)))
 
 
 def fit_kosson(steps: np.ndarray, V: np.ndarray):

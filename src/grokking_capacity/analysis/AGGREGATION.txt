@@ -31,9 +31,10 @@ The production plot, onset and predictiveness pipelines share these fields.
 Stats CSVs identify the selected metrics, censoring policy, onset status and
 unresolved delay counts. Positive at the narrowest sampled width is marked
 left_censored. find_grokking_onset remains a compatibility scalar; use
-onset_summary when bounds/status matter. The rule is the smallest parameter
-count AFTER THE LAST zero/nonpositive aggregate in a fixed width domain, not
-the first positive cell. Unknown widths must stay on the grid.
+onset_summary when bounds/status matter. The rule is the first sampled parameter count with a positive aggregate,
+provided every smaller sampled aggregate is resolved. Later zeros do not
+invalidate that first onset. Unknown widths must stay on the grid. The old
+positive-tail rule remains available separately as sustained_onset_summary.
 
 For reproducing historical outputs only, compute_delays(...,
 censoring='legacy_lower_bound') drops unobserved training crossings and uses

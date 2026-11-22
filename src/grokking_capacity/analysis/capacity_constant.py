@@ -18,29 +18,8 @@ def fit_capacity_slope(rows: Iterable) -> Optional[float]:
     when fewer than two distinct param counts are available; callers fall
     back to `consts.C`.
     """
-    by_param: dict[int, float] = {}
-    for r in rows:
-        if isinstance(r, dict):
-            pc = r.get("param_count")
-            bits = r.get("total_bits_memorized")
-        else:
-            pc = getattr(r, "param_count", None)
-            bits = getattr(r, "total_bits_memorized", None)
-        if pc is None or bits is None:
-            continue
-        pc_i = int(pc)
-        bits_f = float(bits)
-        if pc_i not in by_param or bits_f > by_param[pc_i]:
-            by_param[pc_i] = bits_f
-
-    if len(by_param) < 2:
-        return None
-
-    points = sorted(by_param.items())
-    xs = np.array([p for p, _ in points], dtype=float)
-    ys = np.array([b for _, b in points], dtype=float)
-    slope, _intercept = np.polyfit(xs, ys, 1)
-    return float(slope)
+    fit = fit_capacity_line(rows)
+    return fit["slope"] if fit is not None else None
 
 
 def fit_capacity_line(rows: Iterable) -> Optional[dict]:

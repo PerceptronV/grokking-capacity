@@ -14,35 +14,34 @@ from scipy import integrate
 from scipy.optimize import brentq
 from scipy.stats import norm
 
-RES = normalise_timescale_laws(json.load(open("results/theory/forecast_onset.json")))
-MEM, GEN = RES["mem_law"], RES["gen_law"]
-G, LN_B = MEM["gamma"], MEM["ln_B"]
-LNA, A_EXP, GEN_B = GEN["lnA"], GEN["a"], GEN["b"]
-C = 2.16
-
-
-def K(p):
-    return 0.5 * p * (p - 1) * math.log2(p + 2)
-
-
-def R(p):
-    return (LNA + A_EXP * math.log(p) - LN_B) - GEN_B * math.log(G * K(p) / C)
-
-
-def kappa(p, h=1e-4):
-    return (math.log(K(p * math.exp(h))) - math.log(K(p * math.exp(-h)))) / (2 * h)
-
-
-def x_roots(p):
-    Rp = R(p)
-    Rstar = GEN_B * (1 - math.log(GEN_B))
-    if Rp < Rstar:
-        return None
-    F = lambda x: x - GEN_B * math.log(x) - Rp
-    return brentq(F, GEN_B, 1e3), brentq(F, 1e-9, GEN_B)
-
-
 def main():
+    RES = normalise_timescale_laws(json.load(open("results/theory/forecast_onset.json")))
+    MEM, GEN = RES["mem_law"], RES["gen_law"]
+    G, LN_B = MEM["gamma"], MEM["ln_B"]
+    LNA, A_EXP, GEN_B = GEN["lnA"], GEN["a"], GEN["b"]
+    C = 2.16
+
+
+    def K(p):
+        return 0.5 * p * (p - 1) * math.log2(p + 2)
+
+
+    def R(p):
+        return (LNA + A_EXP * math.log(p) - LN_B) - GEN_B * math.log(G * K(p) / C)
+
+
+    def kappa(p, h=1e-4):
+        return (math.log(K(p * math.exp(h))) - math.log(K(p * math.exp(-h)))) / (2 * h)
+
+
+    def x_roots(p):
+        Rp = R(p)
+        Rstar = GEN_B * (1 - math.log(GEN_B))
+        if Rp < Rstar:
+            return None
+        F = lambda x: x - GEN_B * math.log(x) - Rp
+        return brentq(F, GEN_B, 1e3), brentq(F, 1e-9, GEN_B)
+
     Rstar = GEN_B * (1 - math.log(GEN_B))
 
     print("== Prop 2 (fold): closed-form p* vs pipeline ==")
