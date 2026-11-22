@@ -392,5 +392,19 @@
       "path": "src/grokking_capacity/analysis/mechanisms/weight_decay_scaling.py",
       "description": "Matched A100 decay-law analysis, with common seeds and explicit censoring."
     }
+  },
+  "comparison": {
+    "dataset": {
+      "path": "src/grokking_capacity/analysis/dataset_comparison.py",
+      "description": "Audit and compare a registered dataset-size sweep at any prime."
+    },
+    "plot": {
+      "path": "src/grokking_capacity/analysis/dataset_comparison_plot.py",
+      "description": "Render dataset comparisons using report metadata."
+    },
+    "slice": {
+      "path": "src/grokking_capacity/analysis/dataset_slice.py",
+      "description": "Compare a fully observed dataset-size slice using its registered seeds and widths."
+    }
   }
 }

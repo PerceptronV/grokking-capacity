@@ -2,6 +2,7 @@
 """Audit and report the capacity-constant matched C/B size sweep."""
 from grokking_capacity.experiments.registered import verify_sources as verify_registered_sources
 
+from grokking_capacity.analysis.paired import summarize
 import argparse
 import csv
 import json
@@ -27,13 +28,10 @@ def csv_write(path,rows):
 
 
 def time_summary(values,limit=LIMIT):
-    observed=[v for v in values if v is not None];capped=[limit if v is None else v for v in values]
-    complete=len(observed)==len(values)
-    return dict(n=len(values),observed=len(observed),censored=len(values)-len(observed),
-        mean=statistics.mean(observed) if complete else None,mean_lower_bound=statistics.mean(capped),
-        mean_capped=statistics.mean(capped),median=statistics.median(capped) if len(observed)>len(values)//2 else None,
-        median_lower_bound=statistics.median(capped),min_observed=min(observed) if observed else None,
-        max_observed=max(observed) if observed else None)
+    result = summarize(values, limit)
+    result['mean_capped'] = result.pop('capped_mean')
+    result['max_observed'] = max((v for v in values if v is not None), default=None)
+    return result
 
 
 def delay_summary(values):

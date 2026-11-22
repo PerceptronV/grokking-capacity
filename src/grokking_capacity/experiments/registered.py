@@ -41,7 +41,9 @@ def protocol_sources(name):
     paths += ["src/grokking_capacity/experiments/" + p for p in shared]
     paths += ["src/grokking_capacity/experiments/campaigns/" + CONTROLLERS[name] + ".py"]
     if name == "dataset_scaling":
-        paths.append("src/grokking_capacity/experiments/discrete_workflow/report_p97_dataset_scaling.py")
+        paths += ["src/grokking_capacity/experiments/discrete_workflow/report_p97_dataset_scaling.py",
+                  "src/grokking_capacity/analysis/dataset_comparison.py",
+                  "src/grokking_capacity/analysis/paired.py"]
     return list(dict.fromkeys(paths))
 
 

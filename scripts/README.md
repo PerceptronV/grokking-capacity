@@ -25,6 +25,22 @@ Arguments are forwarded unchanged. Listing commands does not execute them.
 Paths are relative to `src/grokking_capacity/`. The catalogue is
 `src/grokking_capacity/workflow_catalog.json`.
 
+## Reusable comparisons
+
+Dataset-size reports take their prime, seeds, budget, and model widths from the
+registered campaign. Their analysis and rendering live in `analysis/`:
+
+```bash
+gc-workflow comparison dataset --run results/my-sweep --out reports/my-sweep
+gc-workflow comparison plot --report reports/my-sweep
+gc-workflow comparison slice --report reports/my-sweep --run results/my-sweep --size 2952
+```
+
+If calibration evidence was relocated, `dataset --calibration-selection <file>`
+accepts it only when its hash matches the frozen selection. Slice comparisons
+require fully observed times; the full report retains censored runs and bounds.
+Historical p97 command names remain adapters to these implementations.
+
 ## Campaign execution
 
 The capacity-scaling, dataset-scaling, categorical-search, dropout-match,
