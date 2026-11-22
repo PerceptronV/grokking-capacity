@@ -5,7 +5,7 @@ The manifest and source snapshots precede all outcomes. Existing H100 cells
 receive missing seeds; incomplete A100 cells are replaced in full on H100.
 """
 from pathlib import Path
-from grokking_capacity.utils.workflow_paths import frozen_source
+from grokking_capacity.utils.workflow_paths import frozen_source, package_sources
 import argparse, collections, fcntl, hashlib, json, os, shutil, socket, sqlite3
 import subprocess, sys, time
 
@@ -59,7 +59,7 @@ def prepare():
     items.sort(key=lambda j: (0 if (j['p'], j['dim']) == (197, 316) else 1,
                              -j['historical_mean_seconds'], j['p'], j['dim'], j['seed']))
     paths = [Path(__file__).resolve(), ROOT / 'src/grokking_capacity/experiments/cone_workflow/run_cone_h100_boundary.py',
-             *sorted((ROOT / 'src/grokking_capacity').rglob('*.py')), ROOT / 'wallow.toml']
+             *package_sources(ROOT), ROOT / 'wallow.toml']
     hashes = {str(p.relative_to(ROOT)): sha(p) for p in paths}
     for p in paths:
         dst = OUT / 'source' / p.relative_to(ROOT)

@@ -4,6 +4,7 @@ import itertools
 import json
 import os
 from pathlib import Path
+from grokking_capacity.utils.workflow_paths import package_sources
 import subprocess
 import sys
 
@@ -56,7 +57,7 @@ def worker(config, output, device):
 
 def source_hashes():
     # These general CLI workers depend on the registry and data layers too.
-    return {str(p.relative_to(ROOT)): sha(p) for p in sorted((ROOT/'src/grokking_capacity').rglob('*.py'))
+    return {str(p.relative_to(ROOT)): sha(p) for p in package_sources(ROOT)
             if 'frozen' not in p.parts}
 
 

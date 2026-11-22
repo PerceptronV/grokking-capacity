@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Preselected p199 extension: the18 registered p197 widths plus316, ten seeds."""
 from pathlib import Path
+from grokking_capacity.utils.workflow_paths import package_sources
 import argparse,concurrent.futures,json,os,shutil,socket,subprocess,sys,time
 import grokking_capacity.experiments.cone_workflow.run_cone_h100_boundary as engine
 ROOT=Path(__file__).resolve().parents[4]
@@ -9,7 +10,7 @@ WIDTHS=[52,64,76,92,108,124,140,156,172,188,204,236,268,300,316,364,428,492,556]
 def prepare():
     OUT.mkdir(parents=True,exist_ok=True)
     for name in ['jobs','logs','source']:(OUT/name).mkdir(exist_ok=True)
-    paths=[Path(__file__).resolve(),ROOT/'src/grokking_capacity/experiments/cone_workflow/run_cone_h100_boundary.py',*sorted((ROOT/'src/grokking_capacity').rglob('*.py')),ROOT/'wallow.toml']
+    paths=[Path(__file__).resolve(),ROOT/'src/grokking_capacity/experiments/cone_workflow/run_cone_h100_boundary.py',*package_sources(ROOT),ROOT/'wallow.toml']
     hashes={str(p.relative_to(ROOT)):engine.sha(p) for p in paths}
     if (OUT/'manifest.json').exists():
         m=json.loads((OUT/'manifest.json').read_text());assert m['source_hashes']==hashes;return

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Thirty paired norm-gain runs on GPU 0, with immutable source/data provenance."""
 from pathlib import Path
+from grokking_capacity.utils.workflow_paths import package_sources
 import argparse,concurrent.futures,hashlib,json,os,socket,subprocess,sys,time
 ROOT=Path(__file__).resolve().parents[4]
 OUT=ROOT/'results/normfrozen_h100_paired_20261103'
@@ -52,7 +53,7 @@ if __name__=='__main__':
     else:
         OUT.mkdir(parents=True,exist_ok=True)
         for name in ['logs','jobs','source']:(OUT/name).mkdir(exist_ok=True)
-        paths=[Path(__file__).resolve(),*sorted((ROOT/'src/grokking_capacity').rglob('*.py')),ROOT/'wallow.toml']
+        paths=[Path(__file__).resolve(),*package_sources(ROOT),ROOT/'wallow.toml']
         hashes={str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}
         manifest={'settings':SETTINGS,'seeds':SEEDS,'arms':['frozen','unfrozen'],'p':113,'protocol':'modular division, train fraction 0.5, depth 2, heads 1, dropout .2, init scale 1, AdamW lr .001 betas .9/.98, batch 512, 5000 epochs, first validation99; stop once training99 and validation99, no patience, no muP','host':socket.gethostname(),'physical_gpu':0,'source_hashes':hashes,'jobs':30,'started_at':time.time(),'estimator':'Per arm, OLS log(mean first-val99 epoch over identical seeds) on log(weight_decay) at d128; width slope versus common total architecture parameter count at wd1. Paired seed bootstrap uses the same resample across both arms and all settings. Censored runs retained and flagged; no slope silently drops censored outcomes.'}
         if (OUT/'manifest.json').exists():assert json.loads((OUT/'manifest.json').read_text())['source_hashes']==hashes,'Source changed during campaign'

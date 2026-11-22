@@ -5,17 +5,12 @@ passed through unchanged. Training commands require the registered local data
 and hardware; listing commands does not import or execute them.
 """
 import argparse
-import json
 import os
 from pathlib import Path
 import runpy
 import sys
 
-from .utils.workflow_paths import ROOT
-
-
-def catalog():
-    return json.loads(Path(__file__).with_name("workflow_catalog.json").read_text())
+from .utils.workflow_paths import ROOT, catalog
 
 
 def main(argv=None):

@@ -1,13 +1,24 @@
-from .device import get_device, gpu_type
-from .compute import compute_dataset_size_bits
-from .checkpoints import load_model, save_model
-from .optim import build_adamw
+"""Shared helpers; load training dependencies only when their exports are used."""
+from importlib import import_module
 
-__all__ = [
-    "get_device",
-    "gpu_type",
-    "compute_dataset_size_bits",
-    "load_model",
-    "save_model",
-    "build_adamw",
-]
+_EXPORTS = {
+    'get_device': 'device',
+    'gpu_type': 'device',
+    'compute_dataset_size_bits': 'compute',
+    'load_model': 'checkpoints',
+    'save_model': 'checkpoints',
+    'build_adamw': 'optim',
+}
+__all__ = list(_EXPORTS)
+
+
+def __getattr__(name):
+    if name not in _EXPORTS:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    value = getattr(import_module('.' + _EXPORTS[name], __name__), name)
+    globals()[name] = value
+    return value
+
+
+def __dir__():
+    return sorted(set(globals()) | set(__all__))

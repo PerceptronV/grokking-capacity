@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Preselected paired A100-to-H100 grokking-outcome replication."""
 from pathlib import Path
-from grokking_capacity.utils.workflow_paths import frozen_source
+from grokking_capacity.utils.workflow_paths import frozen_source, package_sources
 from collections import Counter,defaultdict
 import argparse,concurrent.futures,csv,hashlib,json,multiprocessing,os,shutil,socket,sqlite3,subprocess,sys,threading,time
 
@@ -55,7 +55,7 @@ def prepare():
     protected=json.loads((ROOT/'results/law_complete_ten_seed_sensitivity_20261106/validation.json').read_text())['protected_artifacts_unchanged']
     for rel,digest in protected.items():assert sha(ROOT/rel)==digest
     files=[Path(__file__).resolve(),ROOT/'src/grokking_capacity/experiments/cone_workflow/run_cone_h100_boundary.py',ROOT/'src/grokking_capacity/experiments/cone_workflow/verify_cone_h100_boundary.py',ROOT/'src/grokking_capacity/experiments/cone_workflow/cone_data.py',
-           *sorted((ROOT/'src/grokking_capacity').rglob('*.py')),ROOT/'wallow.toml']
+           *package_sources(ROOT),ROOT/'wallow.toml']
     hashes={str(p.relative_to(ROOT)):sha(p) for p in files}
     for p in files:
         dest=OUT/'source'/p.relative_to(ROOT);dest.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(p,dest)

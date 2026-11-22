@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Preselected 225-run cone boundary replication, two workers on one H100."""
 from pathlib import Path
+from grokking_capacity.utils.workflow_paths import package_sources
 import argparse,concurrent.futures,hashlib,json,os,socket,sqlite3,subprocess,sys,time,shutil
 ROOT=Path(__file__).resolve().parents[4]
 OUT=ROOT/'results/cone_h100_boundary_20261104'
@@ -12,7 +13,7 @@ def items():return [(p,d,s,'target' if d==target else 'neighbour') for p,target,
 def prepare():
     OUT.mkdir(parents=True,exist_ok=True)
     for name in ['logs','jobs','source','reference_traces']:(OUT/name).mkdir(exist_ok=True)
-    paths=[Path(__file__).resolve(),*sorted((ROOT/'src/grokking_capacity').rglob('*.py')),ROOT/'wallow.toml']
+    paths=[Path(__file__).resolve(),*package_sources(ROOT),ROOT/'wallow.toml']
     hashes={str(p.relative_to(ROOT)):sha(p) for p in paths}
     if (OUT/'manifest.json').exists():
         m=json.loads((OUT/'manifest.json').read_text());assert m['source_hashes']==hashes and m['groups']==[list(x[:2])+[x[2],x[3]] for x in GROUPS];return

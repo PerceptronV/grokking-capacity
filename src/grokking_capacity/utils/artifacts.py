@@ -11,6 +11,8 @@ def sha(path):
 def clean(value):
     if isinstance(value, dict):
         return {str(k): clean(v) for k, v in value.items()}
+    if isinstance(value, np.ndarray) and value.ndim == 0:
+        return clean(value.item())
     if isinstance(value, (list, tuple, np.ndarray)):
         return [clean(v) for v in value]
     if isinstance(value, (np.integer, np.bool_)):
@@ -20,7 +22,7 @@ def clean(value):
     return value
 
 def save_json(path, value):
-    path.write_text(json.dumps(clean(value), indent=2, allow_nan=False) + '\n')
+    Path(path).write_text(json.dumps(clean(value), indent=2, allow_nan=False) + '\n')
 
 
 def read_json(path):
