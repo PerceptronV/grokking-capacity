@@ -41,6 +41,22 @@ accepts it only when its hash matches the frozen selection. Slice comparisons
 require fully observed times; the full report retains censored runs and bounds.
 Historical p97 command names remain adapters to these implementations.
 
+## Character mechanisms
+
+Character-growth training lives in `experiments/character.py`; importing the
+analysis module does not start training. Prime, seed, device, recording cadence,
+and output are explicit options:
+
+```bash
+gc-workflow mechanisms character_growth --p 113 --seed 42 --device cuda:0 --out results/characters.npz
+gc-workflow mechanisms character_lambda_sweep --config configs/analysis/character_sweeps.yaml --out /tmp/lambda.json
+gc-workflow mechanisms character_alpha_width --input-dir results/theory --out /tmp/alpha-width.json
+```
+
+The two sweep reports share spectrum and event measurements while retaining
+their different fit windows. Their trace selections live in the YAML profile.
+Missing threshold crossings remain unresolved, rather than becoming epoch zero.
+
 ## Campaign execution
 
 The capacity-scaling, dataset-scaling, categorical-search, dropout-match,

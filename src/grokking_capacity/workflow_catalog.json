@@ -337,7 +337,7 @@
       "description": "Winner-rate vs \u03b1 and vs width \u2014 the drive-vs-SNR discriminator"
     },
     "character_growth": {
-      "path": "src/grokking_capacity/analysis/mechanisms/character_growth.py",
+      "path": "src/grokking_capacity/experiments/character.py",
       "description": "Track multiplicative-character amplitudes through training (p=113, d=128,"
     },
     "character_lambda_sweep": {

@@ -18,7 +18,7 @@ SOURCES = {'advance_p97_multilevel': 'src/grokking_capacity/experiments/discrete
  'audit_discrete_capacity': 'src/grokking_capacity/experiments/discrete_workflow/audit_discrete_capacity.py',
  'character_ablation': 'src/grokking_capacity/analysis/mechanisms/character_ablation.py',
  'character_alpha_width': 'src/grokking_capacity/analysis/mechanisms/character_alpha_width.py',
- 'character_growth': 'src/grokking_capacity/analysis/mechanisms/character_growth.py',
+ 'character_growth': 'src/grokking_capacity/experiments/character.py',
  'character_lambda_sweep': 'src/grokking_capacity/analysis/mechanisms/character_lambda_sweep.py',
  'check_law_complete_ten_seeds': 'src/grokking_capacity/analysis/law_sensitivity/check_law_complete_ten_seeds.py',
  'complete_cone_neighbour_seeds': 'src/grokking_capacity/experiments/cone_workflow/complete_cone_neighbour_seeds.py',

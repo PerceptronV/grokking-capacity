@@ -26,53 +26,32 @@ from pathlib import Path
 
 import numpy as np
 
-REPO = Path(__file__).resolve().parents[4]
-RES = REPO / "results/theory"
-
-ALPHA_ARM = {0.3: "character_growth_a0.3.npz",
-             0.5: "character_growth_abs_wd1.npz",
-             0.7: "character_growth_a0.7.npz"}
-WIDTH_ARM = {64: "character_growth_d64.npz",
-             128: "character_growth_abs_wd1.npz",
-             256: "character_growth_d256.npz",
-             512: "character_growth_d512.npz"}
+from grokking_capacity.analysis.characters import CharacterTrace, log_slopes, sweep_options
 
 
 def slopes(ep, mat, idx, mask):
-    if mask.sum() < 4:
-        return None
-    return float(np.mean([
-        np.polyfit(ep[mask], np.log(mat[mask, i] + 1e-300), 1)[0]
-        for i in idx]))
+    return log_slopes(ep,mat,idx,mask,min_points=4)
 
 
 def analyse(fn):
-    d = np.load(fn)
-    ep = d["epochs"]
-    pw = d["out_pow"]
-    share = pw / pw.sum(1, keepdims=True)
-    tr, va = d["train_acc"], d["val_acc"]
-    n = pw.shape[1]
-    final = share[-1]
-    winners = np.where(final > 2 / n)[0]
-    losers = np.where(final <= 2 / n)[0]
-    if not (va >= 0.99).any():
+    trace = CharacterTrace.load(fn)
+    ep,pw,share=trace.epochs,trace.power,trace.share
+    winners,losers=trace.cohorts()
+    grok=trace.first_epoch(trace.validation,.99)
+    if grok is None:
         return {"grok": None, "note": "no grok within budget",
-                "final_val": float(va[-1]), "n_winners": int(len(winners))}
-    gi = int(np.argmax(va >= 0.99))
-    grok = int(ep[gi])
-    wshare = share[:, winners].mean(1) * n
-    take = int(ep[np.argmax(wshare > 1.5)])
-    esc = (ep >= take) & (ep <= grok)
-    post = (ep >= grok) & (ep <= grok + 300)
+                "final_val": float(trace.validation[-1]), "n_winners": int(len(winners))}
+    take=trace.takeoff(winners,1.5)
+    esc=trace.window(take,grok)
+    post=trace.window(grok,grok+300)
     return {
         "grok": grok, "takeoff_1p5x": take,
-        "train_sat": int(ep[np.argmax(tr >= 0.99)]) if (tr >= .99).any() else None,
+        "train_sat": trace.first_epoch(trace.train,.99),
         "n_winners": int(len(winners)),
         "winner_amp_rate_escape": slopes(ep, pw, winners, esc),
         "winner_amp_rate_post": slopes(ep, pw, winners, post),
         "loser_share_rate_post": slopes(ep, share, losers, post),
-        "effn_final": float(1 / (final ** 2).sum()),
+        "effn_final": float(1 / (share[-1] ** 2).sum()),
     }
 
 
@@ -85,13 +64,14 @@ def powerfit(pairs, key):
                             np.log([y for _, y in pts]), 1)[0])
 
 
-def main():
-    out = {"alpha_arm": {}, "width_arm": {}}
-    for arm, files, xlab in (("alpha_arm", ALPHA_ARM, "alpha"),
-                             ("width_arm", WIDTH_ARM, "dim")):
+def main(argv=None):
+    inputs,ofn,config=sweep_options("alpha_width",argv)
+    out = {arm:{} for arm in config["arms"]}
+    for arm,files in config["arms"].items():
+        xlab=arm.removesuffix("_arm")
         pairs = []
         for x, name in sorted(files.items()):
-            fn = RES / name
+            fn = inputs / name
             if not fn.exists():
                 print(f"[{arm}] {name} missing, skipped")
                 continue
@@ -112,8 +92,7 @@ def main():
         if tg is not None:
             out[arm]["exponent_grok_epoch"] = tg
             print(f"[{arm}] grok epoch ∝ {xlab}^{tg:+.2f}")
-    ofn = RES / "character_alpha_width.json"
-    ofn.write_text(json.dumps(out, indent=1))
+    ofn.write_text(json.dumps(out, indent=1, allow_nan=False))
     print("saved", ofn)
 
 

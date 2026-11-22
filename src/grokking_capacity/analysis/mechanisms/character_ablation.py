@@ -32,23 +32,10 @@ import numpy as np
 import torch
 
 from grokking_capacity.models import TransformerTorch
+from grokking_capacity.analysis.characters import primitive_root, character_order, spectral_power
 
 THRESH_X_UNIFORM = 3.0
 N_CTRL = 20
-
-
-def primitive_root(p):
-    fac, n, d = [], p - 1, 2
-    while d * d <= n:
-        if n % d == 0:
-            fac.append(d)
-            while n % d == 0:
-                n //= d
-        d += 1
-    if n > 1:
-        fac.append(n)
-    return next(g for g in range(2, p)
-                if all(pow(g, (p - 1) // q, p) != 1 for q in fac))
 
 
 def spectral_surgery(W: np.ndarray, p: int, order: list[int],
@@ -114,8 +101,7 @@ def main():
         if not mp.exists():
             continue
         p, dim = int(r["p"]), int(r["dim"])
-        g = primitive_root(p)
-        order = [pow(g, m, p) for m in range(p - 1)]
+        order = list(character_order(p))
         n_bins = (p - 1) // 2 + 1              # rfft bins 0..(p-1)/2
 
         sd = torch.load(mp, map_location="cpu", weights_only=False)
@@ -128,9 +114,7 @@ def main():
         model.eval()
 
         U = model.state_dict()["out.weight"].cpu().numpy()
-        X = U[order, :].astype(np.float64)
-        C = np.fft.rfft(X - X.mean(0, keepdims=True), axis=0)
-        pw = (np.abs(C[1:, :]) ** 2).sum(1)
+        pw = spectral_power(U,p)
         share = pw / pw.sum()
         m = len(share)
         winners = np.where(share > THRESH_X_UNIFORM / m)[0] + 1  # bin idx
