@@ -10,7 +10,7 @@ import math
 import torch
 from torch import nn
 
-from .transformer import TransformerTorch, RMSNormTorch
+from .transformer import TransformerTorch, RMSNormTorch, _scale_parameters
 
 
 class ScalarChannel(nn.Module):
@@ -52,19 +52,13 @@ class ChannelTransformer(TransformerTorch):
             for _ in self.layers
         ])
         # Apply init_scale to added parameters consistently with the base model.
-        scale = kwargs.get("init_scale", 1.0)
-        if scale != 1:
-            with torch.no_grad():
-                for p in self.channels.parameters():
-                    p.mul_(scale)
+        _scale_parameters(kwargs.get("init_scale", 1.0), self.channels)
 
     def forward(self, tokens):
         x = self.embedding(tokens)
         for layer, channel in zip(self.layers, self.channels):
             x = channel(layer(x))
-        x = self.norm(x)
-        x = x.mean(dim=1) if self.pool == "mean" else x[:, -1]
-        return self.out(x)
+        return self._readout(x)
 
 
 def make_model(config: dict):

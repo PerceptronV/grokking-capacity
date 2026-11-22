@@ -15,7 +15,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-from .transformer import TransformerTorch
+from .transformer import TransformerTorch, _scale_parameters
 
 
 def categorical_straight_through(logits, *, sample=True):
@@ -79,9 +79,7 @@ class FullWidthQuantizedTransformer(TransformerTorch):
         x = self.embedding(tokens)
         for layer, quantize in zip(self.layers, self.quantizers):
             x = quantize(layer(x))
-        x = self.norm(x)
-        x = x.mean(dim=1) if self.pool == 'mean' else x[:, -1]
-        return self.out(x)
+        return self._readout(x)
 
 
 class FullWidthCategoricalState(nn.Module):
@@ -133,12 +131,8 @@ class FullWidthCategoricalTransformer(TransformerTorch):
         self.state_embeddings = nn.ModuleList([
             nn.Linear(dim * alphabet, dim, bias=False) for _ in self.layers
         ])
-        scale = kwargs.get('init_scale', 1.0)
-        if scale != 1:
-            with torch.no_grad():
-                for module in [self.categorical_states, self.state_embeddings]:
-                    for parameter in module.parameters():
-                        parameter.mul_(scale)
+        _scale_parameters(kwargs.get('init_scale', 1.0),
+                          self.categorical_states, self.state_embeddings)
 
     def forward(self, tokens, *, sample=True):
         x = self.embedding(tokens)
@@ -146,6 +140,4 @@ class FullWidthCategoricalTransformer(TransformerTorch):
                 self.layers, self.categorical_states, self.state_embeddings):
             state = categorical(layer(x), sample=sample)
             x = embed(state.flatten(-2))
-        x = self.norm(x)
-        x = x.mean(dim=1) if self.pool == 'mean' else x[:, -1]
-        return self.out(x)
+        return self._readout(x)

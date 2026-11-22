@@ -12,6 +12,15 @@ import torch.nn.functional as F
 from torch import Tensor
 
 
+def _scale_parameters(scale, *modules):
+    """Scale newly constructed modules without changing their initialization order."""
+    if scale != 1.0:
+        with torch.no_grad():
+            for module in modules:
+                for parameter in module.parameters():
+                    parameter.mul_(scale)
+
+
 class RotaryPositionalEmbeddings(nn.Module):
     def __init__(self, dim: int, max_seq_len: int = 4096, base: int = 10_000) -> None:
         super().__init__()
@@ -189,15 +198,16 @@ class TransformerTorch(nn.Module):
         self.norm = RMSNormTorch(dim)
         self.out = nn.Linear(dim, n_tokens, bias=False)
 
-        if init_scale != 1.0:
-            with torch.no_grad():
-                for param in self.parameters():
-                    param.mul_(init_scale)
+        _scale_parameters(init_scale, self)
 
     def forward(self, x):
         x = self.embedding(x)
         for layer in self.layers:
             x = layer(x)
+        return self._readout(x)
+
+    def _readout(self, x):
+        """Shared normalization, token pooling, and output projection."""
         x = self.norm(x)
         if self.pool == 'mean':
             x = x.mean(dim=1)
